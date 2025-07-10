@@ -22,6 +22,12 @@
   font-weight: 700;
   font-style: normal;
 }
+@font-face {
+  font-family: "Work Sans";
+  src: url("/src/assets/fonts/WorkSans-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
 
 @font-face {
   font-family: "Yeseva One";
