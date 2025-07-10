@@ -1,12 +1,12 @@
 import { FiPhoneCall, FiClock, FiMapPin } from "react-icons/fi";
-export default function TopBar() {
+export default function TopBar({ isHidden }) {
   return (
-    <>
+    <div className={`${isHidden ? "hidden" : "block"}`}>
       <div className="min-h-[80px] w-full flex flex-col xl:flex-row gap-4 items-center border-b border-red-600 p-4 xl:p-0">
         <h2 className="font-yeseva text-2xl text-primary hidden xl:block xl:w-full xl:relative xl:left-8">
           TONSUYA SUPER HEALTH CENTER
         </h2>
-        <div className="flex flex-wrap xl:flex-row xl:relative xl:ml-36 gap-4 w-full justify-center xl:justify-evenly">
+        <div className="flex flex-wrap xl:flex-row xl:relative  gap-4 w-full justify-center xl:justify-evenly right-64 ">
           <div className="flex gap-4 items-center">
             <FiPhoneCall className="text-2xl xl:text-3xl text-primary flex-shrink-0" />
             <div className="flex flex-col">
@@ -42,6 +42,6 @@ export default function TopBar() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
