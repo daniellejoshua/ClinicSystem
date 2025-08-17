@@ -1,6 +1,7 @@
 import HeroDoctor from "../assets/images/heroDoctorBlur.png";
 import DoctorTransparent from "../assets/images/DoctorTransparent.png";
 import { IoCalendarSharp } from "react-icons/io5";
+
 export default function Hero() {
   return (
     <>
@@ -22,7 +23,7 @@ export default function Hero() {
         <div className="absolute left-8 bottom-20 w-24 h-24 md:hidden bg-accent/20 rounded-full z-5"></div>
 
         {/* Text content - centered on mobile */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 md:left-[24rem] md:transform-none top-1/3 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[750px] px-4 md:px-0 text-center md:text-left">
+        <div className="absolute left-1/2 transform -translate-x-1/2 md:left-[24rem] md:transform-none top-1/2 lg:top-1/3 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[750px] px-4 md:px-0 text-center md:text-left">
           <h1 className="text-lg md:text-xl font-bold text-secondary mb-4 font-worksans tracking-[.3rem] md:tracking-[.5rem]">
             CARING FOR LIFE
           </h1>
@@ -33,7 +34,15 @@ export default function Hero() {
             </>
             in Medical Excellence
           </p>
-          <button className="w-full md:w-auto bg-accent text-primary px-8 py-4 md:py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-lg md:text-base shadow-lg">
+
+          {/* Mobile/Tablet - Book Appointment Button */}
+          <button className="w-full md:hidden flex items-center justify-center gap-2 bg-primary text-white px-8 py-4 rounded-full font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg">
+            BOOK APPOINTMENT
+            <IoCalendarSharp className="text-xl" />
+          </button>
+
+          {/* Desktop - Our Services Button */}
+          <button className="hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
             Our Services
           </button>
         </div>
@@ -71,11 +80,11 @@ export default function Hero() {
         {/* Right circle for desktop */}
         <div className="absolute -right-32 -bottom-32 w-96 h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] xl:w-[36rem] xl:h-[36rem] bg-accent rounded-full opacity-25 z-5"></div>
 
-        {/* Centered Book Appointment button - positioned halfway at bottom */}
-        <div className="absolute bottom-[-20px] left-1/2 transform -translate-x-1/2 z-30 w-full max-w-sm px-4">
-          <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6  font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg rounded-md ">
+        {/* Desktop Only - Book Appointment button at bottom */}
+        <div className="hidden md:block absolute bottom-[-20px] left-1/2 transform -translate-x-1/2 z-30 w-full max-w-sm px-4">
+          <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg rounded-md">
             BOOK APPOINTMENT
-            <IoCalendarSharp className="text-4xl ml-7" />
+            <IoCalendarSharp className="text-xl" />
           </button>
         </div>
       </section>
