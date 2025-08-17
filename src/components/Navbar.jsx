@@ -7,12 +7,12 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
     <>
       <div className="bg-primary">
         {/* Desktop Navbar */}
-        <div className="min-h-[80px] border-b border-red-500 hidden md:flex p-4 gap-10 items-center xl:justify-center relative xl:left-52 text-white text-[18px] ">
+        <div className="min-h-[80px] hidden md:flex p-4 gap-10 items-center xl:justify-center relative xl:left-52 text-white text-[18px] ">
           <span className="font-worksans font-semibold text-accent">Home</span>
           <span className="whitespace-nowrap font-worksans">About us</span>
           <span className="font-worksans">Services</span>
           <span className="font-worksans">Contact</span>
-          <div className="flex w-full justify-center relative xl:left-20 right-20">
+          <div className="flex w-full justify-center relative xl:left-20 right-20 items-center gap-4">
             <button className="text-primary font-worksans font-medium py-3 px-8 rounded-[50px] bg-accent">
               Appointment
             </button>
@@ -40,9 +40,8 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
               <span className="font-worksans font-normal">About us</span>
               <span className="font-worksans font-normal">Services</span>
               <span className="font-worksans font-normal">Contact</span>
-              <button className="text-accent font-worksans font-medium py-4 px-12 rounded-[50px] bg-primary border border-accent mt-8">
-                Appointment
-              </button>
+              <button className="text-accent font-worksans font-medium py-4 px-12 rounded-[50px] bg-primary border border-accent mt-8"></button>
+              Appointment
             </div>
           </div>
         )}
