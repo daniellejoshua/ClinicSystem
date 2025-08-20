@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import { useState } from "react";
 import HeroSection from "./components/HeroSection";
 import HeroSection2 from "./components/HeroSection2";
+import OurServices from "./components/OurServices";
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -13,6 +14,7 @@ export default function App() {
         <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
         <HeroSection />
         <HeroSection2 />
+        <OurServices />
       </div>
     </>
   );
