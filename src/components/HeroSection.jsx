@@ -5,7 +5,7 @@ import { IoCalendarSharp } from "react-icons/io5";
 export default function Hero() {
   return (
     <>
-      <section className="h-[calc(100vh-160px)] w-screen relative overflow-hidden">
+      <section className="h-[calc(100vh-160px)] w-screen relative overflow-visible">
         {/* Hero doctor background - responsive */}
         <div
           className="absolute inset-0 bg-cover bg-center md:bg-left bg-no-repeat opacity-90 md:opacity-100"
@@ -16,7 +16,7 @@ export default function Hero() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent md:hidden z-5"></div>
 
         {/* Decorative circles - improved positioning */}
-        <div className="absolute -left-32 -top-32 w-64 h-64 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem] bg-accent rounded-full opacity-20 md:opacity-25 z-5"></div>
+        <div className="absolute -left-36 -top-0 w-64 h-64 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem] bg-accent rounded-full opacity-20 md:opacity-25 z-5"></div>
 
         {/* Additional decorative element for mobile */}
         <div className="absolute -right-16 top-16 w-32 h-32 md:hidden bg-accent/30 rounded-full z-5"></div>
@@ -80,9 +80,9 @@ export default function Hero() {
         {/* Right circle for desktop */}
         <div className="absolute -right-32 -bottom-32 w-96 h-96 md:w-[28rem] md:h-[28rem] lg:w-[32rem] lg:h-[32rem] xl:w-[36rem] xl:h-[36rem] bg-accent rounded-full opacity-25 z-5"></div>
 
-        {/* Desktop Only - Book Appointment button at bottom */}
-        <div className="hidden md:block absolute bottom-[-20px] left-1/2 transform -translate-x-1/2 z-30 w-full max-w-sm px-4">
-          <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg rounded-md">
+        {/* Desktop Only - Book Appointment button between sections */}
+        <div className="hidden md:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-xl rounded-md">
             BOOK APPOINTMENT
             <IoCalendarSharp className="text-xl" />
           </button>
