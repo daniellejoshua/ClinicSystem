@@ -1,25 +1,31 @@
-import TopBar from "./components/TopBar";
-import Navbar from "./components/Navbar";
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar.jsx";
+import TopBar from "./components/TopBar.jsx";
+import Home from "./pages/Home.jsx";
+import AboutUs from "./pages/AboutUs.jsx";
+import Footer from "./components/Footer.jsx";
 import { useState } from "react";
-import HeroSection from "./components/HeroSection";
-import HeroSection2 from "./components/HeroSection2";
-import OurServices from "./components/OurServices";
-import Contact from "./components/Contact";
-import Footer from "./components/Footer";
-export default function App() {
+
+function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <>
-      <div className="overflow-hidden">
+    <Router>
+      <div className="App overflow-hidden">
         <TopBar isHidden={isMenuOpen} />
         <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
-        <HeroSection />
-        <HeroSection2 />
-        <OurServices />
-        <Contact />
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<AboutUs />} />
+          {/* Add more routes as needed */}
+        </Routes>
+
         <Footer />
       </div>
-    </>
+    </Router>
   );
 }
+
+export default App;
