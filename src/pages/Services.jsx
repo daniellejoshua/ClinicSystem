@@ -1,15 +1,19 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaHeartbeat,
-  FaDna,
-  FaTint,
   FaBaby,
   FaSyringe,
   FaUserMd,
   FaBandAid,
-  FaCalendarCheck,
   FaBrain,
+  FaStethoscope,
+  FaComments,
+  FaFemale,
+  FaUsers,
+  FaCalendarAlt,
   FaCertificate,
+  FaEllipsisH,
 } from "react-icons/fa";
 import ServiceBanner from "../assets/images/ServiceBanner.png";
 import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
@@ -18,78 +22,134 @@ import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
 const servicesData = [
   {
     id: 1,
-    icon: FaHeartbeat,
-    title: "Cardiology",
+    icon: FaStethoscope,
+    title: "Medical Checkup",
     description:
-      "Comprehensive heart care services including diagnostics, treatment, and preventive care for all cardiac conditions.",
+      "Comprehensive medical checkup to assess your overall health status and detect potential health issues early.",
     image: DoctorWithPatient,
-    featured: false, // Changed from true to false
-    link: "/services/cardiology",
-    buttonText: "Learn More", // Changed to "Learn More"
+    featured: false,
+    serviceId: "medical-checkup",
+    buttonText: "Learn More",
   },
   {
     id: 2,
-    icon: FaBaby,
-    title: "Pediatric Care",
+    icon: FaComments,
+    title: "Consultation",
     description:
-      "Specialized medical care for infants, children, and adolescents with experienced pediatric specialists.",
+      "Professional medical consultation services providing expert advice, diagnosis, and treatment recommendations.",
     image: DoctorWithPatient,
     featured: false,
-    link: "/services/pediatrics",
-    buttonText: "Learn More", // Changed to "Learn More"
+    serviceId: "consultation",
+    buttonText: "Learn More",
   },
   {
     id: 3,
-    icon: FaSyringe,
-    title: "Vaccination Services",
+    icon: FaFemale,
+    title: "Maternal and Child Health",
     description:
-      "Complete immunization programs for all ages including travel vaccines and routine immunizations.",
+      "Specialized healthcare services for pregnant women, new mothers, and children to ensure healthy development.",
     image: DoctorWithPatient,
     featured: false,
-    link: "/services/vaccination",
-    buttonText: "Learn More", // Changed to "Learn More"
+    serviceId: "maternal-child-health",
+    buttonText: "Learn More",
   },
   {
     id: 4,
-    icon: FaUserMd,
-    title: "General Medicine",
+    icon: FaUsers,
+    title: "Family Planning",
     description:
-      "Comprehensive primary healthcare services for routine check-ups, diagnosis, and treatment.",
+      "Comprehensive family planning services including contraceptive counseling and reproductive health education.",
     image: DoctorWithPatient,
     featured: false,
-    link: "/services/general-medicine",
+    serviceId: "family-planning",
     buttonText: "Learn More",
   },
   {
     id: 5,
-    icon: FaBrain,
-    title: "Mental Health",
-    description: "Mental Health Care for Patients",
+    icon: FaSyringe,
+    title: "Immunization",
+    description:
+      "Complete immunization programs for all ages including routine vaccines and travel immunizations.",
     image: DoctorWithPatient,
     featured: false,
-    link: "/services/neurology",
-    buttonText: "Learn More", // Changed to "Learn More"
+    serviceId: "immunization",
+    buttonText: "Learn More",
   },
   {
     id: 6,
-    icon: FaBandAid,
-    title: "Emergency Care",
+    icon: FaHeartbeat,
+    title: "Senior Citizen Care",
     description:
-      "24/7 emergency medical services with rapid response team and state-of-the-art emergency facilities.",
+      "Specialized healthcare services designed for senior citizens, focusing on age-related health concerns.",
     image: DoctorWithPatient,
     featured: false,
-    link: "/services/emergency",
-    buttonText: "Learn More", // Changed to "Learn More"
+    serviceId: "senior-citizen-care",
+    buttonText: "Learn More",
+  },
+  {
+    id: 7,
+    icon: FaBandAid,
+    title: "Wound Care",
+    description:
+      "Specialized wound care services for proper healing, infection prevention, and comprehensive wound management.",
+    image: DoctorWithPatient,
+    featured: false,
+    serviceId: "wound-care",
+    buttonText: "Learn More",
+  },
+  {
+    id: 8,
+    icon: FaCalendarAlt,
+    title: "Follow-Up Visit",
+    description:
+      "Follow-up consultation services to monitor treatment progress and ensure continuity of care.",
+    image: DoctorWithPatient,
+    featured: false,
+    serviceId: "follow-up-visit",
+    buttonText: "Learn More",
+  },
+  {
+    id: 9,
+    icon: FaBrain,
+    title: "Mental Health",
+    description:
+      "Mental health services providing professional support, counseling, and treatment for psychological health concerns.",
+    image: DoctorWithPatient,
+    featured: false,
+    serviceId: "mental-health",
+    buttonText: "Learn More",
+  },
+  {
+    id: 10,
+    icon: FaCertificate,
+    title: "Medical Certificate",
+    description:
+      "Issuance of medical certificates for employment, school, legal requirements, and other official purposes.",
+    image: DoctorWithPatient,
+    featured: false,
+    serviceId: "medical-certificate",
+    buttonText: "Learn More",
+  },
+  {
+    id: 11,
+    icon: FaEllipsisH,
+    title: "Other Services",
+    description:
+      "Various other healthcare services and medical procedures customized to meet specific patient needs.",
+    image: DoctorWithPatient,
+    featured: false,
+    serviceId: "other",
+    buttonText: "Learn More",
   },
 ];
 
 // Then use it in your component
 export default function Services() {
+  const navigate = useNavigate();
+
   // Handle click function for dynamic routing
-  const handleServiceClick = (link) => {
-    // You can use React Router here
-    // navigate(link);
-    console.log(`Navigating to: ${link}`);
+  const handleServiceClick = (serviceId) => {
+    navigate(`/services/${serviceId}`);
   };
 
   return (
@@ -111,7 +171,12 @@ export default function Services() {
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-primary mb-4">
-            <span className="font-worksans">Home</span>
+            <button
+              onClick={() => navigate("/")}
+              className="font-worksans hover:text-accent transition-colors"
+            >
+              Home
+            </button>
             <span>/</span>
             <span className="font-worksans">Services</span>
           </div>
@@ -132,12 +197,12 @@ export default function Services() {
 
       {/* Services Grid Section */}
       <section className="py-16">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8">
             {servicesData.map((service) => (
               <div
                 key={service.id}
-                className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white max-w-xs mx-auto"
+                className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white max-w-sm mx-auto"
               >
                 {/* Card Image */}
                 <div className="relative h-64 overflow-hidden">
@@ -174,8 +239,8 @@ export default function Services() {
                   </p>
                   <div className="flex items-center">
                     <button
-                      onClick={() => handleServiceClick(service.link)}
-                      className="text-secondary font-worksans font-medium  transition-colors flex items-center gap-1"
+                      onClick={() => handleServiceClick(service.serviceId)}
+                      className="text-secondary font-worksans font-medium transition-colors flex items-center gap-1"
                     >
                       {service.buttonText}
                       <span className="text-primary">→</span>

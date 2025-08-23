@@ -7,7 +7,7 @@ import {
 
 export default function Contact() {
   return (
-    <section className="w-screen py-16 bg-gray-50">
+    <section className="w-screen py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">

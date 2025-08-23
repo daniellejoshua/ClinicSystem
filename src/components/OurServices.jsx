@@ -1,3 +1,5 @@
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FaHeartbeat,
   FaDna,
@@ -15,6 +17,33 @@ import MedicalTeam2 from "../assets/images/MedicalTeam2.png";
 import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
 
 export default function OurServices() {
+  const navigate = useNavigate();
+
+  // Service mapping for navigation
+  const serviceRoutes = {
+    "Medical Checkup": "medical-checkup",
+    "Maternal & Child Health": "maternal-child-health",
+    Immunization: "immunization",
+    Consultation: "consultation",
+    "Family Planning": "family-planning",
+    "Senior Citizen Care": "senior-citizen-care",
+    "Wound Care": "wound-care",
+    "Follow-Up Visit": "follow-up-visit",
+    "Mental Health": "mental-health",
+    "Medical Certificates": "medical-certificate",
+  };
+
+  const handleServiceClick = (serviceName) => {
+    const route = serviceRoutes[serviceName];
+    if (route) {
+      navigate(`/services/${route}`);
+    }
+  };
+
+  const handleViewAllClick = () => {
+    navigate("/services");
+  };
+
   return (
     <section className="w-screen py-16 bg-white relative overflow-hidden">
       {/* Decorative circles - made more visible */}
@@ -87,7 +116,10 @@ export default function OurServices() {
 
             {/* View All Button - Centered */}
             <div className="flex justify-center">
-              <button className="w-1/2 bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 transition-colors">
+              <button
+                onClick={handleViewAllClick}
+                className="w-1/2 bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 hover:scale-105 transition-all duration-300"
+              >
                 View All
               </button>
             </div>
@@ -146,7 +178,10 @@ export default function OurServices() {
               </div>
             </div>
             {/* View All Button */}
-            <button className="w-full bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 transition-colors">
+            <button
+              onClick={handleViewAllClick}
+              className="w-full bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 hover:scale-105 transition-all duration-300"
+            >
               View All
             </button>
           </div>
@@ -264,61 +299,79 @@ export default function OurServices() {
         <div className="block lg:hidden">
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Medical Checkup */}
-            <div className="bg-primary text-white p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Medical Checkup")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaHeartbeat className="text-2xl text-accent" />
+                <FaHeartbeat className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold">
+              <h3 className="text-sm font-worksans font-semibold text-black group-hover:text-white transition-colors duration-300">
                 Medical Checkup
               </h3>
             </div>
 
             {/* Maternal & Child Health */}
-            <div className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Maternal & Child Health")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaBaby className="text-2xl text-accent" />
+                <FaBaby className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold text-primary">
+              <h3 className="text-sm font-worksans font-semibold text-primary group-hover:text-white transition-colors duration-300">
                 Maternal & Child Health
               </h3>
             </div>
 
             {/* Immunization */}
-            <div className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Immunization")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaSyringe className="text-2xl text-accent" />
+                <FaSyringe className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold text-primary">
+              <h3 className="text-sm font-worksans font-semibold text-primary group-hover:text-white transition-colors duration-300">
                 Immunization
               </h3>
             </div>
 
             {/* Consultation */}
-            <div className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Consultation")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaUserMd className="text-2xl text-accent" />
+                <FaUserMd className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold text-primary">
+              <h3 className="text-sm font-worksans font-semibold text-primary group-hover:text-white transition-colors duration-300">
                 Consultation
               </h3>
             </div>
 
             {/* Family Planning */}
-            <div className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Family Planning")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaHeartbeat className="text-2xl text-accent" />
+                <FaHeartbeat className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold text-primary">
+              <h3 className="text-sm font-worksans font-semibold text-primary group-hover:text-white transition-colors duration-300">
                 Family Planning
               </h3>
             </div>
 
             {/* Senior Citizen Care */}
-            <div className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg transition-shadow">
+            <div
+              onClick={() => handleServiceClick("Senior Citizen Care")}
+              className="bg-white border-2 border-gray-100 p-4 rounded-lg text-center hover:shadow-lg hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group"
+            >
               <div className="flex justify-center mb-3">
-                <FaUserMd className="text-2xl text-accent" />
+                <FaUserMd className="text-2xl text-accent group-hover:text-white hover:scale-110 transition-transform duration-300" />
               </div>
-              <h3 className="text-sm font-worksans font-semibold text-primary">
+              <h3 className="text-sm font-worksans font-semibold text-primary group-hover:text-white transition-colors duration-300">
                 Senior Citizen Care
               </h3>
             </div>
@@ -326,7 +379,10 @@ export default function OurServices() {
 
           {/* View All Button for Mobile Clinic Services - Centered */}
           <div className="flex justify-center">
-            <button className="w-1/2 bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 transition-colors">
+            <button
+              onClick={handleViewAllClick}
+              className="w-1/2 bg-primary text-white py-4 rounded-lg font-worksans font-semibold hover:bg-primary/90 hover:scale-105 transition-all duration-300"
+            >
               View All
             </button>
           </div>
@@ -335,104 +391,163 @@ export default function OurServices() {
         {/* Desktop Services Grid - 4 Column Layout */}
         <div className="hidden lg:grid lg:grid-cols-4 gap-6">
           {/* Medical Checkup - Featured */}
-          <div className="bg-primary text-white p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Medical Checkup")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaHeartbeat className="text-4xl text-accent" />
+              <FaHeartbeat className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold mb-2">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Medical Checkup
             </h3>
-            <p className="text-sm opacity-90">"For BP, general screening"</p>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "For BP, general screening"
+            </p>
           </div>
 
           {/* Maternal & Child Health */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Maternal & Child Health")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaBaby className="text-4xl text-accent" />
+              <FaBaby className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Maternal & Child Health
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Prenatal and postnatal care"
+            </p>
           </div>
 
           {/* Immunization */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Immunization")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaSyringe className="text-4xl text-accent" />
+              <FaSyringe className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Immunization
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Vaccines for all ages"
+            </p>
           </div>
 
           {/* Consultation */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Consultation")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaUserMd className="text-4xl text-accent" />
+              <FaUserMd className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Consultation
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Expert medical advice"
+            </p>
           </div>
 
           {/* Family Planning */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Family Planning")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaHeartbeat className="text-4xl text-accent" />
+              <FaHeartbeat className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Family Planning
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Reproductive health services"
+            </p>
           </div>
 
           {/* Senior Citizen Care */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Senior Citizen Care")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaUserMd className="text-4xl text-accent" />
+              <FaUserMd className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Senior Citizen Care
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Specialized elderly care"
+            </p>
           </div>
 
           {/* Wound Care */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Wound Care")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaBandAid className="text-4xl text-accent" />
+              <FaBandAid className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Wound Care
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Professional wound treatment"
+            </p>
           </div>
 
           {/* Follow-Up Visit */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Follow-Up Visit")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaCalendarCheck className="text-4xl text-accent" />
+              <FaCalendarCheck className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Follow-Up Visit
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Continued care monitoring"
+            </p>
           </div>
 
           {/* Mental Health */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Mental Health")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaBrain className="text-4xl text-accent" />
+              <FaBrain className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Mental Health
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Psychological support services"
+            </p>
           </div>
 
           {/* Medical Certificates */}
-          <div className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+          <div
+            onClick={() => handleServiceClick("Medical Certificates")}
+            className="bg-white border-2 border-gray-100 p-8 rounded-lg text-center hover:shadow-xl hover:scale-105 hover:border-primary/30 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer transform group h-48 flex flex-col justify-center"
+          >
             <div className="flex justify-center mb-4">
-              <FaCertificate className="text-4xl text-accent" />
+              <FaCertificate className="text-4xl text-accent hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-xl font-worksans font-semibold text-primary">
+            <h3 className="text-xl font-worksans font-semibold mb-2 text-primary group-hover:text-white transition-colors duration-300">
               Medical Certificates
             </h3>
+            <p className="text-sm opacity-0 group-hover:opacity-90 transition-opacity duration-300">
+              "Official medical documentation"
+            </p>
           </div>
         </div>
       </div>
