@@ -5,6 +5,7 @@ import TopBar from "./components/TopBar.jsx";
 import Home from "./pages/Home.jsx";
 import AboutUs from "./pages/AboutUs.jsx";
 import Footer from "./components/Footer.jsx";
+import Services from "./pages/Services.jsx";
 import { useState } from "react";
 
 function App() {
@@ -19,7 +20,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<AboutUs />} />
-          {/* Add more routes as needed */}
+          <Route path="/services" element={<Services />} />
         </Routes>
 
         <Footer />

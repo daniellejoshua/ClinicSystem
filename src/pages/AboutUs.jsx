@@ -1,22 +1,29 @@
 import React from "react";
 import MedicalTeam from "../assets/images/MedicalTeam.png";
+
 export default function AboutUs() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section
-        className="relative h-[400px] bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url(${MedicalTeam})`,
-        }}
-      >
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-black/40"></div>
+      <section className="relative h-[400px] overflow-hidden">
+        {/* Background Image Layer */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${MedicalTeam})`,
+          }}
+        ></div>
+
+        {/* Custom Rectangle Overlay - #BEBEBE */}
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: "#BEBEBE", opacity: 0.5 }}
+        ></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-white/90 mb-4">
+          <div className="flex items-center gap-2 text-primary mb-4">
             <span className="font-worksans">Home</span>
             <span>/</span>
             <span className="font-worksans">About</span>
