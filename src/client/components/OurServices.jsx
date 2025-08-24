@@ -13,8 +13,8 @@ import {
   FaBrain,
   FaCertificate,
 } from "react-icons/fa";
-import MedicalTeam2 from "../assets/images/MedicalTeam2.png";
-import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
+import MedicalTeam2 from "../../assets/images/MedicalTeam2.png";
+import DoctorWithPatient from "../../assets/images/DoctorWithPatient.png";
 
 export default function OurServices() {
   const navigate = useNavigate();

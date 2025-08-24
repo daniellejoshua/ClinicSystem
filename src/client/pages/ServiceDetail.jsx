@@ -17,7 +17,7 @@ import {
   FaCertificate,
   FaEllipsisH,
 } from "react-icons/fa";
-import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
+import DoctorWithPatient from "../../assets/images/DoctorWithPatient.png";
 
 // Service data with detailed information
 const servicesDetailData = {

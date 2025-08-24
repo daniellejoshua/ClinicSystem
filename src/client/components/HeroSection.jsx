@@ -1,5 +1,5 @@
-import HeroDoctor from "../assets/images/heroDoctorBlur.png";
-import DoctorTransparent from "../assets/images/DoctorTransparent.png";
+import HeroDoctor from "../../assets/images/heroDoctorBlur.png";
+import DoctorTransparent from "../../assets/images/DoctorTransparent.png";
 import { IoCalendarSharp } from "react-icons/io5";
 
 export default function Hero() {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaPhone, FaMapMarkerAlt, FaEnvelope, FaClock } from "react-icons/fa";
-import ServiceBanner from "../assets/images/ServiceBanner.png";
+import ServiceBanner from "../../assets/images/ServiceBanner.png";
 
 export default function Contact() {
   const navigate = useNavigate();

@@ -15,8 +15,8 @@ import {
   FaCertificate,
   FaEllipsisH,
 } from "react-icons/fa";
-import ServiceBanner from "../assets/images/ServiceBanner.png";
-import DoctorWithPatient from "../assets/images/DoctorWithPatient.png";
+import ServiceBanner from "../../assets/images/ServiceBanner.png";
+import DoctorWithPatient from "../../assets/images/DoctorWithPatient.png";
 
 // Define your services data separately for easy management
 const servicesData = [

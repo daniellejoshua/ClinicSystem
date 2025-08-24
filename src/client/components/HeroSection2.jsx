@@ -1,4 +1,4 @@
-import MedicalTeam from "../assets/images/MedicalTeam.png";
+import MedicalTeam from "../../assets/images/MedicalTeam.png";
 
 export default function HeroSection2() {
   return (
