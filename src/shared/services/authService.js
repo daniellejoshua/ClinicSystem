@@ -1,151 +1,23 @@
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updateProfile,
+} from "firebase/auth";
+import { ref, set, get, push } from "firebase/database";
 import { auth, database } from "../config/firebase";
-import { ref, get } from "firebase/database";
-import dataService from "./dataService";
+import customDataService from "./customDataService";
 
 class AuthService {
-  // Create Admin Account with proper database entry
-  async createAdmin(email, password, adminData) {
-    try {
-      // First create the Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      // Then add admin record to database with the user's UID
-      await set(ref(database, `admins/${user.uid}`), {
-        email: email,
-        role: "admin",
-        createdAt: new Date().toISOString(),
-        permissions: ["all"],
-        ...adminData,
-      });
-
-      console.log("✅ Admin account created with UID:", user.uid);
-      return user;
-    } catch (error) {
-      console.error("❌ Admin creation failed:", error);
-      throw new Error(error.message);
-    }
-  }
-
-  // Admin Login
-  async adminLogin(email, password) {
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      // Check if user is admin in database
-      const adminRef = ref(database, `admins/${user.uid}`);
-      const adminSnapshot = await get(adminRef);
-
-      if (!adminSnapshot.exists()) {
-        await signOut(auth);
-        throw new Error("Access denied. Admin privileges required.");
-      }
-
-      const adminData = adminSnapshot.val();
-
-      // Store admin token and data
-      localStorage.setItem("adminToken", await user.getIdToken());
-      localStorage.setItem(
-        "adminData",
-        JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          ...adminData,
-        })
-      );
-
-      return {
-        user,
-        adminData: adminData,
-      };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  // Client Registration (for patients)
-  async clientRegister(email, password, clientData) {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      // Add client as patient in database
-      await set(ref(database, `patients/${user.uid}`), {
-        full_name: clientData.name,
-        email: email,
-        phone_number: clientData.phone || "",
-        date_of_birth: clientData.dateOfBirth || "",
-        address: clientData.address || "",
-        created_at: new Date().toISOString(),
-        status: "active",
-      });
-
-      return user;
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  // Client Login
-  async clientLogin(email, password) {
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
-
-      // Get patient data
-      const patientRef = ref(database, `patients/${user.uid}`);
-      const patientSnapshot = await get(patientRef);
-
-      if (!patientSnapshot.exists()) {
-        throw new Error("Patient account not found.");
-      }
-
-      const patientData = patientSnapshot.val();
-
-      // Store client token and data
-      localStorage.setItem("clientToken", await user.getIdToken());
-      localStorage.setItem(
-        "clientData",
-        JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          ...patientData,
-        })
-      );
-
-      return {
-        user,
-        patientData: patientData,
-      };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  // Staff-based login (no Firebase Auth needed)
+  // Staff-based login (matching your database design)
   async staffLogin(email, password) {
     try {
       console.log("🔍 Attempting staff login for:", email);
 
-      // Get all staff members
-      const allStaff = await dataService.getAllData("staff");
+      // Get all staff members from your custom database
+      const allStaff = await customDataService.getAllData("staff");
 
       // Find staff member by email and password
       const staffMember = allStaff.find(
@@ -167,9 +39,10 @@ class AuthService {
 
       localStorage.setItem("staffData", JSON.stringify(staffData));
       localStorage.setItem("isStaffLoggedIn", "true");
+      localStorage.setItem("adminToken", "staff-" + staffMember.id); // For ProtectedRoute compatibility
 
       // Log the login activity
-      await dataService.addDataWithAutoId("audit_logs", {
+      await customDataService.addDataWithAutoId("audit_logs", {
         user_ref: `staff/${staffMember.id}`,
         action: `Staff login - ${staffMember.role}`,
         ip_address: this.getClientIP(),
@@ -184,14 +57,14 @@ class AuthService {
     }
   }
 
-  // Check if user is logged in staff
-  isStaffLoggedIn() {
+  // Check if staff is logged in
+  isAuthenticated() {
     return localStorage.getItem("isStaffLoggedIn") === "true";
   }
 
   // Get current staff data
   getCurrentStaff() {
-    if (this.isStaffLoggedIn()) {
+    if (this.isAuthenticated()) {
       const staffData = localStorage.getItem("staffData");
       return staffData ? JSON.parse(staffData) : null;
     }
@@ -205,13 +78,13 @@ class AuthService {
   }
 
   // Logout staff
-  async staffLogout() {
+  async logout() {
     try {
       const staffData = this.getCurrentStaff();
 
       if (staffData) {
         // Log the logout activity
-        await dataService.addDataWithAutoId("audit_logs", {
+        await customDataService.addDataWithAutoId("audit_logs", {
           user_ref: `staff/${staffData.id}`,
           action: `Staff logout - ${staffData.role}`,
           ip_address: this.getClientIP(),
@@ -221,6 +94,7 @@ class AuthService {
 
       localStorage.removeItem("staffData");
       localStorage.removeItem("isStaffLoggedIn");
+      localStorage.removeItem("adminToken");
 
       console.log("✅ Staff logout successful");
     } catch (error) {
@@ -228,34 +102,32 @@ class AuthService {
     }
   }
 
-  // Get client IP (mock for now)
-  getClientIP() {
-    return "192.168.1." + Math.floor(Math.random() * 255);
-  }
-
-  // Create initial admin staff member
-  async createAdminStaff() {
+  // Create admin staff member (for database setup)
+  async createAdmin(email, password, adminData) {
     try {
+      console.log("🔄 Creating admin staff member...");
+
       // Check if admin already exists
-      const allStaff = await dataService.getAllData("staff");
-      const adminExists = allStaff.find(
-        (staff) => staff.email === "admin@clinic.com"
-      );
+      const allStaff = await customDataService.getAllData("staff");
+      const adminExists = allStaff.find((staff) => staff.email === email);
 
       if (adminExists) {
         console.log("ℹ️ Admin staff already exists");
         return adminExists;
       }
 
-      // Create admin staff
-      const adminData = {
-        full_name: "Dr. Maria Santos",
-        email: "admin@clinic.com",
-        password: "AdminPass123!",
+      // Create admin staff member
+      const staffData = {
+        full_name: adminData.name || "Super Admin",
+        email: email,
+        password: password,
         role: "admin",
       };
 
-      const result = await dataService.addDataWithAutoId("staff", adminData);
+      const result = await customDataService.addDataWithAutoId(
+        "staff",
+        staffData
+      );
       console.log("✅ Admin staff created:", result);
       return result;
     } catch (error) {
@@ -264,17 +136,31 @@ class AuthService {
     }
   }
 
-  // Test connection (simplified)
+  // Test connection
   async testConnection() {
     try {
-      await dataService.setData("test/connection", {
-        message: "Connection test successful!",
+      await set(ref(database, "test/connection"), {
+        message: "Firebase connection test successful!",
         timestamp: new Date().toISOString(),
       });
       return true;
     } catch (error) {
       throw error;
     }
+  }
+
+  // Get client IP (mock for demo)
+  getClientIP() {
+    return "192.168.1." + Math.floor(Math.random() * 255);
+  }
+
+  // Legacy methods for compatibility
+  async adminLogin(email, password) {
+    return this.staffLogin(email, password);
+  }
+
+  getCurrentUser() {
+    return Promise.resolve(this.getCurrentStaff());
   }
 }
 

@@ -10,6 +10,7 @@ import { auth } from "../../shared/config/firebase";
 const ClientLayout = () => {
   const [queueData, setQueueData] = useState(null);
   const [user, setUser] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Listen for auth changes
@@ -37,7 +38,7 @@ const ClientLayout = () => {
   return (
     <div className="min-h-screen">
       <TopBar />
-      <Navbar />
+      <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <main>
         <Outlet />
       </main>

@@ -1,6 +1,7 @@
 import HeroDoctor from "../../assets/images/heroDoctorBlur.png";
 import DoctorTransparent from "../../assets/images/DoctorTransparent.png";
 import { IoCalendarSharp } from "react-icons/io5";
+import { Link } from "react-router-dom";
 
 export default function Hero() {
   return (
@@ -34,13 +35,13 @@ export default function Hero() {
             </>
             in Medical Excellence
           </p>
-
-          {/* Mobile/Tablet - Book Appointment Button */}
-          <button className="w-full md:hidden flex items-center justify-center gap-2 bg-primary text-white px-8 py-4 rounded-full font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg">
-            BOOK APPOINTMENT
-            <IoCalendarSharp className="text-xl" />
-          </button>
-
+          <Link to="/appointment">
+            {/* Mobile/Tablet - Book Appointment Button */}
+            <button className="w-full md:hidden flex items-center justify-center gap-2 bg-primary text-white px-8 py-4 rounded-full font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-lg">
+              BOOK APPOINTMENT
+              <IoCalendarSharp className="text-xl" />
+            </button>
+          </Link>
           {/* Desktop - Our Services Button */}
           <button className="hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
             Our Services
@@ -82,10 +83,12 @@ export default function Hero() {
 
         {/* Desktop Only - Book Appointment button between sections */}
         <div className="hidden md:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-sm px-4">
-          <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-xl rounded-md">
-            BOOK APPOINTMENT
-            <IoCalendarSharp className="text-xl text-accent hover:text-primary" />
-          </button>
+          <Link to="/appointment">
+            <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-xl rounded-md">
+              BOOK APPOINTMENT
+              <IoCalendarSharp className="text-xl text-accent hover:text-primary" />
+            </button>
+          </Link>
         </div>
       </section>
     </>

@@ -1,10 +1,12 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import authService from "../services/authService";
 
 const ProtectedRoute = ({ children }) => {
-  const adminToken = localStorage.getItem("adminToken");
+  // Check if any staff member is logged in (admin, doctor, nurse, receptionist)
+  const isAuthenticated = authService.isAuthenticated();
 
-  if (!adminToken) {
+  if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;
   }
 

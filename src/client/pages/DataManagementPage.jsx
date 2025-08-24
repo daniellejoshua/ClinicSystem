@@ -368,7 +368,14 @@ const DataManagementPage = () => {
 
     setIsLoading(true);
     try {
-      await dataService.clearAllData();
+      // Import Firebase functions at the top if not already imported
+      const { ref, remove } = await import("firebase/database");
+      const { database } = await import("../../shared/config/firebase");
+
+      // Clear the entire database by removing the root reference
+      const rootRef = ref(database);
+      await remove(rootRef);
+
       setViewData(null);
       addResult("🗑️ All data cleared successfully!", "success");
     } catch (error) {
