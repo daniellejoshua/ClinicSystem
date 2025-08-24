@@ -42,6 +42,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             >
               Services
             </Link>
+
             <Link
               to="/contact"
               className={`font-worksans font-medium hover:text-accent transition-colors ${
@@ -72,9 +73,12 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             </button>
 
             {/* Appointment Button */}
-            <button className="bg-accent text-primary px-6 py-2 rounded-full font-worksans font-semibold hover:bg-accent/90 transition-colors">
+            <Link
+              to="/appointment"
+              className="bg-accent text-primary px-6 py-2 rounded-full font-worksans font-semibold hover:bg-accent/90 transition-colors"
+            >
               Appointment
-            </button>
+            </Link>
           </div>
 
           {/* Mobile: Logo and Hamburger */}
@@ -121,6 +125,17 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
               Services
             </Link>
             <Link
+              to="/appointment"
+              className={`font-worksans font-bold bg-accent text-white px-6 py-3 rounded-lg ${
+                isActive("/appointment")
+                  ? "bg-primary text-accent"
+                  : "bg-accent text-white"
+              }`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Book Appointment
+            </Link>
+            <Link
               to="/contact"
               className={`font-worksans font-normal ${
                 isActive("/contact") ? "text-accent" : "text-primary"
@@ -129,9 +144,13 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             >
               Contact
             </Link>
-            <button className="text-accent font-worksans font-medium py-4 px-12 rounded-[50px] bg-primary border border-accent mt-8">
+            <Link
+              to="/appointment"
+              className="text-accent font-worksans font-medium py-4 px-12 rounded-[50px] bg-primary border border-accent mt-8"
+              onClick={() => setIsMenuOpen(false)}
+            >
               Appointment
-            </button>
+            </Link>
           </div>
         </div>
       )}

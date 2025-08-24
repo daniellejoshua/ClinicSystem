@@ -1,30 +1,56 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar.jsx";
-import TopBar from "./components/TopBar.jsx";
-import Home from "./pages/Home.jsx";
-import AboutUs from "./pages/AboutUs.jsx";
-import Footer from "./components/Footer.jsx";
-import Services from "./pages/Services.jsx";
-import { useState } from "react";
+
+// Client Pages
+import ClientLayout from "./client/layouts/ClientLayout.jsx";
+import Home from "./client/pages/Home.jsx";
+import AboutUs from "./client/pages/AboutUs.jsx";
+import Services from "./client/pages/Services.jsx";
+import Contact from "./client/pages/Contact.jsx";
+import ServiceDetail from "./client/pages/ServiceDetail.jsx";
+
+// Admin Pages
+import AdminLogin from "./admin/pages/AdminLogin.jsx";
+import AdminLayout from "./admin/layouts/AdminLayout.jsx";
+import AdminDashboard from "./admin/pages/AdminDashboard.jsx";
+import DataManagement from "./admin/pages/DataManagement.jsx";
+import PatientsManagement from "./admin/pages/PatientsManagement.jsx";
+import QueueManagement from "./admin/pages/QueueManagement.jsx";
+import AppointmentBooking from "./client/pages/AppointmentBooking.jsx";
+// Shared Components
+import ProtectedRoute from "./shared/components/ProtectedRoute.jsx";
 
 function App() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   return (
     <Router>
-      <div className="App overflow-hidden">
-        <TopBar isHidden={isMenuOpen} />
-        <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
+      <Routes>
+        {/* Client Routes with Layout */}
+        <Route path="/" element={<ClientLayout />}>
+          <Route index element={<Home />} />
+          <Route path="about" element={<AboutUs />} />
+          <Route path="services" element={<Services />} />
+          <Route path="services/:id" element={<ServiceDetail />} />
+          <Route path="contact" element={<Contact />} />
+          <Route path="appointment" element={<AppointmentBooking />} />
+        </Route>
 
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/services" element={<Services />} />
-        </Routes>
-
-        <Footer />
-      </div>
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="data-management" element={<DataManagement />} />
+          <Route path="patients" element={<PatientsManagement />} />
+          <Route path="queue" element={<QueueManagement />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
