@@ -301,6 +301,9 @@ export default function ServiceDetail() {
 
   const handleSidebarNavigation = (serviceLink) => {
     navigate(`/services/${serviceLink}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
   };
 
   // If service not found, redirect to services page

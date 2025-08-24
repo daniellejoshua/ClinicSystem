@@ -150,6 +150,9 @@ export default function Services() {
   // Handle click function for dynamic routing
   const handleServiceClick = (serviceId) => {
     navigate(`/services/${serviceId}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
   };
 
   return (

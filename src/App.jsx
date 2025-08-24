@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import TopBar from "./components/TopBar.jsx";
 import Home from "./pages/Home.jsx";
@@ -10,27 +10,45 @@ import ServiceDetail from "./pages/ServiceDetail.jsx";
 import Contact from "./pages/Contact.jsx";
 import { useState } from "react";
 
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <Layout />, // Your main layout component
+      children: [
+        {
+          path: "/",
+          element: <Home />,
+        },
+        {
+          path: "/services",
+          element: <Services />,
+        },
+        {
+          path: "/services/:serviceId",
+          element: <ServiceDetail />,
+        },
+        {
+          path: "/about",
+          element: <AboutUs />,
+        },
+        {
+          path: "/contact",
+          element: <Contact />,
+        },
+      ],
+    },
+  ],
+  {
+    future: {
+      v7_startTransition: true,
+      v7_normalizeFormMethod: true,
+    },
+  }
+);
+
 function App() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  return (
-    <Router>
-      <div className="App overflow-hidden">
-        <TopBar isHidden={isMenuOpen} />
-        <Navbar isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
-
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/services/:serviceId" element={<ServiceDetail />} />
-          <Route path="/contact" element={<Contact />} />
-        </Routes>
-
-        <Footer />
-      </div>
-    </Router>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

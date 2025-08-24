@@ -84,7 +84,7 @@ export default function Hero() {
         <div className="hidden md:block absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <button className="w-full flex items-center justify-center gap-2 bg-primary text-white px-8 py-6 font-semibold hover:bg-accent/90 transition-colors hover:text-primary font-worksans text-lg shadow-xl rounded-md">
             BOOK APPOINTMENT
-            <IoCalendarSharp className="text-xl" />
+            <IoCalendarSharp className="text-xl text-accent hover:text-primary" />
           </button>
         </div>
       </section>

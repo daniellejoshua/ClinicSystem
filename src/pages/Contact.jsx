@@ -101,74 +101,107 @@ export default function Contact() {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Contact Form */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-yeseva text-primary mb-2">
-                  GET IN TOUCH
-                </h2>
-                <h3 className="text-3xl font-yeseva text-primary mb-6">
-                  Contact
-                </h3>
+              <div className="bg-white rounded-lg shadow-xl p-6 relative overflow-hidden">
+                {/* Decorative Background Elements */}
+                <div className="absolute -top-4 -right-4 w-16 h-16 bg-accent/10 rounded-full"></div>
+                <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-primary/10 rounded-full"></div>
+
+                {/* Header Section */}
+                <div className="relative mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-accent rounded-full"></div>
+                    <p className="text-sm font-worksans font-medium text-secondary uppercase tracking-wider">
+                      GET IN TOUCH
+                    </p>
+                  </div>
+                  <h2 className="text-3xl font-yeseva text-primary mb-3">
+                    Contact Us
+                  </h2>
+
+                  {/* Decorative Line */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-1 bg-accent"></div>
+                    <div className="w-3 h-1 bg-primary"></div>
+                    <div className="w-2 h-1 bg-secondary"></div>
+                  </div>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Name and Email Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
+                      <label className="block text-xs font-worksans font-medium text-primary mb-1">
+                        Name
+                      </label>
                       <input
                         type="text"
                         name="name"
-                        placeholder="Name"
+                        placeholder="Your name"
                         value={formData.name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 bg-primary text-white placeholder-white/70 rounded-none border-none focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="w-full px-3 py-2 bg-gray-50 text-primary placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-accent transition-all duration-300"
                       />
                     </div>
                     <div>
+                      <label className="block text-xs font-worksans font-medium text-primary mb-1">
+                        Email
+                      </label>
                       <input
                         type="email"
                         name="email"
-                        placeholder="Email"
+                        placeholder="Your email"
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 bg-primary text-white placeholder-white/70 rounded-none border-none focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="w-full px-3 py-2 bg-gray-50 text-primary placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-accent transition-all duration-300"
                       />
                     </div>
                   </div>
 
                   {/* Subject */}
                   <div>
+                    <label className="block text-xs font-worksans font-medium text-primary mb-1">
+                      Subject
+                    </label>
                     <input
                       type="text"
                       name="subject"
-                      placeholder="Subject"
+                      placeholder="What's this about?"
                       value={formData.subject}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-primary text-white placeholder-white/70 rounded-none border-none focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="w-full px-3 py-2 bg-gray-50 text-primary placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-accent transition-all duration-300"
                     />
                   </div>
 
                   {/* Message */}
                   <div>
+                    <label className="block text-xs font-worksans font-medium text-primary mb-1">
+                      Message
+                    </label>
                     <textarea
                       name="message"
-                      placeholder="Message"
-                      rows="5"
+                      placeholder="Tell us how we can help..."
+                      rows="4"
                       value={formData.message}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-primary text-white placeholder-white/70 rounded-none border-none focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                      className="w-full px-3 py-2 bg-gray-50 text-primary placeholder-gray-400 border border-gray-200 rounded-lg focus:outline-none focus:border-accent transition-all duration-300 resize-none"
                     ></textarea>
                   </div>
 
                   {/* Submit Button */}
-                  <div>
+                  <div className="pt-2">
                     <button
                       type="submit"
-                      className="w-full bg-accent text-primary px-6 py-3 font-worksans font-semibold hover:bg-accent/90 transition-colors"
+                      className="w-full bg-primary text-white px-4 py-3 rounded-lg font-worksans font-semibold hover:bg-primary/90 hover:shadow-md transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
                     >
-                      SUBMIT
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        <span>SEND MESSAGE</span>
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full group-hover:scale-110 transition-transform"></div>
+                      </span>
+                      <div className="absolute inset-0 bg-accent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                     </button>
                   </div>
                 </form>

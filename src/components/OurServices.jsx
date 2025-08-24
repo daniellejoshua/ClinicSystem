@@ -37,11 +37,17 @@ export default function OurServices() {
     const route = serviceRoutes[serviceName];
     if (route) {
       navigate(`/services/${route}`);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 10);
     }
   };
 
   const handleViewAllClick = () => {
     navigate("/services");
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
   };
 
   return (
@@ -66,50 +72,62 @@ export default function OurServices() {
         {/* Mobile Version - Service Cards Only */}
         <div className="block lg:hidden mb-16">
           <div className="space-y-4">
-            {/* Free Checkup Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Medical Checkup Card */}
+            <div
+              onClick={() => handleServiceClick("Medical Checkup")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaHeartbeat className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaHeartbeat className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  Free Checkup
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Medical Checkup
                 </h3>
               </div>
             </div>
 
-            {/* Cardiogram Card */}
-            <div className="bg-primary rounded-lg p-6 text-white hover:shadow-lg transition-shadow">
+            {/* Maternal & Child Health Card */}
+            <div
+              onClick={() => handleServiceClick("Maternal & Child Health")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <FaHeartbeat className="text-2xl text-white" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaBaby className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold">
-                  Cardiogram
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Maternal & Child Health
                 </h3>
               </div>
             </div>
 
-            {/* DNA Testing Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Immunization Card */}
+            <div
+              onClick={() => handleServiceClick("Immunization")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaDna className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaSyringe className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  DNA Testing
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Immunization
                 </h3>
               </div>
             </div>
 
-            {/* Blood Bank Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Consultation Card */}
+            <div
+              onClick={() => handleServiceClick("Consultation")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaTint className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaUserMd className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  Blood Bank
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Consultation
                 </h3>
               </div>
             </div>
@@ -130,50 +148,62 @@ export default function OurServices() {
         <div className="hidden lg:grid lg:grid-cols-3 gap-8 mb-16">
           {/* Left Column - Service Cards */}
           <div className="space-y-4">
-            {/* Free Checkup Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Medical Checkup Card */}
+            <div
+              onClick={() => handleServiceClick("Medical Checkup")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaHeartbeat className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaHeartbeat className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  Free Checkup
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Medical Checkup
                 </h3>
               </div>
             </div>
 
-            {/* Cardiogram Card */}
-            <div className="bg-primary rounded-lg p-6 text-white hover:shadow-lg transition-shadow">
+            {/* Maternal & Child Health Card */}
+            <div
+              onClick={() => handleServiceClick("Maternal & Child Health")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                  <FaHeartbeat className="text-2xl text-white" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaBaby className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold">
-                  Cardiogram
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Maternal & Child Health
                 </h3>
               </div>
             </div>
 
-            {/* DNA Testing Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Immunization Card */}
+            <div
+              onClick={() => handleServiceClick("Immunization")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaDna className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaSyringe className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  DNA Testing
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Immunization
                 </h3>
               </div>
             </div>
 
-            {/* Blood Bank Card */}
-            <div className="bg-gray-50 rounded-lg p-6 border hover:shadow-lg transition-shadow">
+            {/* Consultation Card */}
+            <div
+              onClick={() => handleServiceClick("Consultation")}
+              className="bg-white/20 rounded-lg p-6 border hover:shadow-lg transition-all cursor-pointer hover:bg-primary group"
+            >
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
-                  <FaTint className="text-2xl text-secondary" />
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary transition-colors">
+                  <FaUserMd className="text-2xl text-secondary group-hover:text-accent transition-colors" />
                 </div>
-                <h3 className="text-lg font-worksans font-semibold text-primary">
-                  Blood Bank
+                <h3 className="text-lg font-worksans font-semibold text-primary group-hover:text-white transition-colors">
+                  Consultation
                 </h3>
               </div>
             </div>
