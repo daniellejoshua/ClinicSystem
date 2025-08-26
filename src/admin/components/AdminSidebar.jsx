@@ -9,6 +9,7 @@ import {
   FaSignOutAlt,
   FaUserMd,
   FaChartBar,
+  FaUserCheck,
 } from "react-icons/fa";
 
 const AdminSidebar = () => {
@@ -22,7 +23,13 @@ const AdminSidebar = () => {
   const menuItems = [
     { path: "/admin", icon: FaTachometerAlt, label: "Dashboard", exact: true },
     { path: "/admin/queue", icon: FaClipboardList, label: "Queue Management" },
+    { path: "/admin/check-in", icon: FaUserCheck, label: "Patient Check-in" },
     { path: "/admin/patients", icon: FaUsers, label: "Patients" },
+    {
+      path: "/admin/data-management",
+      icon: FaChartBar,
+      label: "Data Management",
+    },
     { path: "/admin/appointments", icon: FaCalendarAlt, label: "Appointments" },
     { path: "/admin/doctors", icon: FaUserMd, label: "Doctors" },
     { path: "/admin/reports", icon: FaChartBar, label: "Reports" },

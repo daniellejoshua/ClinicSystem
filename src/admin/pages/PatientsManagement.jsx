@@ -14,8 +14,10 @@ import {
   FaFlag,
   FaClock,
   FaStethoscope,
+  FaGlobe,
+  FaWalking,
 } from "react-icons/fa";
-import dataService from "../../shared/services/dataService";
+import customDataService from "../../shared/services/customDataService";
 
 const PatientsManagement = () => {
   const [patients, setPatients] = useState([]);
@@ -39,10 +41,10 @@ const PatientsManagement = () => {
       // Load all collections to resolve references
       const [patientsData, servicesData, staffData, appointmentsData] =
         await Promise.all([
-          dataService.getAllData("patients"),
-          dataService.getAllData("services"),
-          dataService.getAllData("staff"),
-          dataService.getAllData("appointments"),
+          customDataService.getAllData("patients"),
+          customDataService.getAllData("services"),
+          customDataService.getAllData("staff"),
+          customDataService.getAllData("appointments"),
         ]);
 
       setPatients(patientsData || []);
@@ -239,6 +241,9 @@ const PatientsManagement = () => {
                   Patient Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Queue
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -262,7 +267,7 @@ const PatientsManagement = () => {
               {filteredPatients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="8"
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     {searchTerm
@@ -298,6 +303,26 @@ const PatientsManagement = () => {
                               </span>
                             </div>
                           </div>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          {patient.appointment_type === "online" ? (
+                            <>
+                              <FaGlobe className="mr-2 h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-600">
+                                Online
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <FaWalking className="mr-2 h-4 w-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-600">
+                                Walk-in
+                              </span>
+                            </>
+                          )}
                         </div>
                       </td>
 

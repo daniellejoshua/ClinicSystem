@@ -11,6 +11,7 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import customDataService from "../../shared/services/customDataService";
+import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 const AppointmentBooking = () => {
   const [services, setServices] = useState([]);
@@ -257,92 +258,104 @@ const AppointmentBooking = () => {
       setIsLoading(true);
       setSubmitStatus(null);
 
-      // Get next queue number
-      const existingPatients = await customDataService.getAllData("patients");
-      const queueNumber = existingPatients.length + 1;
-
-      // Create patient record
-      const patientData = {
-        full_name: appointmentForm.patient_full_name,
-        email: appointmentForm.email_address,
-        phone_number: appointmentForm.contact_number,
-        date_of_birth: appointmentForm.patient_birthdate,
-        sex: appointmentForm.patient_sex,
-        queue_number: queueNumber,
-        service_ref: appointmentForm.service_ref,
-        status: "scheduled",
-        priority_flag: "normal",
-        medical_history: appointmentForm.medical_history,
-        current_medications: appointmentForm.current_medications,
-        allergies: appointmentForm.allergies,
-        appointment_type: "online", // Changed from booking_type to appointment_type
-      };
-
-      const patientResult = await customDataService.addDataWithAutoId(
-        "patients",
-        patientData
-      );
-
-      // Create appointment record
+      // Create online appointment using the new queue service
+      // This will NOT assign a queue number until check-in
       const appointmentData = {
-        patient_ref: `patients/${patientResult.id}`,
-        service_ref: appointmentForm.service_ref,
-        appointment_date: appointmentForm.preferred_date,
-        status: "scheduled",
-        notes: appointmentForm.additional_notes || "No additional notes",
-        appointment_type: "online", // Changed from booking_type to appointment_type
-        priority_flag: "normal",
-      };
-
-      await customDataService.addDataWithAutoId(
-        "appointments",
-        appointmentData
-      );
-
-      // Create fill-up form record (matching your DB structure)
-      const formData = {
-        patient_ref: `patients/${patientResult.id}`,
         patient_full_name: appointmentForm.patient_full_name,
         patient_birthdate: appointmentForm.patient_birthdate,
         patient_sex: appointmentForm.patient_sex,
-        appointment_date: new Date().toISOString(),
-        booked_by_name: appointmentForm.booked_by_name,
-        relationship_to_patient: appointmentForm.relationship_to_patient,
         contact_number: appointmentForm.contact_number,
         email_address: appointmentForm.email_address,
-        present_checkbox: appointmentForm.present_checkbox,
+        booked_by_name: appointmentForm.booked_by_name,
+        relationship_to_patient: appointmentForm.relationship_to_patient,
+        service_ref: appointmentForm.service_ref,
+        preferred_date: appointmentForm.preferred_date,
+        additional_notes:
+          appointmentForm.additional_notes || "No additional notes",
         medical_history: appointmentForm.medical_history,
         current_medications: appointmentForm.current_medications,
         allergies: appointmentForm.allergies,
+        present_checkbox: appointmentForm.present_checkbox,
         booking_source: "online",
+        appointment_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
       };
 
-      await customDataService.addDataWithAutoId("fill_up_forms", formData);
+      const result = await queueService.createOnlineAppointment(
+        appointmentData
+      );
 
-      setSubmitStatus("success");
+      if (result.success) {
+        setSubmitStatus("success");
 
-      // Reset form after successful submission
-      setTimeout(() => {
-        setAppointmentForm({
-          patient_full_name: "",
-          patient_birthdate: "",
-          patient_sex: "",
-          contact_number: "",
-          email_address: "",
-          booked_by_name: "",
-          relationship_to_patient: "Self",
-          service_ref: "",
-          preferred_date: "",
-          additional_notes: "",
-          medical_history: "",
-          current_medications: "",
-          allergies: "",
-          present_checkbox: false,
+        // Create patient record in patients collection for patient management
+        const patientData = {
+          full_name: appointmentForm.patient_full_name,
+          email: appointmentForm.email_address,
+          phone_number: appointmentForm.contact_number,
+          date_of_birth: appointmentForm.patient_birthdate,
+          address: "", // Not collected in online form, can be updated later
+          service_ref: appointmentForm.service_ref,
+          status: "pending", // Pending until checked in
+          priority_flag: "normal",
+          appointment_type: "online",
+          preferred_date: appointmentForm.preferred_date,
+          medical_history: appointmentForm.medical_history,
+          current_medications: appointmentForm.current_medications,
+          allergies: appointmentForm.allergies,
           booking_source: "online",
-        });
-        setSubmitStatus(null);
-      }, 3000);
+          appointment_id: result.appointmentId,
+          created_at: new Date().toISOString(),
+        };
+
+        // Add to patients collection
+        await customDataService.addDataWithAutoId("patients", patientData);
+
+        // Also create fill-up form record for admin reference
+        const formData = {
+          appointment_id: result.appointmentId,
+          patient_full_name: appointmentForm.patient_full_name,
+          patient_birthdate: appointmentForm.patient_birthdate,
+          patient_sex: appointmentForm.patient_sex,
+          appointment_date: new Date().toISOString(),
+          booked_by_name: appointmentForm.booked_by_name,
+          relationship_to_patient: appointmentForm.relationship_to_patient,
+          contact_number: appointmentForm.contact_number,
+          email_address: appointmentForm.email_address,
+          present_checkbox: appointmentForm.present_checkbox,
+          medical_history: appointmentForm.medical_history,
+          current_medications: appointmentForm.current_medications,
+          allergies: appointmentForm.allergies,
+          booking_source: "online",
+          created_at: new Date().toISOString(),
+        };
+
+        await customDataService.addDataWithAutoId("fill_up_forms", formData);
+
+        // Reset form after successful submission
+        setTimeout(() => {
+          setAppointmentForm({
+            patient_full_name: "",
+            patient_birthdate: "",
+            patient_sex: "",
+            contact_number: "",
+            email_address: "",
+            booked_by_name: "",
+            relationship_to_patient: "Self",
+            service_ref: "",
+            preferred_date: "",
+            additional_notes: "",
+            medical_history: "",
+            current_medications: "",
+            allergies: "",
+            present_checkbox: false,
+            booking_source: "online",
+          });
+          setSubmitStatus(null);
+        }, 3000);
+      } else {
+        throw new Error(result.error || "Failed to book appointment");
+      }
     } catch (error) {
       console.error("Error booking appointment:", error);
       setSubmitStatus("error");
@@ -446,11 +459,19 @@ const AppointmentBooking = () => {
               {/* Status Messages */}
               {submitStatus === "success" && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800">
+                  <div className="flex items-center gap-2 text-green-800 mb-2">
                     <FaCheckCircle className="text-green-600" />
                     <span className="font-bold font-worksans">
                       Appointment Booked Successfully!
                     </span>
+                  </div>
+                  <div className="text-sm text-green-700 space-y-1">
+                    <p>✅ Your online appointment has been confirmed</p>
+                    <p>🏥 Please check in at the clinic when you arrive</p>
+                    <p>
+                      ⭐ You'll receive a priority queue number upon check-in
+                    </p>
+                    <p>📧 A confirmation has been sent to your email</p>
                   </div>
                 </div>
               )}
