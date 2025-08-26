@@ -1,4 +1,6 @@
 import React from "react";
+import { signOut } from "firebase/auth";
+import { auth } from "../../shared/config/firebase";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaTachometerAlt,
@@ -15,9 +17,13 @@ import {
 const AdminSidebar = () => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    navigate("/admin/login");
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/admin/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   const menuItems = [
@@ -31,8 +37,7 @@ const AdminSidebar = () => {
       label: "Data Management",
     },
     { path: "/admin/appointment", icon: FaCalendarAlt, label: "Appointments" },
-    { path: "/admin/doctors", icon: FaUserMd, label: "Doctors" },
-    { path: "/admin/reports", icon: FaChartBar, label: "Reports" },
+
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
   ];
 

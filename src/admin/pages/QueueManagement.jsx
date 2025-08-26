@@ -51,8 +51,37 @@ const QueueManagement = () => {
     service_ref: "General Consultation",
   });
 
-  // Real-time queue monitoring
+  // Removed walk-in modal state for cleaner UI
   useEffect(() => {
+    // Helper to check if we need to reset queue
+    const checkAndResetQueue = () => {
+      const now = new Date();
+      const last =
+        lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
+      // 3:00AM today
+      const resetTime = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        3,
+        0,
+        0,
+        0
+      );
+      // If now is after 3:00AM and lastUpdated is before 3:00AM today, reset
+      if (now >= resetTime && last < resetTime) {
+        setQueueData([]);
+        setQueueStats({
+          total: 0,
+          waiting: 0,
+          inProgress: 0,
+          completed: 0,
+          online: 0,
+          walkin: 0,
+        });
+      }
+    };
+
     loadQueueData();
 
     // Subscribe to real-time updates
@@ -60,7 +89,11 @@ const QueueManagement = () => {
       setQueueData(queue);
       updateQueueStats(queue);
       setLastUpdated(new Date());
+      checkAndResetQueue();
     });
+
+    // Also check on mount
+    checkAndResetQueue();
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -194,13 +227,6 @@ const QueueManagement = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setShowWalkinForm(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <FaUserPlus className="w-4 h-4 mr-2" />
-                  Add Walk-in
-                </Button>
                 <Button
                   onClick={loadQueueData}
                   variant="outline"

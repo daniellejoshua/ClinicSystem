@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaUsers,
   FaCalendarAlt,
@@ -113,13 +113,15 @@ const AdminDashboard = () => {
     loadDashboardData();
     setCurrentStaff(authService.getCurrentStaff());
 
-    // Check for saved dark mode preference
-    const savedDarkMode = localStorage.getItem("darkMode") === "true";
-    setIsDarkMode(savedDarkMode);
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem("theme");
+    const isDark = savedTheme === "dark";
+    setIsDarkMode(isDark);
 
-    // Apply dark mode class to document
-    if (savedDarkMode) {
+    if (isDark) {
       document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
 
     // Real-time patients listener
@@ -156,7 +158,7 @@ const AdminDashboard = () => {
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
-    localStorage.setItem("darkMode", newDarkMode.toString());
+    localStorage.setItem("theme", newDarkMode ? "dark" : "light");
 
     if (newDarkMode) {
       document.documentElement.classList.add("dark");

@@ -14,7 +14,13 @@ import {
   FaMoon,
   FaSun,
 } from "react-icons/fa";
-import authService from "../../shared/services/authService";
+import { auth, database } from "../../shared/config/firebase";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { ref, get } from "firebase/database";
 import DoctorImage from "../../assets/images/DoctorWithPatient.png";
 
 const AdminLogin = () => {
@@ -27,6 +33,7 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const navigate = useNavigate();
 
   // Check for saved theme preference or default to light mode
@@ -66,22 +73,57 @@ const AdminLogin = () => {
     }));
   };
 
+  // Show welcome modal and redirect after login
+  const showWelcomeModal = (redirectPath) => {
+    setShowWelcome(true);
+    setTimeout(() => {
+      setShowWelcome(false);
+      navigate(redirectPath);
+    }, 2000);
+  };
+
+  // Manual login and Firebase Auth fallback
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-
     try {
-      const staffData = await authService.staffLogin(
+      const staffRef = ref(database, "staff");
+      const staffSnapshot = await get(staffRef);
+
+      if (!staffSnapshot.exists()) {
+        setError("Access denied: Not a staff member.");
+        setIsLoading(false);
+        return;
+      }
+
+      const staffData = staffSnapshot.val();
+
+      // Manual login validation
+      if (
+        staffData.email === formData.email &&
+        staffData.password === formData.password
+      ) {
+        showWelcomeModal(
+          staffData.role.toLowerCase() === "admin"
+            ? "/admin/dashboard"
+            : "/admin"
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Fallback to Firebase Authentication
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
         formData.email,
         formData.password
       );
+      const user = userCredential.user;
 
-      if (staffData.role === "admin") {
-        navigate("/admin/dashboard");
-      } else {
-        navigate("/admin");
-      }
+      showWelcomeModal(
+        staffData.role.toLowerCase() === "admin" ? "/admin/dashboard" : "/admin"
+      );
     } catch (error) {
       setError(error.message || "Login failed");
     } finally {
@@ -89,12 +131,37 @@ const AdminLogin = () => {
     }
   };
 
-  const handleDemoLogin = () => {
-    setFormData({
-      email: "admin@clinic.com",
-      password: "AdminPass123!",
-      rememberMe: false,
-    });
+  // Google login with welcome modal
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      const staffRef = ref(database, "staff");
+      const staffSnapshot = await get(staffRef);
+
+      if (!staffSnapshot.exists()) {
+        await auth.signOut();
+        setError("Access denied: Not a staff member.");
+        setIsLoading(false);
+        return;
+      }
+
+      const staffData = staffSnapshot.val();
+
+      showWelcomeModal(
+        staffData.role && staffData.role.toLowerCase() === "admin"
+          ? "/admin/dashboard"
+          : "/admin"
+      );
+    } catch (error) {
+      setError(error.message || "Google login failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBackToWebsite = () => {
@@ -102,7 +169,40 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="bg-background flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+    <div
+      className={cn(
+        "flex min-h-svh flex-col items-center justify-center p-6 md:p-10",
+        "bg-gradient-to-br",
+        isDarkMode
+          ? "from-gray-900 via-gray-800 to-blue-400"
+          : "from-primary/10 via-accent/5 to-secondary/10"
+      )}
+    >
+      {/* Welcome Modal */}
+      {showWelcome && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 animate-fade-in">
+            <h2 className="text-3xl font-bold text-center mb-2 text-primary">
+              Welcome!
+            </h2>
+            <p className="text-center text-muted-foreground">
+              You have successfully logged in.
+            </p>
+          </div>
+          <style>
+            {`
+              .animate-fade-in {
+                animation: fadeIn 0.6s;
+              }
+              @keyframes fadeIn {
+                from { opacity: 0; transform: scale(0.95);}
+                to { opacity: 1; transform: scale(1);}
+              }
+            `}
+          </style>
+        </div>
+      )}
+
       <div className="w-full max-w-sm md:max-w-6xl">
         <div className={cn("flex flex-col gap-6")}>
           {/* Dark Mode Toggle */}
@@ -214,16 +314,6 @@ const AdminLogin = () => {
                     </Label>
                   </div>
 
-                  {/* Demo Login Button */}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleDemoLogin}
-                    className="w-full"
-                  >
-                    Fill Demo Credentials
-                  </Button>
-
                   {/* Login Button */}
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign in"}
@@ -238,11 +328,22 @@ const AdminLogin = () => {
 
                   {/* Social Login Buttons */}
                   <div className="grid grid-cols-2 gap-4">
-                    <Button variant="outline" type="button" className="w-full">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="w-full"
+                      onClick={handleGoogleLogin}
+                      disabled={isLoading}
+                    >
                       <FaGoogle className="w-4 h-4 mr-2" />
                       Google
                     </Button>
-                    <Button variant="outline" type="button" className="w-full">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      className="w-full"
+                      disabled
+                    >
                       <FaFacebook className="w-4 h-4 mr-2" />
                       Facebook
                     </Button>
@@ -291,20 +392,6 @@ const AdminLogin = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Demo Credentials Info */}
-          <div className="text-muted-foreground text-center text-sm">
-            <div className="bg-card border rounded-lg p-4 shadow-sm">
-              <p className="font-medium mb-2 text-foreground">
-                Demo Credentials
-              </p>
-              <p className="text-xs">
-                Email: admin@clinic.com • Password: AdminPass123!
-              </p>
-            </div>
-          </div>
-
-          {/* Footer */}
         </div>
       </div>
     </div>
