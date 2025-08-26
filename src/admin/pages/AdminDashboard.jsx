@@ -7,9 +7,49 @@ import {
   FaPlus,
   FaSave,
   FaTimes,
+  FaGlobe,
+  FaWalking,
+  FaMoon,
+  FaSun,
 } from "react-icons/fa";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import customDataService from "../../shared/services/customDataService";
+import analyticsService from "../../shared/services/analyticsService";
 import authService from "../../shared/services/authService";
+
+// Dark mode chart colors configuration
+const chartColors = {
+  light: {
+    online: "#159EEC", // Your secondary color
+    walkin: "#9BDBFF", // Your accent color
+    background: "#ffffff",
+    grid: "#e5e7eb",
+    text: "#374151",
+  },
+  dark: {
+    online: "#3B82F6", // Blue-500 - Better contrast
+    walkin: "#10B981", // Emerald-500 - Distinct green for walk-ins
+    background: "#1f2937",
+    grid: "#374151",
+    text: "#f9fafb",
+  },
+};
 
 const AdminDashboard = () => {
   const [showPatientForm, setShowPatientForm] = useState(false);
@@ -18,6 +58,42 @@ const AdminDashboard = () => {
   const [staff, setStaff] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStaff, setCurrentStaff] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("3months");
+
+  // Real-time analytics state
+  const [analyticsData, setAnalyticsData] = useState({
+    analytics: {
+      "7days": [],
+      "30days": [],
+      "3months": [],
+      all: [],
+    },
+    totals: {
+      totalOnline: 0,
+      totalWalkin: 0,
+      totalAppointments: 0,
+      waitingPatients: 0,
+    },
+  });
+
+  // Get current theme colors
+  const currentColors = isDarkMode ? chartColors.dark : chartColors.light;
+
+  // Get current chart data from real analytics (fallback to empty array)
+  const chartData = analyticsData.analytics[selectedPeriod] || [];
+
+  // Update your chart configuration to use dynamic colors
+  const chartConfig = {
+    online: {
+      label: "Online",
+      color: currentColors.online,
+    },
+    walkin: {
+      label: "Walk-in",
+      color: currentColors.walkin,
+    },
+  };
 
   // Patient form state
   const [patientForm, setPatientForm] = useState({
@@ -28,12 +104,58 @@ const AdminDashboard = () => {
     address: "",
     service_ref: "",
     priority_flag: "normal",
+    appointment_type: "walkin", // New field for appointment type
   });
 
   useEffect(() => {
     loadDashboardData();
     setCurrentStaff(authService.getCurrentStaff());
+
+    // Check for saved dark mode preference
+    const savedDarkMode = localStorage.getItem("darkMode") === "true";
+    setIsDarkMode(savedDarkMode);
+
+    // Apply dark mode class to document
+    if (savedDarkMode) {
+      document.documentElement.classList.add("dark");
+    }
+
+    // Subscribe to real-time analytics
+    const unsubscribeAnalytics =
+      analyticsService.subscribeToAppointmentAnalytics((analytics) => {
+        setAnalyticsData(analytics);
+      });
+
+    // Cleanup function
+    return () => {
+      unsubscribeAnalytics();
+      analyticsService.cleanup();
+    };
   }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem("darkMode", newDarkMode.toString());
+
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
+  // Get period label for display
+  const getPeriodLabel = (period) => {
+    const labels = {
+      "7days": "Last 7 days",
+      "30days": "Last 30 days",
+      "3months": "Last 3 months",
+      all: "All time",
+    };
+    return labels[period] || "Last 3 months";
+  };
 
   const loadDashboardData = async () => {
     try {
@@ -76,7 +198,7 @@ const AdminDashboard = () => {
       if (currentStaff) {
         await customDataService.addDataWithAutoId("audit_logs", {
           user_ref: `staff/${currentStaff.id}`,
-          action: `Patient registered: ${patientForm.full_name}`,
+          action: `Patient registered: ${patientForm.full_name} (${patientForm.appointment_type})`,
           ip_address: "192.168.1.100",
           timestamp: new Date().toISOString(),
         });
@@ -91,6 +213,7 @@ const AdminDashboard = () => {
         address: "",
         service_ref: "",
         priority_flag: "normal",
+        appointment_type: "walkin",
       });
       setShowPatientForm(false);
 
@@ -114,281 +237,650 @@ const AdminDashboard = () => {
     }));
   };
 
+  // Calculate stats from real data and analytics totals
+  const totalPatients =
+    analyticsData.totals.totalAppointments || patients.length;
+  const onlineAppointments =
+    analyticsData.totals.totalOnline ||
+    patients.filter((p) => p.appointment_type === "online").length;
+  const walkinAppointments =
+    analyticsData.totals.totalWalkin ||
+    patients.filter(
+      (p) => p.appointment_type === "walkin" || !p.appointment_type
+    ).length;
+  const waitingPatients =
+    analyticsData.totals.waitingPatients ||
+    patients.filter((p) => p.status === "waiting").length;
+
   return (
-    <div className="p-6">
+    <div
+      className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 ${
+        isDarkMode ? "dark bg-gray-900" : "bg-gray-50"
+      }`}
+    >
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between space-y-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Clinic Dashboard</h1>
-          <p className="text-gray-600">
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
             Welcome back, {currentStaff?.full_name || "User"} (
             {currentStaff?.role || "N/A"})
           </p>
         </div>
-
-        <button
-          onClick={() => setShowPatientForm(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
-        >
-          <FaPlus /> Register New Patient
-        </button>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleDarkMode}
+            className="mr-2"
+          >
+            {isDarkMode ? (
+              <FaSun className="h-4 w-4" />
+            ) : (
+              <FaMoon className="h-4 w-4" />
+            )}
+          </Button>
+          <Button onClick={() => setShowPatientForm(true)}>
+            <FaPlus className="mr-2 h-4 w-4" />
+            Register New Patient
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center gap-4">
-            <FaUsers className="text-blue-500 text-2xl" />
-            <div>
-              <h3 className="text-2xl font-bold">{patients.length}</h3>
-              <p className="text-gray-600">Total Patients</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Patients
+            </CardTitle>
+            <FaUsers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPatients}</div>
+            <p className="text-xs text-muted-foreground">
+              +20.1% from last month
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center gap-4">
-            <FaUserMd className="text-green-500 text-2xl" />
-            <div>
-              <h3 className="text-2xl font-bold">{staff.length}</h3>
-              <p className="text-gray-600">Staff Members</p>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Online Appointments
+            </CardTitle>
+            <FaGlobe className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{onlineAppointments}</div>
+            <p className="text-xs text-muted-foreground">
+              +180.1% from last month
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center gap-4">
-            <FaClipboardList className="text-purple-500 text-2xl" />
-            <div>
-              <h3 className="text-2xl font-bold">{services.length}</h3>
-              <p className="text-gray-600">Services</p>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Walk-in Patients
+            </CardTitle>
+            <FaWalking className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{walkinAppointments}</div>
+            <p className="text-xs text-muted-foreground">
+              +19% from last month
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center gap-4">
-            <FaCalendarAlt className="text-orange-500 text-2xl" />
-            <div>
-              <h3 className="text-2xl font-bold">
-                {patients.filter((p) => p.status === "waiting").length}
-              </h3>
-              <p className="text-gray-600">In Queue</p>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Queue</CardTitle>
+            <FaCalendarAlt className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{waitingPatients}</div>
+            <p className="text-xs text-muted-foreground">
+              +201 since last hour
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recent Patients */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Recent Patients</h2>
+      {/* Chart Section */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Appointment Overview</CardTitle>
+                <CardDescription>
+                  Online vs Walk-in appointments -{" "}
+                  {getPeriodLabel(selectedPeriod)}
+                </CardDescription>
+              </div>
+              <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+                {[
+                  { key: "7days", label: "Last 7 days" },
+                  { key: "30days", label: "Last 30 days" },
+                  { key: "3months", label: "Last 3 months" },
+                  { key: "all", label: "All" },
+                ].map((period) => (
+                  <Button
+                    key={period.key}
+                    variant={
+                      selectedPeriod === period.key ? "default" : "ghost"
+                    }
+                    size="sm"
+                    onClick={() => setSelectedPeriod(period.key)}
+                    className={`text-xs px-3 py-1 h-8 ${
+                      selectedPeriod === period.key
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {period.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <ChartContainer config={chartConfig}>
+              <AreaChart
+                accessibilityLayer
+                data={chartData}
+                margin={{
+                  left: 12,
+                  right: 12,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={currentColors.grid}
+                  opacity={0.3}
+                />
+                <XAxis
+                  dataKey="period"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) =>
+                    selectedPeriod === "7days"
+                      ? value
+                      : selectedPeriod === "30days"
+                      ? value
+                      : selectedPeriod === "3months"
+                      ? value.slice(0, 3)
+                      : value
+                  }
+                  tick={{ fill: currentColors.text, fontSize: 12 }}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                  contentStyle={{
+                    backgroundColor: currentColors.background,
+                    border: `1px solid ${currentColors.grid}`,
+                    borderRadius: "8px",
+                    color: currentColors.text,
+                  }}
+                />
+                <defs>
+                  <linearGradient id="fillOnline" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor={currentColors.online}
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={currentColors.online}
+                      stopOpacity={0.1}
+                    />
+                  </linearGradient>
+                  <linearGradient id="fillWalkin" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor={currentColors.walkin}
+                      stopOpacity={0.8}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={currentColors.walkin}
+                      stopOpacity={0.1}
+                    />
+                  </linearGradient>
+                </defs>
+                <Area
+                  dataKey="walkin"
+                  type="natural"
+                  fill="url(#fillWalkin)"
+                  fillOpacity={0.4}
+                  stroke={currentColors.walkin}
+                  strokeWidth={2}
+                  stackId="a"
+                />
+                <Area
+                  dataKey="online"
+                  type="natural"
+                  fill="url(#fillOnline)"
+                  fillOpacity={0.4}
+                  stroke={currentColors.online}
+                  strokeWidth={2}
+                  stackId="a"
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
 
-        {patients.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            No patients registered yet. Click "Register New Patient" to add your
-            first patient.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Queue #</th>
-                  <th className="text-left py-2">Name</th>
-                  <th className="text-left py-2">Phone</th>
-                  <th className="text-left py-2">Service</th>
-                  <th className="text-left py-2">Status</th>
-                  <th className="text-left py-2">Priority</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patients
-                  .slice(-10)
-                  .reverse()
-                  .map((patient) => (
-                    <tr key={patient.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2">{patient.queue_number}</td>
-                      <td className="py-2">{patient.full_name}</td>
-                      <td className="py-2">{patient.phone_number}</td>
-                      <td className="py-2">
-                        {patient.service_ref?.split("/")[1] || "N/A"}
-                      </td>
-                      <td className="py-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            patient.status === "waiting"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : patient.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {patient.status}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            patient.priority_flag === "high"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {patient.priority_flag}
-                        </span>
-                      </td>
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Latest patient registrations and updates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-8">
+              {patients
+                .slice(-5)
+                .reverse()
+                .map((patient) => (
+                  <div key={patient.id} className="flex items-center">
+                    <div
+                      className={`w-2 h-2 rounded-full mr-4 ${
+                        patient.appointment_type === "online"
+                          ? "bg-primary"
+                          : "bg-secondary"
+                      }`}
+                    />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {patient.full_name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {patient.appointment_type === "online"
+                          ? "Online"
+                          : "Walk-in"}{" "}
+                        • Queue #{patient.queue_number}
+                      </p>
+                    </div>
+                    <div className="ml-auto font-medium">
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          patient.status === "waiting"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                            : patient.status === "in-progress"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                        }`}
+                      >
+                        {patient.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Patients Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Patients</CardTitle>
+          <CardDescription>
+            A list of recent patient registrations in your clinic.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {patients.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No patients registered yet. Click "Register New Patient" to add
+                your first patient.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left py-3 px-4 font-medium">
+                        Queue #
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium">Name</th>
+                      <th className="text-left py-3 px-4 font-medium">Phone</th>
+                      <th className="text-left py-3 px-4 font-medium">Type</th>
+                      <th className="text-left py-3 px-4 font-medium">
+                        Service
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium">
+                        Priority
+                      </th>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  </thead>
+                  <tbody>
+                    {patients
+                      .slice(-10)
+                      .reverse()
+                      .map((patient) => (
+                        <tr
+                          key={patient.id}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          <td className="py-3 px-4">{patient.queue_number}</td>
+                          <td className="py-3 px-4 font-medium">
+                            {patient.full_name}
+                          </td>
+                          <td className="py-3 px-4">{patient.phone_number}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center">
+                              {patient.appointment_type === "online" ? (
+                                <>
+                                  <FaGlobe className="mr-1 h-3 w-3" /> Online
+                                </>
+                              ) : (
+                                <>
+                                  <FaWalking className="mr-1 h-3 w-3" /> Walk-in
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            {patient.service_ref?.split("/")[1] || "N/A"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                patient.status === "waiting"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                                  : patient.status === "in-progress"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                                  : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                              }`}
+                            >
+                              {patient.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                patient.priority_flag === "high"
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
+                              }`}
+                            >
+                              {patient.priority_flag}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Patient Registration Modal */}
       {showPatientForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Register New Patient</h2>
-              <button
-                onClick={() => setShowPatientForm(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <FaTimes />
-              </button>
-            </div>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPatientForm(false);
+            }
+          }}
+        >
+          {/* Enhanced Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-            <form onSubmit={handlePatientSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={patientForm.full_name}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter patient's full name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={patientForm.email}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter email address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={patientForm.phone_number}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+63 9XX XXX XXXX"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Date of Birth *
-                </label>
-                <input
-                  type="date"
-                  name="date_of_birth"
-                  value={patientForm.date_of_birth}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Address *
-                </label>
-                <textarea
-                  name="address"
-                  value={patientForm.address}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter complete address"
-                  rows="2"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Service *
-                </label>
-                <select
-                  name="service_ref"
-                  value={patientForm.service_ref}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a service</option>
-                  {services.map((service) => (
-                    <option key={service.id} value={`services/${service.id}`}>
-                      {service.service_name} ({service.duration_minutes} mins)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Priority
-                </label>
-                <select
-                  name="priority_flag"
-                  value={patientForm.priority_flag}
-                  onChange={handleInputChange}
-                  className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="high">High Priority</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <FaSave />
-                  {isLoading ? "Registering..." : "Register Patient"}
-                </button>
-
-                <button
-                  type="button"
+          {/* Modal Content */}
+          <Card className="relative w-full max-w-lg mx-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-2xl border-2">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <FaWalking className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">
+                      Register Walk-in Patient
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Add a new walk-in patient to the queue
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowPatientForm(false)}
-                  className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600"
+                  className="h-8 w-8 p-0"
                 >
-                  Cancel
-                </button>
+                  <FaTimes className="h-4 w-4" />
+                </Button>
               </div>
-            </form>
-          </div>
+            </CardHeader>
+
+            <CardContent className="max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handlePatientSubmit} className="space-y-6">
+                {/* Personal Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 pb-2 border-b">
+                    <FaUsers className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Personal Information
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="full_name"
+                        className="text-sm font-medium"
+                      >
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="full_name"
+                        name="full_name"
+                        value={patientForm.full_name}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Enter patient's full name"
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium">
+                          Email Address *
+                        </Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={patientForm.email}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="patient@example.com"
+                          className="h-11"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="phone_number"
+                          className="text-sm font-medium"
+                        >
+                          Phone Number *
+                        </Label>
+                        <Input
+                          id="phone_number"
+                          name="phone_number"
+                          type="tel"
+                          value={patientForm.phone_number}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="+63 9XX XXX XXXX"
+                          className="h-11"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="date_of_birth"
+                        className="text-sm font-medium"
+                      >
+                        Date of Birth *
+                      </Label>
+                      <Input
+                        id="date_of_birth"
+                        name="date_of_birth"
+                        type="date"
+                        value={patientForm.date_of_birth}
+                        onChange={handleInputChange}
+                        required
+                        className="h-11"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address" className="text-sm font-medium">
+                        Complete Address *
+                      </Label>
+                      <textarea
+                        id="address"
+                        name="address"
+                        value={patientForm.address}
+                        onChange={handleInputChange}
+                        required
+                        className="flex min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                        placeholder="Enter complete address with barangay, city, province"
+                        rows="3"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Appointment Information Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 pb-2 border-b">
+                    <FaClipboardList className="h-4 w-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Appointment Information
+                    </h3>
+                  </div>
+
+                  {/* Walk-in Only Badge */}
+                  <div className="flex items-center space-x-2 p-3 bg-secondary/10 border border-secondary/20 rounded-lg">
+                    <FaWalking className="h-4 w-4 text-secondary" />
+                    <div>
+                      <p className="text-sm font-medium text-secondary">
+                        Walk-in Appointment
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Patient will be added to the walk-in queue
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="service_ref"
+                        className="text-sm font-medium"
+                      >
+                        Select Service *
+                      </Label>
+                      <select
+                        id="service_ref"
+                        name="service_ref"
+                        value={patientForm.service_ref}
+                        onChange={handleInputChange}
+                        required
+                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Choose a service...</option>
+                        {services.map((service) => (
+                          <option
+                            key={service.id}
+                            value={`services/${service.id}`}
+                          >
+                            {service.service_name} ({service.duration_minutes}{" "}
+                            mins)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="priority_flag"
+                        className="text-sm font-medium"
+                      >
+                        Priority Level
+                      </Label>
+                      <select
+                        id="priority_flag"
+                        name="priority_flag"
+                        value={patientForm.priority_flag}
+                        onChange={handleInputChange}
+                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="normal">Normal Priority</option>
+                        <option value="high">High Priority</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-6 border-t">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 h-11"
+                    size="lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                        Registering...
+                      </>
+                    ) : (
+                      <>
+                        <FaSave className="mr-2 h-4 w-4" />
+                        Register Patient
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowPatientForm(false)}
+                    className="px-6 h-11"
+                    size="lg"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

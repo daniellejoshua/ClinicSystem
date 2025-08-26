@@ -87,9 +87,6 @@ export default function Contact() {
               <p className="font-worksans text-xs lg:text-base">
                 Mon-Sat 09:00-20:00
               </p>
-              <p className="font-worksans text-xs lg:text-base">
-                Sunday Emergency only
-              </p>
             </div>
           </div>
         </div>
