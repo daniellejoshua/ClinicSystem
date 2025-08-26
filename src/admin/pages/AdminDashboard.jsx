@@ -57,6 +57,7 @@ const AdminDashboard = () => {
   const [services, setServices] = useState([]);
   const [patients, setPatients] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [appointments, setAppointments] = useState([]); // Add appointments state
   const [isLoading, setIsLoading] = useState(false);
   const [currentStaff, setCurrentStaff] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -121,61 +122,32 @@ const AdminDashboard = () => {
       document.documentElement.classList.add("dark");
     }
 
-    // Subscribe to real-time analytics
+    // Real-time patients listener
+    const unsubscribePatients = customDataService.subscribeToRealtimeData(
+      "patients",
+      (patientsData) => {
+        setPatients(patientsData || []);
+      }
+    );
+
+    // Real-time analytics listener
     const unsubscribeAnalytics =
       analyticsService.subscribeToAppointmentAnalytics((analytics) => {
         setAnalyticsData(analytics);
       });
 
-    // Subscribe to real-time queue updates
-    const unsubscribeQueue = queueService.onQueueUpdate((queue) => {
-      // Load online appointments when queue updates (non-async callback)
-      const loadAllPatients = async () => {
-        try {
-          const fillUpForms = await customDataService.getAllData(
-            "fill_up_forms"
-          );
+    // Real-time appointments listener
+    const unsubscribeAppointments = customDataService.subscribeToRealtimeData(
+      "appointments",
+      (appointmentsData) => {
+        setAppointments(appointmentsData || []);
+      }
+    );
 
-          const queuePatients = queue || [];
-
-          // Convert online forms to patient format (those not yet checked in)
-          const onlineAppointments = (fillUpForms || []).map((form) => ({
-            id: form.id,
-            full_name: form.patient_full_name,
-            phone_number: form.contact_number,
-            email: form.email_address,
-            service_ref: form.service_ref,
-            preferred_date: form.preferred_date,
-            status: "pending",
-            appointment_type: "online",
-            priority_flag: "normal",
-            queue_number: null,
-            booking_source: form.booking_source,
-            created_at: form.created_at,
-          }));
-
-          // Combine both lists
-          const allPatients = [...queuePatients, ...onlineAppointments];
-          setPatients(allPatients);
-
-          console.log("Real-time update:", {
-            queuePatients: queuePatients.length,
-            onlineAppointments: onlineAppointments.length,
-            total: allPatients.length,
-          });
-        } catch (error) {
-          console.error("Error updating patient data:", error);
-          setPatients(queue || []);
-        }
-      };
-
-      loadAllPatients();
-    });
-
-    // Cleanup function
     return () => {
+      unsubscribePatients(); // Clean up patients listener
       unsubscribeAnalytics();
-      unsubscribeQueue();
+      unsubscribeAppointments(); // Clean up appointments listener
       analyticsService.cleanup();
     };
   }, []);
@@ -207,45 +179,19 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [servicesData, todayQueue, staffData, fillUpForms] =
-        await Promise.all([
-          customDataService.getAllData("services"),
-          queueService.getTodayQueue(),
-          customDataService.getAllData("staff"),
-          customDataService.getAllData("fill_up_forms"),
-        ]);
+      const [servicesData, staffData, patientsData] = await Promise.all([
+        customDataService.getAllData("services"),
+        customDataService.getAllData("staff"),
+        customDataService.getAllData("patients"),
+      ]);
 
       setServices(servicesData);
       setStaff(staffData);
-
-      // Combine queue data and online appointment forms
-      const queuePatients = todayQueue || [];
-
-      // Convert online forms to patient format (those not yet checked in)
-      const onlineAppointments = (fillUpForms || []).map((form) => ({
-        id: form.id,
-        full_name: form.patient_full_name,
-        phone_number: form.contact_number,
-        email: form.email_address,
-        service_ref: form.service_ref,
-        preferred_date: form.preferred_date,
-        status: "pending", // Online appointments start as pending until checked in
-        appointment_type: "online",
-        priority_flag: "normal",
-        queue_number: null, // No queue number until checked in
-        booking_source: form.booking_source,
-        created_at: form.created_at,
-      }));
-
-      // Combine both lists
-      const allPatients = [...queuePatients, ...onlineAppointments];
-      setPatients(allPatients);
+      setPatients(patientsData || []);
 
       console.log("Dashboard data loaded:", {
         services: servicesData.length,
-        queuePatients: queuePatients.length,
-        onlineAppointments: onlineAppointments.length,
-        totalPatients: allPatients.length,
+        patients: patientsData.length,
         staff: staffData.length,
       });
     } catch (error) {
@@ -278,6 +224,27 @@ const AdminDashboard = () => {
             ip_address: "192.168.1.100",
             timestamp: new Date().toISOString(),
           });
+        }
+
+        // Create walk-in appointment in appointments collection
+        const appointmentData = {
+          patient_full_name: patientForm.full_name,
+          email_address: patientForm.email,
+          contact_number: patientForm.phone_number,
+          service_ref: patientForm.service_ref || "General Consultation",
+          appointment_type: "walk-in",
+          status: "checkedin",
+          checked_in: true,
+          created_at: new Date().toISOString(),
+          appointment_date: new Date().toISOString(),
+          queue_number: result.queueNumber,
+        };
+        try {
+          await import("../../shared/services/dataService").then((mod) =>
+            mod.default.addDataWithAutoId("appointments", appointmentData)
+          );
+        } catch (err) {
+          console.error("Error creating walk-in appointment:", err);
         }
 
         // Reset form and close modal
@@ -319,16 +286,16 @@ const AdminDashboard = () => {
   };
 
   // Calculate stats from real data and analytics totals
-  const totalPatients =
-    analyticsData.totals.totalAppointments || patients.length;
-  const onlineAppointments =
-    analyticsData.totals.totalOnline ||
-    patients.filter((p) => p.appointment_type === "online").length;
-  const walkinAppointments =
-    analyticsData.totals.totalWalkin ||
-    patients.filter(
-      (p) => p.appointment_type === "walkin" || !p.appointment_type
-    ).length;
+  // Count unique patients by email address
+  // Only count records from the 'patients' collection
+  // Patient card count matches PatientsManagement.jsx
+  const totalPatients = patients.length;
+  const onlineAppointments = appointments.filter(
+    (a) => a.appointment_type === "online"
+  ).length;
+  const walkinAppointments = appointments.filter(
+    (a) => a.appointment_type === "walk-in" || a.appointment_type === "walkin"
+  ).length;
   const waitingPatients =
     analyticsData.totals.waitingPatients ||
     patients.filter((p) => p.status === "waiting").length;

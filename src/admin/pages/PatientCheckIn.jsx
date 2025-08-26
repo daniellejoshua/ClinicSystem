@@ -29,6 +29,16 @@ const PatientCheckIn = () => {
   const [checkInResult, setCheckInResult] = useState(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
 
+  // Make check-in result last longer (5 seconds)
+  useEffect(() => {
+    if (checkInResult) {
+      const timer = setTimeout(() => {
+        setCheckInResult(null);
+      }, 5000); // 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [checkInResult]);
+
   // Load all online appointments on component mount
   useEffect(() => {
     loadAllOnlineAppointments();

@@ -1,5 +1,6 @@
 import { ref, set, get, push, remove, update } from "firebase/database";
 import { database } from "../config/firebase";
+import { getDatabase, ref as dbRef, onValue, off } from "firebase/database";
 
 class CustomDataService {
   async addDataWithAutoId(collection, data) {
@@ -135,6 +136,23 @@ class CustomDataService {
       console.error("❌ Error creating services:", error);
       throw error;
     }
+  }
+
+  subscribeToRealtimeData(collection, callback) {
+    const db = getDatabase();
+    const dbRef = ref(db, collection);
+
+    const listener = onValue(dbRef, (snapshot) => {
+      const data = snapshot.val();
+      // Convert object to array with id
+      const arr = data
+        ? Object.entries(data).map(([id, value]) => ({ id, ...value }))
+        : [];
+      callback(arr);
+    });
+
+    // Return unsubscribe function
+    return () => off(dbRef, "value", listener);
   }
 }
 

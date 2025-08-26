@@ -147,14 +147,9 @@ const PatientsManagement = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <FaUsers className="text-3xl text-primary" />
-          <div>
-            <h1 className="text-3xl font-yeseva text-primary">
-              Patients Management
-            </h1>
-            <p className="text-gray-600 font-worksans">
-              Manage patients with referenced services and appointments
-            </p>
-          </div>
+          <h1 className="text-3xl font-yeseva text-primary">
+            Patients Management
+          </h1>
         </div>
         <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
           <FaPlus />
@@ -177,7 +172,6 @@ const PatientsManagement = () => {
             <FaUsers className="text-3xl text-primary opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -189,7 +183,6 @@ const PatientsManagement = () => {
             <FaClock className="text-3xl text-blue-600 opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -203,7 +196,6 @@ const PatientsManagement = () => {
             <FaFlag className="text-3xl text-red-600 opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -231,20 +223,17 @@ const PatientsManagement = () => {
         </div>
       </div>
 
-      {/* Patients Table */}
+      {/* Patients Table - scrollable, sticky header, no queue column */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[60vh]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Patient Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Queue
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Service (Referenced)
@@ -267,7 +256,7 @@ const PatientsManagement = () => {
               {filteredPatients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="7"
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     {searchTerm
@@ -280,7 +269,6 @@ const PatientsManagement = () => {
                   const patientAppointments = getPatientAppointments(
                     patient.id
                   );
-
                   return (
                     <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
@@ -305,7 +293,6 @@ const PatientsManagement = () => {
                           </div>
                         </div>
                       </td>
-
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           {patient.appointment_type === "online" ? (
@@ -325,13 +312,6 @@ const PatientsManagement = () => {
                           )}
                         </div>
                       </td>
-
-                      <td className="px-6 py-4">
-                        <div className="text-2xl font-bold text-primary">
-                          #{patient.queue_number || "N/A"}
-                        </div>
-                      </td>
-
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           {getServiceName(patient.service_ref)}
@@ -340,7 +320,6 @@ const PatientsManagement = () => {
                           Ref: {patient.service_ref || "No reference"}
                         </div>
                       </td>
-
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
@@ -350,7 +329,6 @@ const PatientsManagement = () => {
                           {patient.status || "unknown"}
                         </span>
                       </td>
-
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
@@ -361,7 +339,6 @@ const PatientsManagement = () => {
                           {patient.priority_flag || "normal"}
                         </span>
                       </td>
-
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           {patientAppointments.length} appointment(s)
@@ -373,7 +350,6 @@ const PatientsManagement = () => {
                           </div>
                         )}
                       </td>
-
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <div className="flex items-center gap-2">
                           <button

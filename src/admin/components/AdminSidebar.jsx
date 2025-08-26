@@ -30,7 +30,7 @@ const AdminSidebar = () => {
       icon: FaChartBar,
       label: "Data Management",
     },
-    { path: "/admin/appointments", icon: FaCalendarAlt, label: "Appointments" },
+    { path: "/admin/appointment", icon: FaCalendarAlt, label: "Appointments" },
     { path: "/admin/doctors", icon: FaUserMd, label: "Doctors" },
     { path: "/admin/reports", icon: FaChartBar, label: "Reports" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
