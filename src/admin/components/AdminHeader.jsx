@@ -1,30 +1,42 @@
 import React, { useState } from "react";
-import { FaBell, FaUser, FaChevronDown, FaSearch } from "react-icons/fa";
+import {
+  FaBell,
+  FaUser,
+  FaChevronDown,
+  FaSearch,
+  FaBars,
+} from "react-icons/fa";
 
-const AdminHeader = () => {
+const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
   const [showProfile, setShowProfile] = useState(false);
   const [notifications] = useState(3); // Mock notification count
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
       <div className="flex items-center justify-between">
-        {/* Search Bar */}
-        <div className="flex-1 max-w-lg">
-          <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search patients, appointments..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-            />
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={onToggleSidebar}
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <FaBars className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Right Side - Notifications & Profile */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center space-x-4">
           {/* Notifications */}
           <div className="relative">
-            <button className="p-2 text-gray-600 hover:text-primary transition-colors relative">
+            <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors relative">
               <FaBell className="text-xl" />
               {notifications > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -38,33 +50,35 @@ const AdminHeader = () => {
           <div className="relative">
             <button
               onClick={() => setShowProfile(!showProfile)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <FaUser className="text-white text-sm" />
               </div>
-              <span className="font-worksans text-gray-700">Admin</span>
-              <FaChevronDown className="text-gray-400 text-sm" />
+              <span className="font-worksans text-gray-700 dark:text-gray-300">
+                Admin
+              </span>
+              <FaChevronDown className="text-gray-400 dark:text-gray-500 text-sm" />
             </button>
 
             {showProfile && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 z-10 transition-colors duration-200">
                 <a
                   href="#"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Profile Settings
                 </a>
                 <a
                   href="#"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Change Password
                 </a>
-                <hr className="my-2" />
+                <hr className="my-2 border-gray-200 dark:border-gray-600" />
                 <a
                   href="#"
-                  className="block px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                  className="block px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   Logout
                 </a>

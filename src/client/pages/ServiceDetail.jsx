@@ -277,14 +277,14 @@ const servicesDetailData = {
 };
 
 export default function ServiceDetail() {
-  const { serviceId } = useParams();
+  const { id } = useParams(); // Changed from serviceId to id
   const navigate = useNavigate();
 
-  const service = servicesDetailData[serviceId];
+  const service = servicesDetailData[id]; // Changed from serviceId to id
 
   // Get all available services except the current one
   const allServices = Object.entries(servicesDetailData).filter(
-    ([key]) => key !== serviceId
+    ([key]) => key !== id // Changed from serviceId to id
   );
 
   // Randomly shuffle and select 5 services for sidebar
@@ -515,11 +515,24 @@ export default function ServiceDetail() {
 
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mt-20">
-                <button className="bg-primary text-white px-8 py-3 rounded-full font-worksans font-semibold hover:bg-primary/90 transition-colors">
+                <button
+                  onClick={() => {
+                    navigate("/appointment");
+                    setTimeout(() => {
+                      window.scrollTo(0, 0);
+                    }, 100);
+                  }}
+                  className="bg-primary text-white px-8 py-3 rounded-full font-worksans font-semibold hover:bg-primary/90 transition-colors"
+                >
                   Book Appointment
                 </button>
                 <button
-                  onClick={() => navigate("/contact")}
+                  onClick={() => {
+                    navigate("/contact");
+                    setTimeout(() => {
+                      window.scrollTo(0, 0);
+                    }, 100);
+                  }}
                   className="bg-accent text-primary px-8 py-3 rounded-full font-worksans font-semibold hover:bg-accent/90 transition-colors"
                 >
                   Contact Us

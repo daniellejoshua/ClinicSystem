@@ -18,7 +18,7 @@ const AppointmentBooking = () => {
   const [submitStatus, setSubmitStatus] = useState(null);
   const [errors, setErrors] = useState({});
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   // Appointment form state aligned with fill_up_forms structure
   const [appointmentForm, setAppointmentForm] = useState({
@@ -38,8 +38,6 @@ const AppointmentBooking = () => {
     // Appointment Details
     service_ref: "",
     preferred_date: "",
-    preferred_time: "",
-    reason_for_visit: "",
     additional_notes: "",
 
     // Medical Information
@@ -60,6 +58,7 @@ const AppointmentBooking = () => {
     try {
       setIsLoading(true);
       const servicesData = await customDataService.getAllData("services");
+      console.log("Loaded services:", servicesData); // Debug log
       setServices(servicesData);
     } catch (error) {
       console.error("Error loading services:", error);
@@ -90,10 +89,6 @@ const AppointmentBooking = () => {
       newErrors.service_ref = "Please select a service";
     if (!appointmentForm.preferred_date)
       newErrors.preferred_date = "Date is required";
-    if (!appointmentForm.preferred_time)
-      newErrors.preferred_time = "Time is required";
-    if (!appointmentForm.reason_for_visit.trim())
-      newErrors.reason_for_visit = "Reason for visit is required";
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -178,8 +173,6 @@ const AppointmentBooking = () => {
           newErrors.service_ref = "Please select a service";
         if (!appointmentForm.preferred_date)
           newErrors.preferred_date = "Date is required";
-        if (!appointmentForm.preferred_time)
-          newErrors.preferred_time = "Time is required";
 
         // Date validation (not in the past)
         if (appointmentForm.preferred_date) {
@@ -191,11 +184,6 @@ const AppointmentBooking = () => {
             newErrors.preferred_date = "Please select a future date";
           }
         }
-        break;
-
-      case 5: // Reason for Visit
-        if (!appointmentForm.reason_for_visit.trim())
-          newErrors.reason_for_visit = "Reason for visit is required";
         break;
     }
 
@@ -287,7 +275,7 @@ const AppointmentBooking = () => {
         medical_history: appointmentForm.medical_history,
         current_medications: appointmentForm.current_medications,
         allergies: appointmentForm.allergies,
-        booking_type: "online",
+        appointment_type: "online", // Changed from booking_type to appointment_type
       };
 
       const patientResult = await customDataService.addDataWithAutoId(
@@ -300,10 +288,9 @@ const AppointmentBooking = () => {
         patient_ref: `patients/${patientResult.id}`,
         service_ref: appointmentForm.service_ref,
         appointment_date: appointmentForm.preferred_date,
-        appointment_time: appointmentForm.preferred_time,
         status: "scheduled",
-        notes: appointmentForm.reason_for_visit,
-        booking_type: "online",
+        notes: appointmentForm.additional_notes || "No additional notes",
+        appointment_type: "online", // Changed from booking_type to appointment_type
         priority_flag: "normal",
       };
 
@@ -318,7 +305,6 @@ const AppointmentBooking = () => {
         patient_full_name: appointmentForm.patient_full_name,
         patient_birthdate: appointmentForm.patient_birthdate,
         patient_sex: appointmentForm.patient_sex,
-        reason_for_visit: appointmentForm.reason_for_visit,
         appointment_date: new Date().toISOString(),
         booked_by_name: appointmentForm.booked_by_name,
         relationship_to_patient: appointmentForm.relationship_to_patient,
@@ -348,8 +334,6 @@ const AppointmentBooking = () => {
           relationship_to_patient: "Self",
           service_ref: "",
           preferred_date: "",
-          preferred_time: "",
-          reason_for_visit: "",
           additional_notes: "",
           medical_history: "",
           current_medications: "",
@@ -408,8 +392,8 @@ const AppointmentBooking = () => {
             <h2 className="text-xl font-bold text-primary mb-4 font-yeseva text-center">
               Appointment Form - Step {currentStep} of {totalSteps}
             </h2>
-            <div className="grid grid-cols-5 gap-4">
-              {[1, 2, 3, 4, 5].map((step) => (
+            <div className="grid grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((step) => (
                 <div
                   key={step}
                   onClick={() => goToStep(step)}
@@ -437,7 +421,6 @@ const AppointmentBooking = () => {
                     {step === 2 && "Contact Info"}
                     {step === 3 && "Booking Info"}
                     {step === 4 && "Appointment"}
-                    {step === 5 && "Reason"}
                   </p>
                 </div>
               ))}
@@ -738,102 +721,6 @@ const AppointmentBooking = () => {
                         {errors.preferred_date && (
                           <p className="text-red-500 text-sm mt-1 font-worksans">
                             {errors.preferred_date}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Time */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
-                          Preferred Time *
-                        </label>
-                        <select
-                          name="preferred_time"
-                          value={appointmentForm.preferred_time}
-                          onChange={handleInputChange}
-                          className={`w-full bg-primary text-white border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans ${
-                            errors.preferred_time ? "ring-2 ring-red-500" : ""
-                          }`}
-                        >
-                          <option value="">Select Time</option>
-                          <option value="8:00 AM">8:00 AM</option>
-                          <option value="9:00 AM">9:00 AM</option>
-                          <option value="10:00 AM">10:00 AM</option>
-                          <option value="11:00 AM">11:00 AM</option>
-                          <option value="1:00 PM">1:00 PM</option>
-                          <option value="2:00 PM">2:00 PM</option>
-                          <option value="3:00 PM">3:00 PM</option>
-                          <option value="4:00 PM">4:00 PM</option>
-                          <option value="5:00 PM">5:00 PM</option>
-                        </select>
-                        {errors.preferred_time && (
-                          <p className="text-red-500 text-sm mt-1 font-worksans">
-                            {errors.preferred_time}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 5: Reason for Visit */}
-                {currentStep === 5 && (
-                  <div className="p-6">
-                    <h3 className="text-lg font-semibold text-primary mb-6 font-yeseva">
-                      Reason for Visit
-                    </h3>
-                    <div className="grid grid-cols-1 gap-6">
-                      {/* Service/Reason Dropdown */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
-                          Reason for Visit *
-                        </label>
-                        <select
-                          name="reason_for_visit"
-                          value={appointmentForm.reason_for_visit}
-                          onChange={handleInputChange}
-                          className={`w-full bg-primary text-white border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans ${
-                            errors.reason_for_visit ? "ring-2 ring-red-500" : ""
-                          }`}
-                        >
-                          <option value="">Select reason for visit</option>
-                          <option value="General Consultation">
-                            General Consultation
-                          </option>
-                          <option value="Annual Medical Checkup">
-                            Annual Medical Checkup
-                          </option>
-                          <option value="Health Assessment">
-                            Health Assessment
-                          </option>
-                          <option value="Follow-up Visit">
-                            Follow-up Visit
-                          </option>
-                          <option value="Vaccination">Vaccination</option>
-                          <option value="Physical Examination">
-                            Physical Examination
-                          </option>
-                          <option value="Laboratory Results Review">
-                            Laboratory Results Review
-                          </option>
-                          <option value="Medication Review">
-                            Medication Review
-                          </option>
-                          <option value="Preventive Care">
-                            Preventive Care
-                          </option>
-                          <option value="Symptom Evaluation">
-                            Symptom Evaluation
-                          </option>
-                          <option value="Emergency Care">Emergency Care</option>
-                          <option value="Specialist Consultation">
-                            Specialist Consultation
-                          </option>
-                          <option value="Other">Other</option>
-                        </select>
-                        {errors.reason_for_visit && (
-                          <p className="text-red-500 text-sm mt-1 font-worksans">
-                            {errors.reason_for_visit}
                           </p>
                         )}
                       </div>

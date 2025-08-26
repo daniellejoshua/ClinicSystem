@@ -30,10 +30,14 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-primary shadow-lg">
+    <div className="w-64 bg-primary dark:bg-gray-800 shadow-lg transition-colors duration-300">
       <div className="p-6">
-        <h2 className="text-2xl font-yeseva text-white">Clinic Admin</h2>
-        <p className="text-accent/80 text-sm font-worksans">Management Panel</p>
+        <h2 className="text-2xl font-yeseva text-white dark:text-gray-100">
+          Clinic Admin
+        </h2>
+        <p className="text-accent/80 dark:text-gray-400 text-sm font-worksans">
+          Management Panel
+        </p>
       </div>
 
       <nav className="mt-8">
@@ -43,8 +47,10 @@ const AdminSidebar = () => {
             to={item.path}
             end={item.exact}
             className={({ isActive }) =>
-              `flex items-center px-6 py-3 text-white hover:bg-accent/20 transition-colors ${
-                isActive ? "bg-accent border-r-4 border-accent" : ""
+              `flex items-center px-6 py-3 text-white dark:text-gray-300 hover:bg-accent/20 dark:hover:bg-gray-700 transition-colors ${
+                isActive
+                  ? "bg-accent dark:bg-gray-700 border-r-4 border-accent dark:border-blue-400"
+                  : ""
               }`
             }
           >
@@ -55,7 +61,7 @@ const AdminSidebar = () => {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center px-6 py-3 text-white hover:bg-red-500/20 transition-colors mt-8"
+          className="w-full flex items-center px-6 py-3 text-white dark:text-gray-300 hover:bg-red-500/20 dark:hover:bg-red-500/20 transition-colors mt-8"
         >
           <FaSignOutAlt className="mr-3 text-lg" />
           <span className="font-worksans">Logout</span>
