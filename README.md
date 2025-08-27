@@ -57,6 +57,6 @@ Visit [http://localhost:5173](http://localhost:5173) to view the app.
 
 You can modify the Firebase rules, UI, and features to fit your clinic's workflow.
 
-## License
+LICENSE
 
-MIT
+Danielle JOshua C. Esternon
