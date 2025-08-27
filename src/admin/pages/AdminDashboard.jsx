@@ -15,6 +15,7 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaMoon,
+  FaSun,
 } from "react-icons/fa";
 import {
   Card,
@@ -41,8 +42,8 @@ import authService from "../../shared/services/authService";
 // Dark mode chart colors configuration
 const chartColors = {
   light: {
-    online: "#159EEC", // Your secondary color
-    walkin: "#9BDBFF", // Your accent color
+    online: "#159EEC", // secondary color
+    walkin: "#9BDBFF", // accent color
     background: "#ffffff",
     grid: "#e5e7eb",
     text: "#374151",
@@ -573,41 +574,55 @@ const AdminDashboard = () => {
                     let icon, badgeColor;
                     if (log.action.toLowerCase().includes("check-in")) {
                       icon = <FaCheckCircle className="text-green-500" />;
-                      badgeColor = "bg-green-100 text-green-800";
+                      badgeColor =
+                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100";
                     } else if (
                       log.action.toLowerCase().includes("add") ||
                       log.action.toLowerCase().includes("register")
                     ) {
                       icon = <FaUser className="text-blue-500" />;
-                      badgeColor = "bg-blue-100 text-blue-800";
+                      badgeColor =
+                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100";
                     } else if (log.action.toLowerCase().includes("update")) {
                       icon = <FaSave className="text-yellow-500" />;
-                      badgeColor = "bg-yellow-100 text-yellow-800";
+                      badgeColor =
+                        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100";
                     } else if (log.action.toLowerCase().includes("delete")) {
                       icon = <FaExclamationTriangle className="text-red-500" />;
-                      badgeColor = "bg-red-100 text-red-800";
+                      badgeColor =
+                        "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100";
                     } else {
                       icon = <FaClipboardList className="text-gray-400" />;
-                      badgeColor = "bg-gray-100 text-gray-800";
+                      badgeColor =
+                        "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100";
                     }
                     return (
                       <div
                         key={log.id}
-                        className="flex items-center gap-4 rounded-lg border bg-white dark:bg-gray-900 shadow-sm p-4 hover:shadow-md transition-all"
+                        className={`flex items-center gap-4 rounded-lg border bg-white dark:bg-neutral-900 shadow-lg p-4 hover:shadow-xl transition-all border-l-4 border-gray-200 dark:border-gray-700 ${
+                          log.action.toLowerCase().includes("check-in")
+                            ? "border-l-green-500"
+                            : log.action.toLowerCase().includes("add") ||
+                              log.action.toLowerCase().includes("register")
+                            ? "border-l-blue-500"
+                            : log.action.toLowerCase().includes("update")
+                            ? "border-l-yellow-500"
+                            : log.action.toLowerCase().includes("delete")
+                            ? "border-l-red-500"
+                            : "border-l-gray-400"
+                        }`}
                       >
                         <div className="flex-shrink-0">{icon}</div>
                         <div className="flex flex-col flex-1">
-                          <span
-                            className={`inline-block px-2 py-1 rounded font-semibold text-xs mb-1 ${badgeColor}`}
-                          >
+                          <span className="inline-block font-semibold text-xs mb-1">
                             {log.action}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-600 dark:text-gray-300">
                             {log.user_ref} •{" "}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
                         </div>
-                        <div className="ml-auto text-xs text-gray-400 text-right">
+                        <div className="ml-auto text-xs text-gray-400 dark:text-gray-200 text-right">
                           <span className="block">{log.ip_address}</span>
                         </div>
                       </div>
@@ -735,13 +750,13 @@ const AdminDashboard = () => {
                               <span
                                 className={`px-2 py-1 rounded text-xs font-medium ${
                                   status === "waiting"
-                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
+                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-neutral-100"
                                     : status === "in-progress"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-neutral-100"
                                     : status === "pending"
-                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
+                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-neutral-100"
                                     : status === "completed"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-neutral-100"
                                     : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
                                 }`}
                               >
@@ -755,7 +770,7 @@ const AdminDashboard = () => {
                                 className={`px-2 py-1 rounded text-xs font-medium ${
                                   patient.priority_flag === "high"
                                     ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
+                                    : "bg-gray-100 text-gray-800 dark:bg-neutral-900 dark:text-neutral-100"
                                 }`}
                               >
                                 {patient.priority_flag}
