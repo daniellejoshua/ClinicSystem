@@ -53,9 +53,6 @@ Visit [http://localhost:5173](http://localhost:5173) to view the app.
 - `src/admin` — Admin dashboard and management tools
 - `src/shared` — Shared services, Firebase config, and utilities
 
-## Customization
-
-You can modify the Firebase rules, UI, and features to fit your clinic's workflow.
 
 LICENSE
 
