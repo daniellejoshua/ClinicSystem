@@ -7,6 +7,12 @@ class AnalyticsService {
     this.listeners = new Map();
   }
 
+  // This function subscribes to real-time updates for appointments and today's queue
+  // Step by step:
+  // 1. Set up listeners for changes in the appointments and queue data in Firebase
+  // 2. When data changes, call calculateAppointmentAnalytics to process the latest stats
+  // 3. Pass the analytics results to the callback so the dashboard can update
+  // 4. Returns a cleanup function to remove listeners when no longer needed
   // Get real-time appointment analytics
   subscribeToAppointmentAnalytics(callback) {
     const appointmentsRef = ref(database, "appointments");
@@ -49,6 +55,18 @@ class AnalyticsService {
     };
   }
 
+  // This function calculates analytics for appointments
+  // Step by step:
+  // 1. Get all appointments and patients from the database
+  // 2. Get today's queue data to count waiting patients
+  // 3. Organize queue data into an array for easy processing
+  // 4. Separate online and walk-in appointments
+  // 5. Find walk-in patients from both appointments and patients collections
+  // 6. Also count queue data for today's statistics
+  // 7. Combine all walk-ins for chart analytics
+  // 8. Generate time-based analytics using merged data
+  // 9. Calculate current totals including both appointments, patients, and current queue
+  // 10. Return the analytics and totals for use in the dashboard
   // Calculate appointment analytics from database
   async calculateAppointmentAnalytics() {
     try {

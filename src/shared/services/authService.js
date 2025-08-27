@@ -1,3 +1,8 @@
+// This service handles authentication for staff and patients
+// It provides functions to log in, log out, create admin accounts, and check user status
+// The logic connects to Firebase Auth and the database to verify users
+// Used by admin and client pages to manage secure access
+
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -102,7 +107,10 @@ class AuthService {
     }
   }
 
-  // Create admin staff member (for database setup)
+  // This function creates a new admin account in Firebase Auth and the database
+  // Used by the clinic owner to set up the first admin user
+  // Returns a promise that resolves when the account is created
+  // Rejects with an error message if the account could not be created
   async createAdmin(email, password, adminData) {
     try {
       console.log("🔄 Creating admin staff member...");

@@ -1,3 +1,5 @@
+// This is the main dashboard for clinic staff and admins
+// It shows stats, charts, and lets staff manage patients, queue, and appointments
 import React, { useEffect, useState } from "react";
 import {
   FaCalendarAlt,
@@ -39,18 +41,18 @@ import analyticsService from "../../shared/services/analyticsService";
 import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
 
-// Dark mode chart colors configuration
+// Chart colors for light and dark mode
 const chartColors = {
   light: {
-    online: "#159EEC", // secondary color
-    walkin: "#9BDBFF", // accent color
+    online: "#159EEC",
+    walkin: "#9BDBFF",
     background: "#ffffff",
     grid: "#e5e7eb",
     text: "#374151",
   },
   dark: {
-    online: "#3B82F6", // Blue-500 - Better contrast
-    walkin: "#10B981", // Emerald-500 - Distinct green for walk-ins
+    online: "#3B82F6",
+    walkin: "#10B981",
     background: "#1f2937",
     grid: "#374151",
     text: "#f9fafb",
@@ -58,19 +60,22 @@ const chartColors = {
 };
 
 const AdminDashboard = () => {
+  // UI state for showing/hiding forms and dark mode
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [services, setServices] = useState([]);
-  const [patients, setPatients] = useState([]);
-  const [queue, setQueue] = useState([]);
-  const [staff, setStaff] = useState([]);
-  const [appointments, setAppointments] = useState([]); // Add appointments state
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentStaff, setCurrentStaff] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("3months");
 
-  // Real-time analytics state
+  // Data state for dashboard info
+  const [services, setServices] = useState([]); // List of clinic services
+  const [patients, setPatients] = useState([]); // All patients
+  const [queue, setQueue] = useState([]); // Queue for today
+  const [staff, setStaff] = useState([]); // Staff members
+  const [appointments, setAppointments] = useState([]); // Appointments
+  const [auditLogs, setAuditLogs] = useState([]); // System logs
+  const [isLoading, setIsLoading] = useState(false); // Loading spinner
+  const [currentStaff, setCurrentStaff] = useState(null); // Logged-in staff
+
+  // Analytics for charts and stats
   const [analyticsData, setAnalyticsData] = useState({
     analytics: {
       "7days": [],

@@ -1,3 +1,9 @@
+// This page lets staff manage the patient queue for today
+// Staff can see who's waiting, in progress, completed, online, or walk-in
+// The queue resets every day at 3:00AM so staff always start fresh
+// Staff can select patients, update their status, and add walk-ins
+// The UI updates in real time as patients move through the queue
+
 import React, { useState, useEffect } from "react";
 import {
   FaClock,

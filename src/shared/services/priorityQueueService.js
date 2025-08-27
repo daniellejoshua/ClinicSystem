@@ -1,3 +1,13 @@
+// This service manages the priority queue for patients
+// It helps decide who gets seen first based on rules and patient info
+//
+// How the logic works:
+// - Functions here add, update, and remove patients from the queue
+// - The queue is sorted by priority (e.g., emergency, appointment time, walk-in)
+// - When a patient is added, the service checks their info and assigns a queue number
+// - Staff can update patient status, move them in the queue, or mark as completed
+// - The code connects to the database to keep everything in sync and real-time
+
 import {
   ref,
   set,
@@ -17,7 +27,9 @@ class QueueService {
     this.listeners = new Map();
   }
 
-  // Get next queue number (for both online and walk-in)
+  // Get the next queue number for today
+  // Finds the highest queue number and adds 1
+  // Used when adding a new patient to the queue
   async getNextQueueNumber(date = null) {
     try {
       const targetDate = date || new Date().toISOString().split("T")[0];
@@ -46,7 +58,9 @@ class QueueService {
     }
   }
 
-  // Create online appointment (NO queue number yet)
+  // Create a new online appointment
+  // Adds the appointment to the database, but doesn't assign a queue number yet
+  // Patient gets a queue number when they check in at the clinic
   async createOnlineAppointment(appointmentData) {
     try {
       const appointmentEntry = {

@@ -1,3 +1,5 @@
+// This page lets staff check in patients for their appointments
+// Staff can search for appointments, see results, and check patients in
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -23,16 +25,17 @@ import {
 } from "lucide-react";
 
 const PatientCheckIn = () => {
+  // State for search box, found appointments, all appointments, and loading
   const [searchTerm, setSearchTerm] = useState("");
   const [foundAppointments, setFoundAppointments] = useState([]);
-  const [allAppointments, setAllAppointments] = useState([]); // Store all appointments
+  const [allAppointments, setAllAppointments] = useState([]); // All appointments loaded from database
   const [isSearching, setIsSearching] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Loading state for initial load
-  const [checkInResult, setCheckInResult] = useState(null);
-  const [isCheckingIn, setIsCheckingIn] = useState(false);
-  const [currentStaff, setCurrentStaff] = useState(null); // Assuming you have a way to get the current staff
+  const [isLoading, setIsLoading] = useState(true); // Show spinner while loading
+  const [checkInResult, setCheckInResult] = useState(null); // Result of check-in action
+  const [isCheckingIn, setIsCheckingIn] = useState(false); // Spinner for check-in
+  const [currentStaff, setCurrentStaff] = useState(null); // Current staff member
 
-  // Make check-in result last longer (5 seconds)
+  // When a check-in happens, show the result for 5 seconds
   useEffect(() => {
     if (checkInResult) {
       const timer = setTimeout(() => {
@@ -42,30 +45,32 @@ const PatientCheckIn = () => {
     }
   }, [checkInResult]);
 
-  // Load all online appointments on component mount
+  // When the page loads, get all online appointments from the database
   useEffect(() => {
     loadAllOnlineAppointments();
   }, []);
 
-  // Auto-search effect with debouncing
+  // When staff types in the search box, filter appointments after a short delay
+  // If the box is empty, show all appointments
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchTerm.trim()) {
         filterAppointments();
       } else {
-        // Show all appointments when search term is empty
         setFoundAppointments(allAppointments);
         setCheckInResult(null);
       }
-    }, 300); // Reduced to 300ms for faster response
+    }, 300); // 300ms debounce for fast response
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, allAppointments]); // Trigger when searchTerm or allAppointments changes
+  }, [searchTerm, allAppointments]);
 
+  // Get the current staff member when the page loads
   useEffect(() => {
     setCurrentStaff(authService.getCurrentStaff());
   }, []);
 
+  // Load all online appointments from the database
   const loadAllOnlineAppointments = async () => {
     setIsLoading(true);
     try {
