@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import dataService from "../../shared/services/dataService";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, database } from "../../shared/config/firebase";
+import { ref, push } from "firebase/database";
 
 const AddStaff = () => {
   const [form, setForm] = useState({
@@ -19,6 +22,30 @@ const AddStaff = () => {
     setError("");
   };
 
+  const registerStaff = async (staffData) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        staffData.email,
+        staffData.password
+      );
+      const user = userCredential.user;
+
+      const staffRef = ref(database, "staff");
+      await push(staffRef, {
+        email: staffData.email,
+        full_name: staffData.full_name,
+        role: staffData.role,
+        created_at: new Date().toISOString(),
+        uid: user.uid,
+      });
+
+      alert("Staff registered successfully!");
+    } catch (error) {
+      alert("Error registering staff: " + error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -32,6 +59,7 @@ const AddStaff = () => {
       const { confirmPassword, ...staffData } = form;
       const result = await dataService.addDataWithAutoId("staff", staffData);
       setMessage(`✅ Staff added! ID: ${result.id}`);
+      registerStaff(staffData);
       setForm({
         full_name: "",
         email: "",
