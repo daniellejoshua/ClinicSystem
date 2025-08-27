@@ -98,7 +98,15 @@ const AdminLogin = () => {
     setIsLoading(true);
     setError("");
     try {
-      // Try manual login for staff (support multiple staff records)
+      // Always use Firebase Auth for login
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      const user = userCredential.user;
+
+      // Check staff database for matching email
       const staffRef = ref(database, "staff");
       const staffSnapshot = await get(staffRef);
       let staffList = [];
@@ -106,60 +114,25 @@ const AdminLogin = () => {
       if (staffSnapshot.exists()) {
         const staffData = staffSnapshot.val();
         staffList = Object.values(staffData);
-        matchedStaff = staffList.find((staff) => {
-          // Trim whitespace and ignore case for email, trim for password
-          const staffEmail = staff.email
-            ? staff.email.trim().toLowerCase()
-            : "";
-          const staffPassword = staff.password ? staff.password.trim() : "";
-          const inputEmail = formData.email.trim().toLowerCase();
-          const inputPassword = formData.password.trim();
-          return staffEmail === inputEmail && staffPassword === inputPassword;
-        });
-        if (matchedStaff) {
-          logAudit("manual_login_success", formData.email);
-          showWelcomeModal(
-            matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
-              ? "/admin/dashboard"
-              : "/admin"
-          );
-          setIsLoading(false);
-          return;
-        }
+        matchedStaff = staffList.find(
+          (staff) =>
+            staff.email &&
+            staff.email.trim().toLowerCase() === user.email.trim().toLowerCase()
+        );
       }
 
-      // If not manual staff login, try Firebase Auth
-      // Only attempt Firebase Auth if manual login fails
-      try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          formData.email,
-          formData.password
+      if (matchedStaff) {
+        logAudit("firebase_login_success", user.email);
+        showWelcomeModal(
+          matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
+            ? "/admin/dashboard"
+            : "/admin"
         );
-        const user = userCredential.user;
-
-        // If user is staff (by email), show staff/admin dashboard
-        const staffByEmail = staffList.find(
-          (staff) => staff.email === user.email
-        );
-        if (staffByEmail) {
-          logAudit("firebase_login_success", user.email);
-          showWelcomeModal(
-            staffByEmail.role && staffByEmail.role.toLowerCase() === "admin"
-              ? "/admin/dashboard"
-              : "/admin"
-          );
-        } else {
-          setError("Access denied: You are not registered as staff.");
-          await auth.signOut();
-        }
-      } catch (firebaseError) {
-        // Only show error if both manual and Firebase Auth fail
-        setError("Login failed. Please check your credentials and try again.");
+      } else {
+        setError("Access denied: You are not registered as staff.");
+        await auth.signOut();
       }
     } catch (error) {
-      //friendly error
-      console.error("Login error:", error);
       setError("Login failed. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
