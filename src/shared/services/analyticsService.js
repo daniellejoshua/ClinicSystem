@@ -1,6 +1,6 @@
-import { ref, onValue, off } from "firebase/database";
+import { ref, onValue, off, get } from "firebase/database";
 import { database } from "../config/firebase";
-import dataService from "./dataService";
+import customDataService from "./customDataService";
 
 class AnalyticsService {
   constructor() {
@@ -10,22 +10,41 @@ class AnalyticsService {
   // Get real-time appointment analytics
   subscribeToAppointmentAnalytics(callback) {
     const appointmentsRef = ref(database, "appointments");
-    const patientsRef = ref(database, "patients");
+    const today = new Date().toISOString().split("T")[0];
+    const queueRef = ref(database, `queue/${today}`);
 
-    const unsubscribe = onValue(appointmentsRef, async () => {
+    // Subscribe to both appointments and today's queue
+    const appointmentsUnsubscribe = onValue(appointmentsRef, async () => {
       try {
         const analytics = await this.calculateAppointmentAnalytics();
         callback(analytics);
       } catch (error) {
         console.error("Error calculating analytics:", error);
+        callback(this.getDefaultAnalytics());
       }
     });
 
-    this.listeners.set("appointments", unsubscribe);
+    const queueUnsubscribe = onValue(queueRef, async () => {
+      try {
+        const analytics = await this.calculateAppointmentAnalytics();
+        callback(analytics);
+      } catch (error) {
+        console.error("Error calculating analytics:", error);
+        callback(this.getDefaultAnalytics());
+      }
+    });
+
+    this.listeners.set("appointments", appointmentsUnsubscribe);
+    this.listeners.set("queue", queueUnsubscribe);
+
     return () => {
       if (this.listeners.has("appointments")) {
         off(appointmentsRef, "value", this.listeners.get("appointments"));
         this.listeners.delete("appointments");
+      }
+      if (this.listeners.has("queue")) {
+        off(queueRef, "value", this.listeners.get("queue"));
+        this.listeners.delete("queue");
       }
     };
   }
@@ -33,41 +52,59 @@ class AnalyticsService {
   // Calculate appointment analytics from database
   async calculateAppointmentAnalytics() {
     try {
-      const [appointments, patients] = await Promise.all([
-        dataService.getAllData("appointments"),
-        dataService.getAllData("patients"),
-      ]);
+      // Get all appointments and all patients
+      const appointments = await customDataService.getAllData("appointments");
+      const patients = await customDataService.getAllData("patients");
 
-      // Separate online vs walk-in appointments
+      // Get current queue data to count waiting patients
+      const today = new Date().toISOString().split("T")[0];
+      const queueRef = ref(database, `queue/${today}`);
+      const queueSnapshot = await get(queueRef);
+
+      let queueArray = [];
+      if (queueSnapshot.exists()) {
+        const todayQueue = queueSnapshot.val();
+        queueArray = Object.values(todayQueue);
+      }
+
+      // Merge walk-in patients from both appointments and patients collections
       const onlineAppointments = appointments.filter(
         (apt) => apt.appointment_type === "online"
       );
       const walkinAppointments = appointments.filter(
-        (apt) => apt.appointment_type === "walkin" || !apt.appointment_type
+        (apt) => apt.appointment_type === "walkin"
+      );
+      const walkinPatients = (patients || []).filter(
+        (p) => p.appointment_type === "walkin"
       );
 
-      // Also check patients table for appointment types
-      const onlinePatients = patients.filter(
-        (p) => p.appointment_type === "online"
+      // Also count queue data for today's statistics
+      const onlineInQueue = queueArray.filter(
+        (q) => q.appointment_type === "online"
       );
-      const walkinPatients = patients.filter(
-        (p) => p.appointment_type === "walkin" || !p.appointment_type
+      const walkinInQueue = queueArray.filter(
+        (q) => q.appointment_type === "walkin"
       );
 
-      // Generate time-based analytics
+      // Combine all walk-ins for chart analytics
+      const allWalkins = [...walkinAppointments, ...walkinPatients];
+      const allAppointmentsForChart = [...appointments, ...walkinPatients];
+
+      // Generate time-based analytics using merged data
       const analytics = {
-        "7days": this.generateWeeklyData(appointments, patients),
-        "30days": this.generateMonthlyData(appointments, patients),
-        "3months": this.generateQuarterlyData(appointments, patients),
-        all: this.generateYearlyData(appointments, patients),
+        "7days": this.generateWeeklyData(allAppointmentsForChart),
+        "30days": this.generateMonthlyData(allAppointmentsForChart),
+        "3months": this.generateQuarterlyData(allAppointmentsForChart),
+        all: this.generateYearlyData(allAppointmentsForChart),
       };
 
-      // Current totals
+      // Current totals including both appointments, patients, and current queue
       const totals = {
-        totalOnline: onlineAppointments.length + onlinePatients.length,
-        totalWalkin: walkinAppointments.length + walkinPatients.length,
-        totalAppointments: appointments.length + patients.length,
-        waitingPatients: patients.filter((p) => p.status === "waiting").length,
+        totalOnline: onlineAppointments.length + onlineInQueue.length,
+        totalWalkin: allWalkins.length + walkinInQueue.length,
+        totalAppointments: allAppointmentsForChart.length + queueArray.length,
+        waitingPatients: queueArray.filter((q) => q.status === "waiting")
+          .length,
       };
 
       return { analytics, totals };
@@ -78,7 +115,7 @@ class AnalyticsService {
   }
 
   // Generate weekly data (last 7 days)
-  generateWeeklyData(appointments, patients) {
+  generateWeeklyData(appointments) {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const weekData = [];
 
@@ -87,11 +124,7 @@ class AnalyticsService {
       date.setDate(date.getDate() - i);
       const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
 
-      const dayAppointments = this.getAppointmentsForDate(
-        appointments,
-        patients,
-        date
-      );
+      const dayAppointments = this.getAppointmentsForDate(appointments, date);
 
       weekData.push({
         period: dayName,
@@ -104,7 +137,7 @@ class AnalyticsService {
   }
 
   // Generate monthly data (last 4 weeks)
-  generateMonthlyData(appointments, patients) {
+  generateMonthlyData(appointments) {
     const weekData = [];
 
     for (let i = 3; i >= 0; i--) {
@@ -115,7 +148,6 @@ class AnalyticsService {
 
       const weekAppointments = this.getAppointmentsForDateRange(
         appointments,
-        patients,
         startDate,
         endDate
       );
@@ -131,7 +163,7 @@ class AnalyticsService {
   }
 
   // Generate quarterly data (last 6 months)
-  generateQuarterlyData(appointments, patients) {
+  generateQuarterlyData(appointments) {
     const months = [
       "January",
       "February",
@@ -155,7 +187,6 @@ class AnalyticsService {
 
       const monthAppointments = this.getAppointmentsForMonth(
         appointments,
-        patients,
         date
       );
 
@@ -170,7 +201,7 @@ class AnalyticsService {
   }
 
   // Generate yearly data (last 6 quarters)
-  generateYearlyData(appointments, patients) {
+  generateYearlyData(appointments) {
     const quarterData = [];
 
     for (let i = 5; i >= 0; i--) {
@@ -181,7 +212,6 @@ class AnalyticsService {
 
       const quarterAppointments = this.getAppointmentsForQuarter(
         appointments,
-        patients,
         year,
         quarter
       );
@@ -197,127 +227,98 @@ class AnalyticsService {
   }
 
   // Helper functions for date filtering
-  getAppointmentsForDate(appointments, patients, targetDate) {
+  getAppointmentsForDate(appointments, targetDate) {
     const dateStr = targetDate.toISOString().split("T")[0];
 
     const dayAppointments = appointments.filter((apt) => {
-      const aptDate = new Date(apt.created_at).toISOString().split("T")[0];
+      const aptDate = apt.created_at
+        ? new Date(apt.created_at).toISOString().split("T")[0]
+        : apt.booked_at
+        ? new Date(apt.booked_at).toISOString().split("T")[0]
+        : null;
       return aptDate === dateStr;
     });
 
-    const dayPatients = patients.filter((patient) => {
-      const patientDate = new Date(patient.created_at)
-        .toISOString()
-        .split("T")[0];
-      return patientDate === dateStr;
-    });
-
     return {
-      online:
-        dayAppointments.filter((apt) => apt.appointment_type === "online")
-          .length +
-        dayPatients.filter((p) => p.appointment_type === "online").length,
-      walkin:
-        dayAppointments.filter(
-          (apt) => apt.appointment_type === "walkin" || !apt.appointment_type
-        ).length +
-        dayPatients.filter(
-          (p) => p.appointment_type === "walkin" || !p.appointment_type
-        ).length,
+      online: dayAppointments.filter((apt) => apt.appointment_type === "online")
+        .length,
+      walkin: dayAppointments.filter((apt) => apt.appointment_type === "walkin")
+        .length,
     };
   }
 
-  getAppointmentsForDateRange(appointments, patients, startDate, endDate) {
+  getAppointmentsForDateRange(appointments, startDate, endDate) {
     const rangeAppointments = appointments.filter((apt) => {
-      const aptDate = new Date(apt.created_at);
-      return aptDate >= startDate && aptDate < endDate;
-    });
-
-    const rangePatients = patients.filter((patient) => {
-      const patientDate = new Date(patient.created_at);
-      return patientDate >= startDate && patientDate < endDate;
+      const aptDate = apt.created_at
+        ? new Date(apt.created_at)
+        : apt.booked_at
+        ? new Date(apt.booked_at)
+        : null;
+      return aptDate && aptDate >= startDate && aptDate < endDate;
     });
 
     return {
-      online:
-        rangeAppointments.filter((apt) => apt.appointment_type === "online")
-          .length +
-        rangePatients.filter((p) => p.appointment_type === "online").length,
-      walkin:
-        rangeAppointments.filter(
-          (apt) => apt.appointment_type === "walkin" || !apt.appointment_type
-        ).length +
-        rangePatients.filter(
-          (p) => p.appointment_type === "walkin" || !p.appointment_type
-        ).length,
+      online: rangeAppointments.filter(
+        (apt) => apt.appointment_type === "online"
+      ).length,
+      walkin: rangeAppointments.filter(
+        (apt) => apt.appointment_type === "walkin"
+      ).length,
     };
   }
 
-  getAppointmentsForMonth(appointments, patients, targetDate) {
+  getAppointmentsForMonth(appointments, targetDate) {
     const year = targetDate.getFullYear();
     const month = targetDate.getMonth();
 
     const monthAppointments = appointments.filter((apt) => {
-      const aptDate = new Date(apt.created_at);
-      return aptDate.getFullYear() === year && aptDate.getMonth() === month;
-    });
-
-    const monthPatients = patients.filter((patient) => {
-      const patientDate = new Date(patient.created_at);
+      const aptDate = apt.created_at
+        ? new Date(apt.created_at)
+        : apt.booked_at
+        ? new Date(apt.booked_at)
+        : null;
       return (
-        patientDate.getFullYear() === year && patientDate.getMonth() === month
+        aptDate &&
+        aptDate.getFullYear() === year &&
+        aptDate.getMonth() === month
       );
     });
 
     return {
-      online:
-        monthAppointments.filter((apt) => apt.appointment_type === "online")
-          .length +
-        monthPatients.filter((p) => p.appointment_type === "online").length,
-      walkin:
-        monthAppointments.filter(
-          (apt) => apt.appointment_type === "walkin" || !apt.appointment_type
-        ).length +
-        monthPatients.filter(
-          (p) => p.appointment_type === "walkin" || !p.appointment_type
-        ).length,
+      online: monthAppointments.filter(
+        (apt) => apt.appointment_type === "online"
+      ).length,
+      walkin: monthAppointments.filter(
+        (apt) => apt.appointment_type === "walkin"
+      ).length,
     };
   }
 
-  getAppointmentsForQuarter(appointments, patients, year, quarter) {
+  getAppointmentsForQuarter(appointments, year, quarter) {
     const startMonth = (quarter - 1) * 3;
     const endMonth = startMonth + 3;
 
     const quarterAppointments = appointments.filter((apt) => {
-      const aptDate = new Date(apt.created_at);
+      const aptDate = apt.created_at
+        ? new Date(apt.created_at)
+        : apt.booked_at
+        ? new Date(apt.booked_at)
+        : null;
       return (
+        aptDate &&
         aptDate.getFullYear() === year &&
         aptDate.getMonth() >= startMonth &&
         aptDate.getMonth() < endMonth
       );
     });
 
-    const quarterPatients = patients.filter((patient) => {
-      const patientDate = new Date(patient.created_at);
-      return (
-        patientDate.getFullYear() === year &&
-        patientDate.getMonth() >= startMonth &&
-        patientDate.getMonth() < endMonth
-      );
-    });
-
     return {
-      online:
-        quarterAppointments.filter((apt) => apt.appointment_type === "online")
-          .length +
-        quarterPatients.filter((p) => p.appointment_type === "online").length,
-      walkin:
-        quarterAppointments.filter(
-          (apt) => apt.appointment_type === "walkin" || !apt.appointment_type
-        ).length +
-        quarterPatients.filter(
-          (p) => p.appointment_type === "walkin" || !p.appointment_type
-        ).length,
+      online: quarterAppointments.filter(
+        (apt) => apt.appointment_type === "online"
+      ).length,
+      walkin: quarterAppointments.filter(
+        (apt) => apt.appointment_type === "walkin"
+      ).length,
     };
   }
 

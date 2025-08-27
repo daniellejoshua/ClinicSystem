@@ -14,8 +14,10 @@ import {
   FaFlag,
   FaClock,
   FaStethoscope,
+  FaGlobe,
+  FaWalking,
 } from "react-icons/fa";
-import dataService from "../../shared/services/dataService";
+import customDataService from "../../shared/services/customDataService";
 
 const PatientsManagement = () => {
   const [patients, setPatients] = useState([]);
@@ -39,10 +41,10 @@ const PatientsManagement = () => {
       // Load all collections to resolve references
       const [patientsData, servicesData, staffData, appointmentsData] =
         await Promise.all([
-          dataService.getAllData("patients"),
-          dataService.getAllData("services"),
-          dataService.getAllData("staff"),
-          dataService.getAllData("appointments"),
+          customDataService.getAllData("patients"),
+          customDataService.getAllData("services"),
+          customDataService.getAllData("staff"),
+          customDataService.getAllData("appointments"),
         ]);
 
       setPatients(patientsData || []);
@@ -145,14 +147,9 @@ const PatientsManagement = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <FaUsers className="text-3xl text-primary" />
-          <div>
-            <h1 className="text-3xl font-yeseva text-primary">
-              Patients Management
-            </h1>
-            <p className="text-gray-600 font-worksans">
-              Manage patients with referenced services and appointments
-            </p>
-          </div>
+          <h1 className="text-3xl font-yeseva text-primary">
+            Patients Management
+          </h1>
         </div>
         <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
           <FaPlus />
@@ -175,7 +172,6 @@ const PatientsManagement = () => {
             <FaUsers className="text-3xl text-primary opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -187,7 +183,6 @@ const PatientsManagement = () => {
             <FaClock className="text-3xl text-blue-600 opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -201,7 +196,6 @@ const PatientsManagement = () => {
             <FaFlag className="text-3xl text-red-600 opacity-20" />
           </div>
         </div>
-
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -229,17 +223,17 @@ const PatientsManagement = () => {
         </div>
       </div>
 
-      {/* Patients Table */}
+      {/* Patients Table - scrollable, sticky header, no queue column */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[60vh]">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Patient Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Queue
+                  Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Service (Referenced)
@@ -275,7 +269,6 @@ const PatientsManagement = () => {
                   const patientAppointments = getPatientAppointments(
                     patient.id
                   );
-
                   return (
                     <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
@@ -300,13 +293,25 @@ const PatientsManagement = () => {
                           </div>
                         </div>
                       </td>
-
                       <td className="px-6 py-4">
-                        <div className="text-2xl font-bold text-primary">
-                          #{patient.queue_number || "N/A"}
+                        <div className="flex items-center">
+                          {patient.appointment_type === "online" ? (
+                            <>
+                              <FaGlobe className="mr-2 h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-600">
+                                Online
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <FaWalking className="mr-2 h-4 w-4 text-gray-600" />
+                              <span className="text-sm font-medium text-gray-600">
+                                Walk-in
+                              </span>
+                            </>
+                          )}
                         </div>
                       </td>
-
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           {getServiceName(patient.service_ref)}
@@ -315,7 +320,6 @@ const PatientsManagement = () => {
                           Ref: {patient.service_ref || "No reference"}
                         </div>
                       </td>
-
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
@@ -325,7 +329,6 @@ const PatientsManagement = () => {
                           {patient.status || "unknown"}
                         </span>
                       </td>
-
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
@@ -336,7 +339,6 @@ const PatientsManagement = () => {
                           {patient.priority_flag || "normal"}
                         </span>
                       </td>
-
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           {patientAppointments.length} appointment(s)
@@ -348,7 +350,6 @@ const PatientsManagement = () => {
                           </div>
                         )}
                       </td>
-
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <div className="flex items-center gap-2">
                           <button

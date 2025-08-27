@@ -16,7 +16,9 @@ import AdminDashboard from "./admin/pages/AdminDashboard.jsx";
 import DataManagement from "./admin/pages/DataManagement.jsx";
 import PatientsManagement from "./admin/pages/PatientsManagement.jsx";
 import QueueManagement from "./admin/pages/QueueManagement.jsx";
+import PatientCheckIn from "./admin/pages/PatientCheckIn.jsx";
 import AppointmentBooking from "./client/pages/AppointmentBooking.jsx";
+import AppointmentPage from "./admin/pages/AppointmentPage.jsx";
 // Shared Components
 import ProtectedRoute from "./shared/components/ProtectedRoute.jsx";
 
@@ -49,6 +51,8 @@ function App() {
           <Route path="data-management" element={<DataManagement />} />
           <Route path="patients" element={<PatientsManagement />} />
           <Route path="queue" element={<QueueManagement />} />
+          <Route path="check-in" element={<PatientCheckIn />} />
+          <Route path="appointment" element={<AppointmentPage />} />
         </Route>
       </Routes>
     </Router>

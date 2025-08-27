@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaUsers,
   FaCalendarAlt,
@@ -31,6 +31,7 @@ import {
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import customDataService from "../../shared/services/customDataService";
 import analyticsService from "../../shared/services/analyticsService";
+import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
 
 // Dark mode chart colors configuration
@@ -56,6 +57,7 @@ const AdminDashboard = () => {
   const [services, setServices] = useState([]);
   const [patients, setPatients] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [appointments, setAppointments] = useState([]); // Add appointments state
   const [isLoading, setIsLoading] = useState(false);
   const [currentStaff, setCurrentStaff] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -111,24 +113,43 @@ const AdminDashboard = () => {
     loadDashboardData();
     setCurrentStaff(authService.getCurrentStaff());
 
-    // Check for saved dark mode preference
-    const savedDarkMode = localStorage.getItem("darkMode") === "true";
-    setIsDarkMode(savedDarkMode);
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem("theme");
+    const isDark = savedTheme === "dark";
+    setIsDarkMode(isDark);
 
-    // Apply dark mode class to document
-    if (savedDarkMode) {
+    if (isDark) {
       document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
 
-    // Subscribe to real-time analytics
+    // Real-time patients listener
+    const unsubscribePatients = customDataService.subscribeToRealtimeData(
+      "patients",
+      (patientsData) => {
+        setPatients(patientsData || []);
+      }
+    );
+
+    // Real-time analytics listener
     const unsubscribeAnalytics =
       analyticsService.subscribeToAppointmentAnalytics((analytics) => {
         setAnalyticsData(analytics);
       });
 
-    // Cleanup function
+    // Real-time appointments listener
+    const unsubscribeAppointments = customDataService.subscribeToRealtimeData(
+      "appointments",
+      (appointmentsData) => {
+        setAppointments(appointmentsData || []);
+      }
+    );
+
     return () => {
+      unsubscribePatients(); // Clean up patients listener
       unsubscribeAnalytics();
+      unsubscribeAppointments(); // Clean up appointments listener
       analyticsService.cleanup();
     };
   }, []);
@@ -137,7 +158,7 @@ const AdminDashboard = () => {
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
-    localStorage.setItem("darkMode", newDarkMode.toString());
+    localStorage.setItem("theme", newDarkMode ? "dark" : "light");
 
     if (newDarkMode) {
       document.documentElement.classList.add("dark");
@@ -160,15 +181,21 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setIsLoading(true);
-      const [servicesData, patientsData, staffData] = await Promise.all([
+      const [servicesData, staffData, patientsData] = await Promise.all([
         customDataService.getAllData("services"),
-        customDataService.getAllData("patients"),
         customDataService.getAllData("staff"),
+        customDataService.getAllData("patients"),
       ]);
 
       setServices(servicesData);
-      setPatients(patientsData);
       setStaff(staffData);
+      setPatients(patientsData || []);
+
+      console.log("Dashboard data loaded:", {
+        services: servicesData.length,
+        patients: patientsData.length,
+        staff: staffData.length,
+      });
     } catch (error) {
       console.error("Error loading dashboard data:", error);
     } finally {
@@ -182,45 +209,68 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Get next queue number
-      const queueNumber = patients.length + 1;
-
-      // Create patient with queue number
-      const patientData = {
-        ...patientForm,
-        queue_number: queueNumber,
-        status: "waiting",
-      };
-
-      await customDataService.addDataWithAutoId("patients", patientData);
-
-      // Log the activity
-      if (currentStaff) {
-        await customDataService.addDataWithAutoId("audit_logs", {
-          user_ref: `staff/${currentStaff.id}`,
-          action: `Patient registered: ${patientForm.full_name} (${patientForm.appointment_type})`,
-          ip_address: "192.168.1.100",
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      // Reset form and close modal
-      setPatientForm({
-        full_name: "",
-        email: "",
-        phone_number: "",
-        date_of_birth: "",
-        address: "",
-        service_ref: "",
-        priority_flag: "normal",
-        appointment_type: "walkin",
+      // Use the queue service to add walk-in patient
+      const result = await queueService.addWalkinToQueue({
+        full_name: patientForm.full_name,
+        email: patientForm.email,
+        phone_number: patientForm.phone_number,
+        service_ref: patientForm.service_ref || "General Consultation",
       });
-      setShowPatientForm(false);
 
-      // Reload data
-      loadDashboardData();
+      if (result.success) {
+        // Log the activity
+        if (currentStaff) {
+          await customDataService.addDataWithAutoId("audit_logs", {
+            user_ref: `staff/${currentStaff.id}`,
+            action: `Walk-in patient registered: ${patientForm.full_name} - Queue #${result.queueNumber}`,
+            ip_address: "192.168.1.100",
+            timestamp: new Date().toISOString(),
+          });
+        }
 
-      alert("✅ Patient registered successfully!");
+        // Create walk-in appointment in appointments collection
+        const appointmentData = {
+          patient_full_name: patientForm.full_name,
+          email_address: patientForm.email,
+          contact_number: patientForm.phone_number,
+          service_ref: patientForm.service_ref || "General Consultation",
+          appointment_type: "walk-in",
+          status: "checkedin",
+          checked_in: true,
+          created_at: new Date().toISOString(),
+          appointment_date: new Date().toISOString(),
+          queue_number: result.queueNumber,
+        };
+        try {
+          await import("../../shared/services/dataService").then((mod) =>
+            mod.default.addDataWithAutoId("appointments", appointmentData)
+          );
+        } catch (err) {
+          console.error("Error creating walk-in appointment:", err);
+        }
+
+        // Reset form and close modal
+        setPatientForm({
+          full_name: "",
+          email: "",
+          phone_number: "",
+          date_of_birth: "",
+          address: "",
+          service_ref: "",
+          priority_flag: "normal",
+          appointment_type: "walkin",
+        });
+        setShowPatientForm(false);
+
+        // Reload data
+        loadDashboardData();
+
+        alert(
+          `✅ Walk-in patient registered successfully! Queue Number: ${result.queueNumber}`
+        );
+      } else {
+        throw new Error(result.error || "Failed to register walk-in patient");
+      }
     } catch (error) {
       console.error("Error creating patient:", error);
       alert("❌ Error registering patient: " + error.message);
@@ -238,16 +288,16 @@ const AdminDashboard = () => {
   };
 
   // Calculate stats from real data and analytics totals
-  const totalPatients =
-    analyticsData.totals.totalAppointments || patients.length;
-  const onlineAppointments =
-    analyticsData.totals.totalOnline ||
-    patients.filter((p) => p.appointment_type === "online").length;
-  const walkinAppointments =
-    analyticsData.totals.totalWalkin ||
-    patients.filter(
-      (p) => p.appointment_type === "walkin" || !p.appointment_type
-    ).length;
+  // Count unique patients by email address
+  // Only count records from the 'patients' collection
+  // Patient card count matches PatientsManagement.jsx
+  const totalPatients = patients.length;
+  const onlineAppointments = appointments.filter(
+    (a) => a.appointment_type === "online"
+  ).length;
+  const walkinAppointments = appointments.filter(
+    (a) => a.appointment_type === "walk-in" || a.appointment_type === "walkin"
+  ).length;
   const waitingPatients =
     analyticsData.totals.waitingPatients ||
     patients.filter((p) => p.status === "waiting").length;
@@ -569,14 +619,29 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {patients
-                      .slice(-10)
-                      .reverse()
+                      .sort((a, b) => {
+                        // Show pending online appointments first, then queue order
+                        if (a.status === "pending" && b.status !== "pending")
+                          return -1;
+                        if (b.status === "pending" && a.status !== "pending")
+                          return 1;
+                        if (a.queue_number && b.queue_number)
+                          return a.queue_number - b.queue_number;
+                        return 0;
+                      })
+                      .slice(-15) // Show more entries to include online appointments
                       .map((patient) => (
                         <tr
                           key={patient.id}
                           className="border-b hover:bg-muted/50"
                         >
-                          <td className="py-3 px-4">{patient.queue_number}</td>
+                          <td className="py-3 px-4">
+                            {patient.queue_number || (
+                              <span className="text-orange-600 text-sm font-medium">
+                                Pending Check-in
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 font-medium">
                             {patient.full_name}
                           </td>
@@ -595,7 +660,18 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            {patient.service_ref?.split("/")[1] || "N/A"}
+                            {(() => {
+                              const serviceId =
+                                patient.service_ref?.split("/")[1];
+                              const service = services.find(
+                                (s) => s.id === serviceId
+                              );
+                              return (
+                                service?.service_name ||
+                                patient.service_ref ||
+                                "N/A"
+                              );
+                            })()}
                           </td>
                           <td className="py-3 px-4">
                             <span
@@ -604,10 +680,16 @@ const AdminDashboard = () => {
                                   ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"
                                   : patient.status === "in-progress"
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100"
-                                  : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                  : patient.status === "pending"
+                                  ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
+                                  : patient.status === "completed"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
                               }`}
                             >
-                              {patient.status}
+                              {patient.status === "pending"
+                                ? "Pending Check-in"
+                                : patient.status}
                             </span>
                           </td>
                           <td className="py-3 px-4">

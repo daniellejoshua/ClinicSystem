@@ -117,16 +117,16 @@ class QueueService {
       const queueEntry = {
         queue_number: priorityQueueId,
         appointment_id: appointmentKey,
-        full_name: foundAppointment.patient_full_name, // Consistent field name
+        patient_name: foundAppointment.patient_full_name,
         email: foundAppointment.email_address,
-        phone_number: foundAppointment.contact_number, // Consistent field name
+        phone: foundAppointment.contact_number,
         appointment_type: "online",
         status: "waiting",
-        service_ref: foundAppointment.service_ref, // Consistent field name
-        priority_flag: "high", // Online appointments get high priority
+        service_requested: foundAppointment.service_ref,
         booked_at: foundAppointment.booked_at, // For priority sorting
         arrival_time: new Date().toISOString(),
         checked_in_at: new Date().toISOString(),
+        priority: "online", // Higher priority than walk-ins
         created_at: new Date().toISOString(),
       };
 
@@ -162,40 +162,16 @@ class QueueService {
       const queueNumber = await this.getNextQueueNumber(today);
       const walkinQueueId = queueNumber.toString().padStart(3, "0");
 
-      // Create patient record first
-      const patientRecord = {
-        full_name: patientData.full_name,
-        email: patientData.email,
-        phone_number: patientData.phone_number,
-        date_of_birth: patientData.date_of_birth || "",
-        address: patientData.address || "",
-        appointment_type: "walkin",
-        service_ref: patientData.service_ref,
-        priority_flag: patientData.priority_flag || "normal",
-        status: "waiting",
-        queue_number: walkinQueueId,
-        created_at: new Date().toISOString(),
-        booking_source: "walk-in",
-      };
-
-      // Add to patients collection
-      const patientsRef = ref(database, "patients");
-      const newPatientRef = push(patientsRef);
-      await set(newPatientRef, patientRecord);
-
-      // Create queue entry with consistent field names
       const queueEntry = {
         queue_number: walkinQueueId,
-        patient_id: newPatientRef.key,
-        full_name: patientData.full_name, // Consistent field name
+        patient_name: patientData.full_name,
         email: patientData.email,
-        phone_number: patientData.phone_number, // Consistent field name
+        phone: patientData.phone_number,
         appointment_type: "walkin",
         status: "waiting",
-        service_ref: patientData.service_ref, // Consistent field name
-        priority_flag: patientData.priority_flag || "normal", // Consistent field name
+        service_requested: patientData.service_ref,
         arrival_time: new Date().toISOString(),
-        booking_time: new Date().toISOString(), // For analytics consistency
+        priority: "normal", // Normal priority
         created_at: new Date().toISOString(),
       };
 
@@ -207,7 +183,6 @@ class QueueService {
       return {
         success: true,
         queueNumber: walkinQueueId,
-        patientId: newPatientRef.key,
         message: `Walk-in registered! Your queue number is ${walkinQueueId}`,
       };
     } catch (error) {
@@ -379,39 +354,6 @@ class QueueService {
     }
   }
 
-  // Get all online appointments (from appointments collection)
-  async getAllOnlineAppointments() {
-    try {
-      const appointmentsRef = ref(database, "appointments");
-      const snapshot = await get(appointmentsRef);
-
-      if (!snapshot.exists()) {
-        return { success: true, appointments: [] };
-      }
-
-      const appointmentsData = snapshot.val();
-      const appointments = Object.entries(appointmentsData).map(
-        ([key, value]) => ({
-          id: key,
-          ...value,
-        })
-      );
-
-      // Filter for online appointments that haven't been checked in yet
-      const onlineAppointments = appointments.filter(
-        (appointment) =>
-          appointment.appointment_type === "online" &&
-          appointment.status !== "completed" &&
-          !appointment.queue_number // Not yet checked in
-      );
-
-      return { success: true, appointments: onlineAppointments };
-    } catch (error) {
-      console.error("Error getting all online appointments:", error);
-      return { success: false, error: error.message };
-    }
-  }
-
   // Remove from queue
   async removeFromQueue(queueId, date = null) {
     try {
@@ -452,25 +394,6 @@ class QueueService {
       unsubscribe();
     });
     this.listeners.clear();
-  }
-
-  // Legacy methods for backward compatibility
-  async addToQueue(patientData) {
-    // Convert old format to new walk-in format
-    return await this.addWalkinToQueue({
-      full_name: patientData.name,
-      email: patientData.email,
-      phone_number: patientData.phone,
-      service_ref: patientData.service || "General Consultation",
-    });
-  }
-
-  onQueueUpdate(callback) {
-    return this.subscribeToTodayQueue(callback);
-  }
-
-  async getCurrentQueue() {
-    return await this.getTodayQueue();
   }
 }
 
