@@ -1,5 +1,3 @@
-// This is the login page for clinic staff and admins
-// Staff can log in with email/password or Google, and choose dark mode
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -26,13 +24,11 @@ import { ref, get, push } from "firebase/database";
 import DoctorImage from "../../assets/images/DoctorWithPatient.png";
 
 const AdminLogin = () => {
-  // Login form state
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
-  // UI state for password visibility, loading spinner, errors, and dark mode
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,7 +36,7 @@ const AdminLogin = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const navigate = useNavigate();
 
-  // Set dark mode based on user preference or system default
+  // Check for saved theme preference or default to light mode
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
@@ -56,7 +52,6 @@ const AdminLogin = () => {
     }
   }, []);
 
-  // Toggle dark mode on/off
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
@@ -70,7 +65,6 @@ const AdminLogin = () => {
     }
   };
 
-  // Update form fields when user types
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -79,7 +73,7 @@ const AdminLogin = () => {
     }));
   };
 
-  // Show welcome message and redirect after successful login
+  // Show welcome modal and redirect after login
   const showWelcomeModal = (redirectPath) => {
     setShowWelcome(true);
     setTimeout(() => {
@@ -88,67 +82,81 @@ const AdminLogin = () => {
     }, 2000);
   };
 
-  // Save a login event to the audit log
-  // This helps us track who logged in and when
+  // Log audit trail
   const logAudit = (action, email) => {
     const logRef = ref(database, "auditLogs");
     push(logRef, {
-      action, // What happened (manual or firebase login)
-      email, // Who logged in
-      timestamp: Date.now(), // When it happened
+      action,
+      email,
+      timestamp: Date.now(),
     });
   };
 
-  // This handles the login when the user submits the form
-  // First, we check if the user is a staff member in our database
-  // If their email and password match, we log them in manually
-  // If not, we try Firebase Auth as a backup
+  // Manual login and Firebase Auth fallback
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
     try {
+      // Try manual login for staff (support multiple staff records)
       const staffRef = ref(database, "staff");
       const staffSnapshot = await get(staffRef);
-
-      // If no staff record, block login
-      if (!staffSnapshot.exists()) {
-        setError("Access denied: Not a staff member.");
-        setIsLoading(false);
-        return;
+      let staffList = [];
+      let matchedStaff = null;
+      if (staffSnapshot.exists()) {
+        const staffData = staffSnapshot.val();
+        staffList = Object.values(staffData);
+        matchedStaff = staffList.find((staff) => {
+          // Trim whitespace and ignore case for email, trim for password
+          const staffEmail = staff.email
+            ? staff.email.trim().toLowerCase()
+            : "";
+          const staffPassword = staff.password ? staff.password.trim() : "";
+          const inputEmail = formData.email.trim().toLowerCase();
+          const inputPassword = formData.password.trim();
+          return staffEmail === inputEmail && staffPassword === inputPassword;
+        });
+        if (matchedStaff) {
+          logAudit("manual_login_success", formData.email);
+          showWelcomeModal(
+            matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
+              ? "/admin/dashboard"
+              : "/admin"
+          );
+          setIsLoading(false);
+          return;
+        }
       }
 
-      const staffData = staffSnapshot.val();
-
-      // Try manual login first
-      if (
-        staffData.email === formData.email &&
-        staffData.password === formData.password
-      ) {
-        // Success! Log the event and show welcome
-        logAudit("manual_login_success", formData.email);
-        showWelcomeModal(
-          staffData.role.toLowerCase() === "admin"
-            ? "/admin/dashboard"
-            : "/admin"
+      // If not manual staff login, try Firebase Auth
+      // Only attempt Firebase Auth if manual login fails
+      try {
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
         );
-        setIsLoading(false);
-        return;
+        const user = userCredential.user;
+
+        // If user is staff (by email), show staff/admin dashboard
+        const staffByEmail = staffList.find(
+          (staff) => staff.email === user.email
+        );
+        if (staffByEmail) {
+          logAudit("firebase_login_success", user.email);
+          showWelcomeModal(
+            staffByEmail.role && staffByEmail.role.toLowerCase() === "admin"
+              ? "/admin/dashboard"
+              : "/admin"
+          );
+        } else {
+          setError("Access denied: You are not registered as staff.");
+          await auth.signOut();
+        }
+      } catch (firebaseError) {
+        // Only show error if both manual and Firebase Auth fail
+        setError("Login failed. Please check your credentials and try again.");
       }
-
-      // If manual login fails, try Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
-      const user = userCredential.user;
-
-      // Success! show welcome
-      logAudit("firebase_login_success", user.email);
-      showWelcomeModal(
-        staffData.role.toLowerCase() === "admin" ? "/admin/dashboard" : "/admin"
-      );
     } catch (error) {
       //friendly error
       console.error("Login error:", error);
@@ -158,25 +166,18 @@ const AdminLogin = () => {
     }
   };
 
-  // This handles Google login for staff
-  // User clicks Google button, signs in with their Google account
-  // After login, we check if they're a staff member in our database
-  // If yes, we show the welcome message and redirect
-  // If not, we sign them out and show an error
+  // Google login for staff
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError("");
     try {
-      // Start Google sign-in
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if this Google user is a staff member
       const staffRef = ref(database, "staff");
       const staffSnapshot = await get(staffRef);
 
-      // If not a staff member, block access
       if (!staffSnapshot.exists()) {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
@@ -185,15 +186,22 @@ const AdminLogin = () => {
       }
 
       const staffData = staffSnapshot.val();
-
-      // Success! Show welcome and redirect
-      showWelcomeModal(
-        staffData.role && staffData.role.toLowerCase() === "admin"
-          ? "/admin/dashboard"
-          : "/admin"
+      const staffList = Object.values(staffData);
+      const matchedStaff = staffList.find(
+        (staff) =>
+          staff.email.trim().toLowerCase() === user.email.trim().toLowerCase()
       );
+      if (matchedStaff) {
+        showWelcomeModal(
+          matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
+            ? "/admin/dashboard"
+            : "/admin"
+        );
+      } else {
+        await auth.signOut();
+        setError("Access denied: Not a staff member.");
+      }
     } catch (error) {
-      // If anything goes wrong, show a friendly error
       setError(error.message || "Google login failed");
     } finally {
       setIsLoading(false);
