@@ -739,16 +739,37 @@ const AdminDashboard = () => {
                             </td>
                             <td className="py-3 px-4">
                               {(() => {
-                                const serviceId =
-                                  patient.service_ref?.split("/")[1];
-                                const service = services.find(
-                                  (s) => s.id === serviceId
-                                );
-                                return (
-                                  service?.service_name ||
-                                  patient.service_ref ||
-                                  "N/A"
-                                );
+                                if (patient.appointment_type === "online") {
+                                  // Online: resolve service name from service_ref
+                                  const serviceId =
+                                    patient.service_ref?.split("/")[1];
+                                  const service = services.find(
+                                    (s) => s.id === serviceId
+                                  );
+                                  return (
+                                    service?.service_name ||
+                                    patient.service_ref ||
+                                    "N/A"
+                                  );
+                                } else {
+                                  // Walk-in: show service name directly
+                                  return patient.service_ref?.includes(
+                                    "services/"
+                                  )
+                                    ? (() => {
+                                        const serviceId =
+                                          patient.service_ref?.split("/")[1];
+                                        const service = services.find(
+                                          (s) => s.id === serviceId
+                                        );
+                                        return (
+                                          service?.service_name ||
+                                          patient.service_ref ||
+                                          "N/A"
+                                        );
+                                      })()
+                                    : patient.service_ref || "N/A";
+                                }
                               })()}
                             </td>
                             <td className="py-3 px-4">
