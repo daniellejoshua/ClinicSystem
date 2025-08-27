@@ -19,12 +19,9 @@ const ClientLayout = () => {
 
       if (currentUser) {
         // Listen to queue updates for this user
-        const unsubscribeQueue = queueService.onPatientQueueUpdate(
-          currentUser.uid,
-          (queueInfo) => {
-            setQueueData(queueInfo);
-          }
-        );
+        const unsubscribeQueue = queueService.onQueueUpdate((queueInfo) => {
+          setQueueData(queueInfo);
+        });
 
         return () => unsubscribeQueue();
       } else {
