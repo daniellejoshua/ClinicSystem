@@ -1,3 +1,9 @@
+// This page lets patients book appointments online
+// The form collects patient info, contact, service, and preferred date
+// Patients go through steps to fill out all required details
+// When submitted, the appointment is saved and the patient gets a confirmation
+// The UI shows progress, errors, and feedback to help patients book easily
+
 import React, { useState, useEffect } from "react";
 import {
   FaCalendar,
@@ -218,6 +224,12 @@ const AppointmentBooking = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handles the logic for booking an appointment:
+  // 1. Patient fills out the form step by step
+  // 2. Each step collects specific info (personal, contact, service, date)
+  // 3. When the form is submitted, validate all fields
+  // 4. If valid, send the data to the backend to save the appointment
+  // 5. Show feedback to the patient (success or error)
   // Main submit handler for booking appointment
   const handleSubmit = async (e) => {
     e.preventDefault();

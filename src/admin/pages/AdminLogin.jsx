@@ -1,3 +1,5 @@
+// This is the login page for clinic staff and admins
+// Staff can log in with email/password or Google, and choose dark mode
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -24,11 +26,13 @@ import { ref, get, push } from "firebase/database";
 import DoctorImage from "../../assets/images/DoctorWithPatient.png";
 
 const AdminLogin = () => {
+  // Login form state
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
   });
+  // UI state for password visibility, loading spinner, errors, and dark mode
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +40,7 @@ const AdminLogin = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const navigate = useNavigate();
 
-  // Check for saved theme preference or default to light mode
+  // Set dark mode based on user preference or system default
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia(
@@ -52,6 +56,7 @@ const AdminLogin = () => {
     }
   }, []);
 
+  // Toggle dark mode on/off
   const toggleDarkMode = () => {
     const newDarkMode = !isDarkMode;
     setIsDarkMode(newDarkMode);
@@ -65,6 +70,7 @@ const AdminLogin = () => {
     }
   };
 
+  // Update form fields when user types
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -73,7 +79,7 @@ const AdminLogin = () => {
     }));
   };
 
-  // Show welcome modal and redirect after login
+  // Show welcome message and redirect after successful login
   const showWelcomeModal = (redirectPath) => {
     setShowWelcome(true);
     setTimeout(() => {
@@ -82,17 +88,21 @@ const AdminLogin = () => {
     }, 2000);
   };
 
-  // Log audit trail
+  // Save a login event to the audit log
+  // This helps us track who logged in and when
   const logAudit = (action, email) => {
     const logRef = ref(database, "auditLogs");
     push(logRef, {
-      action,
-      email,
-      timestamp: Date.now(),
+      action, // What happened (manual or firebase login)
+      email, // Who logged in
+      timestamp: Date.now(), // When it happened
     });
   };
 
-  // Manual login and Firebase Auth fallback
+  // This handles the login when the user submits the form
+  // First, we check if the user is a staff member in our database
+  // If their email and password match, we log them in manually
+  // If not, we try Firebase Auth as a backup
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -101,6 +111,7 @@ const AdminLogin = () => {
       const staffRef = ref(database, "staff");
       const staffSnapshot = await get(staffRef);
 
+      // If no staff record, block login
       if (!staffSnapshot.exists()) {
         setError("Access denied: Not a staff member.");
         setIsLoading(false);
@@ -109,12 +120,13 @@ const AdminLogin = () => {
 
       const staffData = staffSnapshot.val();
 
-      // Manual login validation
+      // Try manual login first
       if (
         staffData.email === formData.email &&
         staffData.password === formData.password
       ) {
-        logAudit("manual_login_success", formData.email); // Audit log
+        // Success! Log the event and show welcome
+        logAudit("manual_login_success", formData.email);
         showWelcomeModal(
           staffData.role.toLowerCase() === "admin"
             ? "/admin/dashboard"
@@ -124,7 +136,7 @@ const AdminLogin = () => {
         return;
       }
 
-      // Fallback to Firebase Authentication
+      // If manual login fails, try Firebase Auth
       const userCredential = await signInWithEmailAndPassword(
         auth,
         formData.email,
@@ -132,31 +144,39 @@ const AdminLogin = () => {
       );
       const user = userCredential.user;
 
-      logAudit("firebase_login_success", user.email); // Audit log
-
+      // Success! show welcome
+      logAudit("firebase_login_success", user.email);
       showWelcomeModal(
         staffData.role.toLowerCase() === "admin" ? "/admin/dashboard" : "/admin"
       );
     } catch (error) {
-      console.error("Login error:", error); // Log for devs
-      setError("Login failed. Please check your credentials and try again."); // Generic for users
+      //friendly error
+      console.error("Login error:", error);
+      setError("Login failed. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Google login with welcome modal
+  // This handles Google login for staff
+  // User clicks Google button, signs in with their Google account
+  // After login, we check if they're a staff member in our database
+  // If yes, we show the welcome message and redirect
+  // If not, we sign them out and show an error
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError("");
     try {
+      // Start Google sign-in
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Check if this Google user is a staff member
       const staffRef = ref(database, "staff");
       const staffSnapshot = await get(staffRef);
 
+      // If not a staff member, block access
       if (!staffSnapshot.exists()) {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
@@ -166,12 +186,14 @@ const AdminLogin = () => {
 
       const staffData = staffSnapshot.val();
 
+      // Success! Show welcome and redirect
       showWelcomeModal(
         staffData.role && staffData.role.toLowerCase() === "admin"
           ? "/admin/dashboard"
           : "/admin"
       );
     } catch (error) {
+      // If anything goes wrong, show a friendly error
       setError(error.message || "Google login failed");
     } finally {
       setIsLoading(false);

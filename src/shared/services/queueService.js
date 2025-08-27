@@ -1,3 +1,11 @@
+// This service manages the general patient queue and appointments
+// It handles adding, updating, and checking in patients (online and walk-in)
+//
+// NOTE: di to parehas ng priorityQueueService wala n kasi q maisip na pangalan
+
+// - queueService: handles basic queue and appointment management
+// - priorityQueueService: adds extra logic to sort and manage the queue by priority (emergencies, walk-ins)
+
 import {
   ref,
   set,
@@ -454,7 +462,6 @@ class QueueService {
     this.listeners.clear();
   }
 
-  // Legacy methods for backward compatibility
   async addToQueue(patientData) {
     // Convert old format to new walk-in format
     return await this.addWalkinToQueue({

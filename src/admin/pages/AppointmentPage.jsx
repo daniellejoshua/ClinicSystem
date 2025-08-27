@@ -1,3 +1,5 @@
+// This page shows all appointments for staff/admin
+// Staff can search, view, and filter appointments here
 import React, { useState, useEffect } from "react";
 import {
   FaSearch,
@@ -10,16 +12,19 @@ import { Card } from "@/components/ui/card";
 import dataService from "@/shared/services/dataService";
 
 const AppointmentPage = () => {
+  // State for all appointments, search box, loading spinner, and errors
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // When the page loads, fetch all appointments from the database
   useEffect(() => {
     async function fetchAppointments() {
       setLoading(true);
       setError("");
       try {
+        // Get all appointment records
         const data = await dataService.getAllData("appointments");
         setAppointments(data || []);
       } catch (err) {
@@ -31,6 +36,8 @@ const AppointmentPage = () => {
     fetchAppointments();
   }, []);
 
+  // Filter appointments based on search box
+  // Staff can search by patient name, email, contact, type, status, or service
   const filteredAppointments = appointments.filter((appt) => {
     const term = searchTerm.toLowerCase();
     return (
