@@ -14,7 +14,6 @@ import customDataService from "../../shared/services/customDataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 const AppointmentBooking = () => {
-  // Step navigation handlers
   const nextStep = () => {
     if (currentStep < totalSteps && validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
@@ -36,7 +35,6 @@ const AppointmentBooking = () => {
       setErrors({});
     }
   };
-  // Handles input changes for all form fields
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setAppointmentForm((prev) => ({
@@ -890,7 +888,6 @@ const AppointmentBooking = () => {
                   <div>
                     <h4 className="font-semibold text-gray-800">Phone</h4>
                     <p className="text-gray-600">(237) 681-812-255</p>
-                    <p className="text-gray-600">(237) 666-331-894</p>
                   </div>
                 </div>
 
@@ -907,10 +904,8 @@ const AppointmentBooking = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-800">Email</h4>
-                    <p className="text-gray-600">info@clinicsystem.com</p>
-                    <p className="text-gray-600">
-                      appointments@clinicsystem.com
-                    </p>
+                    <p className="text-gray-600">JustinNabunturan@gmail.com</p>
+                    <p className="text-gray-600"></p>
                   </div>
                 </div>
 
