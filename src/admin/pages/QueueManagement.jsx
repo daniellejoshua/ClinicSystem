@@ -128,7 +128,26 @@ const QueueManagement = () => {
 
   const updateQueueStatus = async (queueId, newStatus) => {
     try {
+      // Update queue status
       await queueService.updateQueueStatus(queueId, newStatus);
+
+      // Find the queue entry to get appointment_id or patient_id
+      const queueEntry = queueData.find((entry) => entry.id === queueId);
+      if (queueEntry) {
+        // Try appointment_id first (for online), fallback to patient_id (for walk-in)
+        const patientId = queueEntry.appointment_id || queueEntry.patient_id;
+        if (patientId) {
+          // Update patient status in 'patients' collection
+          const db = require("firebase/database").getDatabase();
+          const patientRef = require("firebase/database").ref(
+            db,
+            `patients/${patientId}`
+          );
+          await require("firebase/database").update(patientRef, {
+            status: newStatus,
+          });
+        }
+      }
       // Real-time subscription will update the UI automatically
     } catch (error) {
       console.error("Error updating queue status:", error);

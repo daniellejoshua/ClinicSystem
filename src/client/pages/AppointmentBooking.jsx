@@ -14,6 +14,34 @@ import customDataService from "../../shared/services/customDataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 const AppointmentBooking = () => {
+  const nextStep = () => {
+    if (currentStep < totalSteps && validateStep(currentStep)) {
+      setCurrentStep((prev) => prev + 1);
+      setErrors({});
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1);
+      setErrors({});
+    }
+  };
+
+  // Optional: direct step navigation (for progress bar)
+  const goToStep = (step) => {
+    if (step < currentStep) {
+      setCurrentStep(step);
+      setErrors({});
+    }
+  };
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAppointmentForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
@@ -42,9 +70,7 @@ const AppointmentBooking = () => {
     additional_notes: "",
 
     // Medical Information
-    medical_history: "",
     current_medications: "",
-    allergies: "",
 
     // Additional fields
     present_checkbox: false,
@@ -192,74 +218,14 @@ const AppointmentBooking = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    setCurrentStep(currentStep - 1);
-  };
-
-  const goToStep = (step) => {
-    // Allow going back to previous steps or staying on current step
-    if (step <= currentStep) {
-      setCurrentStep(step);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const inputValue = type === "checkbox" ? checked : value;
-
-    setAppointmentForm((prev) => ({
-      ...prev,
-      [name]: inputValue,
-    }));
-
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
-
-    // Auto-fill booked_by_name if relationship is "Self"
-    if (name === "relationship_to_patient" && value === "Self") {
-      setAppointmentForm((prev) => ({
-        ...prev,
-        booked_by_name: prev.patient_full_name,
-      }));
-    }
-
-    // Auto-fill booked_by_name when patient name changes and relationship is "Self"
-    if (
-      name === "patient_full_name" &&
-      appointmentForm.relationship_to_patient === "Self"
-    ) {
-      setAppointmentForm((prev) => ({
-        ...prev,
-        booked_by_name: value,
-      }));
-    }
-  };
-
+  // Main submit handler for booking appointment
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      setSubmitStatus("error");
-      return;
-    }
-
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setSubmitStatus(null);
     try {
-      setIsLoading(true);
-      setSubmitStatus(null);
-
-      // Create online appointment using the new queue service
-      // This will NOT assign a queue number until check-in
+      // Prepare appointment data
       const appointmentData = {
         patient_full_name: appointmentForm.patient_full_name,
         patient_birthdate: appointmentForm.patient_birthdate,
@@ -272,15 +238,14 @@ const AppointmentBooking = () => {
         preferred_date: appointmentForm.preferred_date,
         additional_notes:
           appointmentForm.additional_notes || "No additional notes",
-        medical_history: appointmentForm.medical_history,
         current_medications: appointmentForm.current_medications,
-        allergies: appointmentForm.allergies,
         present_checkbox: appointmentForm.present_checkbox,
         booking_source: "online",
         appointment_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
       };
 
+      // Create appointment in queue
       const result = await queueService.createOnlineAppointment(
         appointmentData
       );
@@ -300,15 +265,12 @@ const AppointmentBooking = () => {
           priority_flag: "normal",
           appointment_type: "online",
           preferred_date: appointmentForm.preferred_date,
-          medical_history: appointmentForm.medical_history,
           current_medications: appointmentForm.current_medications,
-          allergies: appointmentForm.allergies,
           booking_source: "online",
           appointment_id: result.appointmentId,
           created_at: new Date().toISOString(),
         };
 
-        // Add to patients collection
         await customDataService.addDataWithAutoId("patients", patientData);
 
         // Also create fill-up form record for admin reference
@@ -323,16 +285,14 @@ const AppointmentBooking = () => {
           contact_number: appointmentForm.contact_number,
           email_address: appointmentForm.email_address,
           present_checkbox: appointmentForm.present_checkbox,
-          medical_history: appointmentForm.medical_history,
           current_medications: appointmentForm.current_medications,
-          allergies: appointmentForm.allergies,
           booking_source: "online",
           created_at: new Date().toISOString(),
         };
 
         await customDataService.addDataWithAutoId("fill_up_forms", formData);
 
-        // Reset form after successful submission
+        // Reset form after successful submission and re-enable button
         setTimeout(() => {
           setAppointmentForm({
             patient_full_name: "",
@@ -345,13 +305,13 @@ const AppointmentBooking = () => {
             service_ref: "",
             preferred_date: "",
             additional_notes: "",
-            medical_history: "",
             current_medications: "",
-            allergies: "",
             present_checkbox: false,
             booking_source: "online",
           });
+          setCurrentStep(1);
           setSubmitStatus(null);
+          setIsLoading(false);
         }, 3000);
       } else {
         throw new Error(result.error || "Failed to book appointment");
@@ -802,7 +762,7 @@ const AppointmentBooking = () => {
                     ) : (
                       <button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoading || submitStatus === "success"}
                         className="bg-accent text-primary py-3 px-6 rounded font-semibold hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-worksans transition-colors"
                       >
                         {isLoading ? (
@@ -928,7 +888,6 @@ const AppointmentBooking = () => {
                   <div>
                     <h4 className="font-semibold text-gray-800">Phone</h4>
                     <p className="text-gray-600">(237) 681-812-255</p>
-                    <p className="text-gray-600">(237) 666-331-894</p>
                   </div>
                 </div>
 
@@ -945,10 +904,8 @@ const AppointmentBooking = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-800">Email</h4>
-                    <p className="text-gray-600">info@clinicsystem.com</p>
-                    <p className="text-gray-600">
-                      appointments@clinicsystem.com
-                    </p>
+                    <p className="text-gray-600">JustinNabunturan@gmail.com</p>
+                    <p className="text-gray-600"></p>
                   </div>
                 </div>
 
@@ -999,5 +956,4 @@ const AppointmentBooking = () => {
     </div>
   );
 };
-
 export default AppointmentBooking;

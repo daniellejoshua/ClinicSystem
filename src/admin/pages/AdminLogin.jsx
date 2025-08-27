@@ -20,7 +20,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { ref, get } from "firebase/database";
+import { ref, get, push } from "firebase/database";
 import DoctorImage from "../../assets/images/DoctorWithPatient.png";
 
 const AdminLogin = () => {
@@ -82,6 +82,16 @@ const AdminLogin = () => {
     }, 2000);
   };
 
+  // Log audit trail
+  const logAudit = (action, email) => {
+    const logRef = ref(database, "auditLogs");
+    push(logRef, {
+      action,
+      email,
+      timestamp: Date.now(),
+    });
+  };
+
   // Manual login and Firebase Auth fallback
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -104,6 +114,7 @@ const AdminLogin = () => {
         staffData.email === formData.email &&
         staffData.password === formData.password
       ) {
+        logAudit("manual_login_success", formData.email); // Audit log
         showWelcomeModal(
           staffData.role.toLowerCase() === "admin"
             ? "/admin/dashboard"
@@ -121,11 +132,14 @@ const AdminLogin = () => {
       );
       const user = userCredential.user;
 
+      logAudit("firebase_login_success", user.email); // Audit log
+
       showWelcomeModal(
         staffData.role.toLowerCase() === "admin" ? "/admin/dashboard" : "/admin"
       );
     } catch (error) {
-      setError(error.message || "Login failed");
+      console.error("Login error:", error); // Log for devs
+      setError("Login failed. Please check your credentials and try again."); // Generic for users
     } finally {
       setIsLoading(false);
     }

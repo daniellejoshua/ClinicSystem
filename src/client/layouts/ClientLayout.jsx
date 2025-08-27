@@ -13,18 +13,13 @@ const ClientLayout = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Listen for auth changes
     const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
 
       if (currentUser) {
-        // Listen to queue updates for this user
-        const unsubscribeQueue = queueService.onPatientQueueUpdate(
-          currentUser.uid,
-          (queueInfo) => {
-            setQueueData(queueInfo);
-          }
-        );
+        const unsubscribeQueue = queueService.onQueueUpdate((queueInfo) => {
+          setQueueData(queueInfo);
+        });
 
         return () => unsubscribeQueue();
       } else {

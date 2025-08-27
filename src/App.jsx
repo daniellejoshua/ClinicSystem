@@ -21,7 +21,7 @@ import AppointmentBooking from "./client/pages/AppointmentBooking.jsx";
 import AppointmentPage from "./admin/pages/AppointmentPage.jsx";
 // Shared Components
 import ProtectedRoute from "./shared/components/ProtectedRoute.jsx";
-
+import AddStaff from "./admin/pages/AddStaff.jsx";
 function App() {
   return (
     <Router>
@@ -53,6 +53,7 @@ function App() {
           <Route path="queue" element={<QueueManagement />} />
           <Route path="check-in" element={<PatientCheckIn />} />
           <Route path="appointment" element={<AppointmentPage />} />
+          <Route path="add-staff" element={<AddStaff />} />
         </Route>
       </Routes>
     </Router>

@@ -37,7 +37,7 @@ const AdminSidebar = () => {
       label: "Data Management",
     },
     { path: "/admin/appointment", icon: FaCalendarAlt, label: "Appointments" },
-
+    { path: "/admin/add-staff", icon: FaUserMd, label: "Add Staff" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
   ];
 

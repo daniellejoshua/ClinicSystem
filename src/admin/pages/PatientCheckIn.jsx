@@ -10,6 +10,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import queueService from "../../shared/services/queueService";
+import customDataService from "../../shared/services/customDataService";
+import authService from "../../shared/services/authService";
 import {
   AlertCircle,
   CheckCircle,
@@ -28,6 +30,7 @@ const PatientCheckIn = () => {
   const [isLoading, setIsLoading] = useState(true); // Loading state for initial load
   const [checkInResult, setCheckInResult] = useState(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState(null); // Assuming you have a way to get the current staff
 
   // Make check-in result last longer (5 seconds)
   useEffect(() => {
@@ -58,6 +61,10 @@ const PatientCheckIn = () => {
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm, allAppointments]); // Trigger when searchTerm or allAppointments changes
+
+  useEffect(() => {
+    setCurrentStaff(authService.getCurrentStaff());
+  }, []);
 
   const loadAllOnlineAppointments = async () => {
     setIsLoading(true);
@@ -127,6 +134,14 @@ const PatientCheckIn = () => {
       setCheckInResult(result);
 
       if (result.success) {
+        // Log the check-in action
+        await customDataService.addDataWithAutoId("audit_logs", {
+          user_ref: `staff/${currentStaff.id}`,
+          action: `Checked in online appointment for: ${appointment.patient_full_name}`,
+          ip_address: "192.168.1.100",
+          timestamp: new Date().toISOString(),
+        });
+
         // Remove the checked-in appointment from both lists
         setAllAppointments((prev) =>
           prev.filter((apt) => apt.id !== appointment.id)
