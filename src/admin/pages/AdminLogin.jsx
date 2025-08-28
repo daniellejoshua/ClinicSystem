@@ -35,7 +35,12 @@ const AdminLogin = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const navigate = useNavigate();
-
+  useEffect(() => {
+    document.title = "Tonsuya Super Health Center";
+    // Set favicon to tonuysa image
+    const favicon = document.querySelector("link[rel~='icon']");
+    if (favicon) favicon.href = "/Tonsuya.jpg";
+  }, []);
   // Check for saved theme preference or default to light mode
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
