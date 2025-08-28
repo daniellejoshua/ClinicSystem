@@ -69,6 +69,7 @@ const AdminDashboard = () => {
   const [services, setServices] = useState([]); // List of clinic services
   const [patients, setPatients] = useState([]); // All patients
   const [queue, setQueue] = useState([]); // Queue for today
+  const [todayQueue, setTodayQueue] = useState([]);
   const [staff, setStaff] = useState([]); // Staff members
   const [appointments, setAppointments] = useState([]); // Appointments
   const [auditLogs, setAuditLogs] = useState([]); // System logs
@@ -175,12 +176,20 @@ const AdminDashboard = () => {
       }
     );
 
+    // Real-time today's queue listener
+    const unsubscribeTodayQueue = queueService.subscribeToTodayQueue(
+      (queue) => {
+        setTodayQueue(queue || []);
+      }
+    );
+
     return () => {
       unsubscribePatients(); // Clean up patients listener
       unsubscribeAnalytics();
       unsubscribeAppointments(); // Clean up appointments listener
       unsubscribeAuditLogs(); // Clean up audit logs listener
       unsubscribeQueue(); // Clean up queue listener
+      unsubscribeTodayQueue();
       analyticsService.cleanup();
     };
   }, []);
@@ -417,14 +426,20 @@ const AdminDashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Queue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Today's In Queue
+            </CardTitle>
             <FaCalendarAlt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{waitingPatients}</div>
-            <p className="text-xs text-muted-foreground">
-              +201 since last hour
-            </p>
+            <div className="text-xs text-muted-foreground mb-2">
+              {new Date().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </div>
+            <div className="text-2xl font-bold">{todayQueue.length}</div>
           </CardContent>
         </Card>
       </div>
