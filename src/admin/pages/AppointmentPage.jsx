@@ -5,6 +5,7 @@ import Badge from "../../components/ui/badge";
 import dataService from "../../shared/services/dataService";
 
 function AppointmentPage() {
+  const [services, setServices] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [appointments, setAppointments] = useState([]);
@@ -14,58 +15,47 @@ function AppointmentPage() {
   useEffect(() => {
     async function fetchAppointments() {
       try {
-        const data = await dataService.getAllData("appointments");
-        setAppointments(data);
-      } catch (error) {
-        // demo data if failed
-        setAppointments([
-          {
-            patient_full_name: "John Doe",
-            email_address: "john@example.com",
-            contact_number: "1234567890",
-            appointment_type: "Online",
-            service_ref: "General Checkup",
-            appointment_date: Date.now(),
-            status: "confirmed",
-            checked_in: false,
-            additional_notes: "N/A",
-            booked_by_name: "Jane Doe",
-            booking_source: "Web",
-            checked_in_at: null,
-            patient_birthdate: "1990-01-01",
-            patient_sex: "Male",
-            preferred_date: "2025-09-01",
-            present_checkbox: true,
-            queue_number: 1,
-            relation_to_patient: "Self",
-            current_medications: "None",
-          },
-          {
-            patient_full_name: "Alice Smith",
-            email_address: "alice@example.com",
-            contact_number: "9876543210",
-            appointment_type: "Walk-in",
-            service_ref: "Dental",
-            appointment_date: Date.now() + 86400000,
-            status: "completed",
-            checked_in: true,
-            additional_notes: "Follow-up needed",
-            booked_by_name: "Bob Smith",
-            booking_source: "Mobile",
-            checked_in_at: Date.now() + 86400000,
-            patient_birthdate: "1985-05-12",
-            patient_sex: "Female",
-            preferred_date: "2025-09-02",
-            present_checkbox: true,
-            queue_number: 2,
-            relation_to_patient: "Daughter",
-            current_medications: "Ibuprofen",
-          },
+        const [appointmentsData, servicesData] = await Promise.all([
+          dataService.getAllData("appointments"),
+          dataService.getAllData("services"),
         ]);
+        setAppointments(appointmentsData);
+        setServices(servicesData);
+      } catch (error) {
+        setAppointments([]);
+        setServices([]);
       }
     }
     fetchAppointments();
   }, []);
+
+  // Helper function to resolve service name from reference
+  const getServiceName = (serviceRef) => {
+    if (!serviceRef || !services.length) return serviceRef || "Unknown Service";
+    const serviceId = serviceRef.split("/").pop();
+    const service = services.find((s) => s.id === serviceId);
+    return service ? service.service_name : serviceRef;
+  };
+
+  // Helper for status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-700";
+      case "no-show":
+        return "bg-red-100 text-red-700";
+      case "confirmed":
+        return "bg-blue-100 text-blue-700";
+      case "checked-in":
+        return "bg-purple-100 text-purple-700";
+      case "scheduled":
+        return "bg-yellow-100 text-yellow-700";
+      case "missed":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
 
   // Filter and sort appointments
   const filteredAppointments = appointments
@@ -123,70 +113,66 @@ function AppointmentPage() {
         </div>
       </div>
       <div className="overflow-x-auto rounded-lg shadow">
-        <table className="min-w-full bg-white">
-          <thead className="bg-primary text-white">
-            <tr>
-              <th className="px-4 py-2">Patient Name</th>
-              <th className="px-4 py-2">Type</th>
-              <th className="px-4 py-2">Service</th>
-              <th className="px-4 py-2">Date</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAppointments.length === 0 ? (
+        <div className="overflow-x-auto max-h-[60vh]">
+          <table className="min-w-full bg-white">
+            <thead className="bg-primary text-white sticky top-0 z-10">
               <tr>
-                <td colSpan={6} className="text-center py-6 text-gray-500">
-                  No appointments found.
-                </td>
+                <th className="px-4 py-2">Patient Name</th>
+                <th className="px-4 py-2">Type</th>
+                <th className="px-4 py-2">Service</th>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
-            ) : (
-              filteredAppointments.map((appt, idx) => (
-                <tr key={idx} className="border-b hover:bg-gray-50 transition">
-                  <td className="px-4 py-2 font-semibold">
-                    {appt.patient_full_name}
-                  </td>
-                  <td className="px-4 py-2">{appt.appointment_type}</td>
-                  <td className="px-4 py-2">{appt.service_ref}</td>
-                  <td className="px-4 py-2">
-                    {appt.appointment_date
-                      ? new Date(appt.appointment_date).toLocaleString()
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-2">
-                    <Badge
-                      variant={
-                        appt.status === "completed"
-                          ? "secondary"
-                          : appt.status === "no-show"
-                          ? "destructive"
-                          : appt.status === "confirmed"
-                          ? "default"
-                          : appt.status === "checked-in"
-                          ? "secondary"
-                          : "outline"
-                      }
-                    >
-                      {appt.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2">
-                    <button
-                      className="text-primary underline font-medium hover:text-primary-dark"
-                      onClick={() => {
-                        setSelectedAppointment(appt);
-                        setShowDialog(true);
-                      }}
-                    >
-                      View
-                    </button>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredAppointments.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-6 text-gray-500">
+                    No appointments found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredAppointments.map((appt, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-2 font-semibold">
+                      {appt.patient_full_name}
+                    </td>
+                    <td className="px-4 py-2">{appt.appointment_type}</td>
+                    <td className="px-4 py-2">
+                      {getServiceName(appt.service_ref)}
+                    </td>
+                    <td className="px-4 py-2">
+                      {appt.appointment_date
+                        ? new Date(appt.appointment_date).toLocaleString()
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                          appt.status
+                        )}`}
+                      >
+                        {appt.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        className="text-primary underline font-medium hover:text-primary-dark"
+                        onClick={() => {
+                          setSelectedAppointment(appt);
+                          setShowDialog(true);
+                        }}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Appointment Details Dialog */}
@@ -242,7 +228,7 @@ function AppointmentPage() {
                   Service
                 </span>
                 <span className="font-semibold text-base text-gray-800">
-                  {selectedAppointment.service_ref}
+                  {getServiceName(selectedAppointment.service_ref)}
                 </span>
               </div>
               <div>
