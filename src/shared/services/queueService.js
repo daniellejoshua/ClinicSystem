@@ -415,8 +415,8 @@ class QueueService {
     }
   }
 
-  // Get all online appointments (from appointments collection)
-  async getAllOnlineAppointments() {
+  // Get all online appointments for a specific date (from appointments collection)
+  async getAllOnlineAppointments(date = null) {
     try {
       const appointmentsRef = ref(database, "appointments");
       const snapshot = await get(appointmentsRef);
@@ -433,12 +433,18 @@ class QueueService {
         })
       );
 
-      // Filter for online appointments that haven't been checked in yet
+      // Helper to get date string
+      const getDateString = (d) => {
+        if (!d) return "";
+        return new Date(d).toISOString().split("T")[0];
+      };
+      const targetDate = date || new Date().toISOString().split("T")[0];
+
+      // Filter for online appointments for the selected date
       const onlineAppointments = appointments.filter(
         (appointment) =>
           appointment.appointment_type === "online" &&
-          appointment.status !== "completed" &&
-          !appointment.queue_number // Not yet checked in
+          getDateString(appointment.preferred_date) === targetDate
       );
 
       return { success: true, appointments: onlineAppointments };
