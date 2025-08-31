@@ -33,9 +33,6 @@ export default function Contact() {
               <p className="font-worksans text-xs lg:text-base">
                 (237) 681-812-255
               </p>
-              <p className="font-worksans text-xs lg:text-base">
-                (237) 666-331-894
-              </p>
             </div>
           </div>
 
@@ -49,10 +46,7 @@ export default function Contact() {
             </h3>
             <div className="space-y-1 lg:space-y-2">
               <p className="font-worksans text-xs lg:text-base">
-                0123 Some place
-              </p>
-              <p className="font-worksans text-xs lg:text-base">
-                9876 Some country
+                Ortega St, Malabon City, Philippines
               </p>
             </div>
           </div>
@@ -66,9 +60,6 @@ export default function Contact() {
               Email
             </h3>
             <div className="space-y-1 lg:space-y-2">
-              <p className="font-worksans text-xs lg:text-base">
-                justinnabunturan@gmail.com
-              </p>
               <p className="font-worksans text-xs lg:text-base">
                 justinnabunturan@gmail.com
               </p>

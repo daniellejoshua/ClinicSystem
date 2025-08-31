@@ -43,9 +43,11 @@ export default function Hero() {
             </button>
           </Link>
           {/* Desktop - Our Services Button */}
-          <button className="hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
-            Our Services
-          </button>
+          <Link to="/services">
+            <button className="hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
+              Our Services
+            </button>
+          </Link>
         </div>
 
         {/* Medical icons for mobile decoration */}

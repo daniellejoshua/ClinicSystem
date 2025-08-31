@@ -45,9 +45,6 @@ export default function OurServices() {
 
   const handleViewAllClick = () => {
     navigate("/services");
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 100);
   };
 
   return (

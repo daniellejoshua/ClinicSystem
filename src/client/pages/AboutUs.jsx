@@ -2,6 +2,10 @@ import React from "react";
 import MedicalTeam from "../../assets/images/MedicalTeam.png";
 
 export default function AboutUs() {
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+  }, 100);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}

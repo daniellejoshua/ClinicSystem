@@ -17,7 +17,7 @@ function AppointmentPage() {
         const data = await dataService.getAllData("appointments");
         setAppointments(data);
       } catch (error) {
-        // fallback to demo data if backend fails
+        // demo data if failed
         setAppointments([
           {
             patient_full_name: "John Doe",

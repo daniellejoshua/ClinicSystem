@@ -25,7 +25,7 @@ export default function TopBar({ isHidden }) {
                 WORK HOUR
               </p>
               <p className="text-secondary text-sm xl:text-base">
-                08:00 - 20:00 Everyday
+                08:00 - 20:00 Mon - Sat
               </p>
             </div>
           </div>
