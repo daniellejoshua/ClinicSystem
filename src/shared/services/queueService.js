@@ -19,6 +19,34 @@ import {
 import { database } from "../config/firebase";
 
 class QueueService {
+  // Mark online appointments as no_show if not checked in by end of day
+  async markNoShowAppointments(date = null) {
+    try {
+      const targetDate = date || new Date().toISOString().split("T")[0];
+      const appointmentsSnapshot = await get(this.appointmentsRef);
+
+      if (!appointmentsSnapshot.exists()) return;
+
+      const appointments = appointmentsSnapshot.val();
+      for (const [key, appointment] of Object.entries(appointments)) {
+        if (
+          appointment.appointment_type === "online" &&
+          appointment.status === "scheduled" &&
+          !appointment.checked_in &&
+          appointment.preferred_date === targetDate
+        ) {
+          // Mark as no_show
+          const appointmentRef = ref(database, `appointments/${key}`);
+          await update(appointmentRef, {
+            status: "no_show",
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error marking no show appointments:", error);
+    }
+  }
   constructor() {
     this.queueRef = ref(database, "queue");
     this.appointmentsRef = ref(database, "appointments");

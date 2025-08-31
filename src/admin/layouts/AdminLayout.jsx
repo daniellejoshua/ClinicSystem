@@ -1,9 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
 
 const AdminLayout = () => {
+  useEffect(() => {
+    document.title = "Tonsuya Super Health Center Admin";
+    // Set favicon to tonuysa image
+    const favicon = document.querySelector("link[rel~='icon']");
+    if (favicon) favicon.href = "/Tonsuya.jpg";
+  }, []);
+
   return (
     <div className="flex h-screen bg-background text-foreground transition-colors duration-300">
       <AdminSidebar />

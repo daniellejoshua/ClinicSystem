@@ -1,16 +1,14 @@
 import React from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "../config/firebase";
 import { Navigate } from "react-router-dom";
-import authService from "../services/authService";
 
-const ProtectedRoute = ({ children }) => {
-  // Check if any staff member is logged in (admin, doctor, nurse, receptionist)
-  const isAuthenticated = authService.isAuthenticated();
+function ProtectedRoute({ children }) {
+  const [user, loading] = useAuthState(auth);
 
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
+  if (loading) return null; // or a loading spinner
+  if (!user) return <Navigate to="/admin/login" replace />;
   return children;
-};
+}
 
 export default ProtectedRoute;
