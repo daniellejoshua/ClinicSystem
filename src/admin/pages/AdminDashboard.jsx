@@ -18,6 +18,7 @@ import {
   FaExclamationTriangle,
   FaMoon,
   FaSun,
+  FaTimes,
 } from "react-icons/fa";
 import {
   Card,

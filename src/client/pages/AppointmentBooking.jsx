@@ -58,7 +58,9 @@ const AppointmentBooking = () => {
   // Appointment form state aligned with fill_up_forms structure
   const [appointmentForm, setAppointmentForm] = useState({
     // Patient Information
-    patient_full_name: "",
+    patient_first_name: "",
+    patient_middle_name: "",
+    patient_last_name: "",
     patient_birthdate: "",
     patient_sex: "",
 
@@ -104,8 +106,10 @@ const AppointmentBooking = () => {
     const newErrors = {};
 
     // Required fields validation
-    if (!appointmentForm.patient_full_name.trim())
-      newErrors.patient_full_name = "Name is required";
+    if (!appointmentForm.patient_first_name.trim())
+      newErrors.patient_first_name = "First name is required";
+    if (!appointmentForm.patient_last_name.trim())
+      newErrors.patient_last_name = "Last name is required";
     if (!appointmentForm.patient_birthdate)
       newErrors.patient_birthdate = "Date of birth is required";
     if (!appointmentForm.patient_sex)
@@ -150,6 +154,10 @@ const AppointmentBooking = () => {
       if (selectedDate < today) {
         newErrors.preferred_date = "Please select a future date";
       }
+      // No Sundays allowed
+      if (selectedDate.getDay() === 0) {
+        newErrors.preferred_date = "No Sundays allowed for appointments";
+      }
     }
 
     setErrors(newErrors);
@@ -161,8 +169,10 @@ const AppointmentBooking = () => {
 
     switch (step) {
       case 1: // Patient Information
-        if (!appointmentForm.patient_full_name.trim())
-          newErrors.patient_full_name = "Name is required";
+        if (!appointmentForm.patient_first_name.trim())
+          newErrors.patient_first_name = "First name is required";
+        if (!appointmentForm.patient_last_name.trim())
+          newErrors.patient_last_name = "Last name is required";
         if (!appointmentForm.patient_birthdate)
           newErrors.patient_birthdate = "Date of birth is required";
         if (!appointmentForm.patient_sex)
@@ -216,6 +226,10 @@ const AppointmentBooking = () => {
           if (selectedDate < today) {
             newErrors.preferred_date = "Please select a future date";
           }
+          // No Sundays allowed
+          if (selectedDate.getDay() === 0) {
+            newErrors.preferred_date = "No Sundays allowed for appointments";
+          }
         }
         break;
     }
@@ -237,9 +251,14 @@ const AppointmentBooking = () => {
     setIsLoading(true);
     setSubmitStatus(null);
     try {
+      const fullName =
+        `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim();
       // Prepare appointment data
       const appointmentData = {
-        patient_full_name: appointmentForm.patient_full_name,
+        patient_full_name: fullName,
+        patient_first_name: appointmentForm.patient_first_name,
+        patient_middle_name: appointmentForm.patient_middle_name,
+        patient_last_name: appointmentForm.patient_last_name,
         patient_birthdate: appointmentForm.patient_birthdate,
         patient_sex: appointmentForm.patient_sex,
         contact_number: appointmentForm.contact_number,
@@ -267,7 +286,7 @@ const AppointmentBooking = () => {
 
         // Create patient record in patients collection for patient management
         const patientData = {
-          full_name: appointmentForm.patient_full_name,
+          full_name: fullName,
           email: appointmentForm.email_address,
           phone_number: appointmentForm.contact_number,
           date_of_birth: appointmentForm.patient_birthdate,
@@ -307,7 +326,9 @@ const AppointmentBooking = () => {
         // Reset form after successful submission and re-enable button
         setTimeout(() => {
           setAppointmentForm({
-            patient_full_name: "",
+            patient_first_name: "",
+            patient_middle_name: "",
+            patient_last_name: "",
             patient_birthdate: "",
             patient_sex: "",
             contact_number: "",
@@ -324,6 +345,7 @@ const AppointmentBooking = () => {
           setCurrentStep(1);
           setSubmitStatus(null);
           setIsLoading(false);
+          setErrors({}); // Clear errors after success
         }, 3000);
       } else {
         throw new Error(result.error || "Failed to book appointment");
@@ -467,31 +489,70 @@ const AppointmentBooking = () => {
                     <h3 className="text-lg font-semibold text-primary mb-6 font-yeseva">
                       Patient Information
                     </h3>
-                    <div className="grid grid-cols-1 gap-6">
-                      {/* Name */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* First Name */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
-                          Patient Full Name *
+                          First Name *
                         </label>
                         <input
                           type="text"
-                          name="patient_full_name"
-                          value={appointmentForm.patient_full_name}
+                          name="patient_first_name"
+                          value={appointmentForm.patient_first_name}
                           onChange={handleInputChange}
-                          placeholder="Enter patient's full name"
+                          placeholder="Enter first name"
                           className={`w-full bg-primary text-white placeholder-blue-200 border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans ${
-                            errors.patient_full_name
+                            errors.patient_first_name
                               ? "ring-2 ring-red-500"
                               : ""
                           }`}
                         />
-                        {errors.patient_full_name && (
+                        {errors.patient_first_name && (
                           <p className="text-red-500 text-sm mt-1 font-worksans">
-                            {errors.patient_full_name}
+                            {errors.patient_first_name}
                           </p>
                         )}
                       </div>
-
+                      {/* Middle Name */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
+                          Middle Name
+                        </label>
+                        <input
+                          type="text"
+                          name="patient_middle_name"
+                          value={appointmentForm.patient_middle_name}
+                          onChange={handleInputChange}
+                          placeholder="Enter middle name"
+                          className="w-full bg-primary text-white placeholder-blue-200 border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans"
+                        />
+                      </div>
+                      {/* Last Name */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
+                          Last Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="patient_last_name"
+                          value={appointmentForm.patient_last_name}
+                          onChange={handleInputChange}
+                          placeholder="Enter last name"
+                          className={`w-full bg-primary text-white placeholder-blue-200 border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans ${
+                            errors.patient_last_name
+                              ? "ring-2 ring-red-500"
+                              : ""
+                          }`}
+                        />
+                        {errors.patient_last_name && (
+                          <p className="text-red-500 text-sm mt-1 font-worksans">
+                            {errors.patient_last_name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Date of Birth and Gender */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                       {/* Date of Birth */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
@@ -514,7 +575,6 @@ const AppointmentBooking = () => {
                           </p>
                         )}
                       </div>
-
                       {/* Gender */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2 font-worksans">
@@ -528,10 +588,11 @@ const AppointmentBooking = () => {
                             errors.patient_sex ? "ring-2 ring-red-500" : ""
                           }`}
                         >
-                          <option value="">Select Gender</option>
+                          {appointmentForm.patient_sex === "" && (
+                            <option value="">Select Gender</option>
+                          )}
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
-                          <option value="Other">Other</option>
                         </select>
                         {errors.patient_sex && (
                           <p className="text-red-500 text-sm mt-1 font-worksans">
@@ -647,7 +708,6 @@ const AppointmentBooking = () => {
                           <option value="Child">Child</option>
                           <option value="Sibling">Sibling</option>
                           <option value="Guardian">Guardian</option>
-                          <option value="Other">Other</option>
                         </select>
                         {errors.relationship_to_patient && (
                           <p className="text-red-500 text-sm mt-1 font-worksans">
@@ -680,14 +740,18 @@ const AppointmentBooking = () => {
                           }`}
                         >
                           <option value="">Select Department/Service</option>
-                          {services.map((service) => (
-                            <option
-                              key={service.id}
-                              value={`services/${service.id}`}
-                            >
-                              {service.service_name}
-                            </option>
-                          ))}
+                          {services
+                            .filter(
+                              (service) => service.service_name !== "Other"
+                            )
+                            .map((service) => (
+                              <option
+                                key={service.id}
+                                value={`services/${service.id}`}
+                              >
+                                {service.service_name}
+                              </option>
+                            ))}
                         </select>
                         {errors.service_ref && (
                           <p className="text-red-500 text-sm mt-1 font-worksans">
@@ -804,37 +868,37 @@ const AppointmentBooking = () => {
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Monday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Tuesday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Wednesday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Thursday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Friday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
                 <div className="flex justify-between py-4 border-b border-gray-100">
                   <span className="font-semibold text-lg">Saturday</span>
                   <span className="text-primary font-bold text-lg">
-                    09:00 AM - 07:00 PM
+                    8:00 AM - 8:00 PM
                   </span>
                 </div>
               </div>
@@ -937,10 +1001,8 @@ const AppointmentBooking = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-800">Hours</h4>
-                    <p className="text-gray-600">
-                      Mon - Sat: 9:00 AM - 7:00 PM
-                    </p>
-                    <p className="text-gray-600">Sunday: Closed</p>
+                    <p className="text-gray-600">Mon - Sat: :00 AM - 8:00 PM</p>
+                    8<p className="text-gray-600">Sunday: Closed</p>
                   </div>
                 </div>
               </div>

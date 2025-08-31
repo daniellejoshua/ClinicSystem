@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import queueService from "../../shared/services/queueService";
+import dataService from "../../shared/services/dataService";
 import customDataService from "../../shared/services/customDataService";
 import authService from "../../shared/services/authService";
 import {
@@ -25,15 +26,40 @@ import {
 } from "lucide-react";
 
 const PatientCheckIn = () => {
-  // State for search box, found appointments, all appointments, and loading
+  const [servicesMap, setServicesMap] = useState({});
+  // Fetch all services and build a map of id -> service_name
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const services = await dataService.getAllData("services");
+        // Map: serviceId -> service_name
+        const map = {};
+        services.forEach((service) => {
+          map[service.id] = service.service_name;
+        });
+        setServicesMap(map);
+      } catch (error) {
+        console.error("Error loading services:", error);
+      }
+    };
+    fetchServices();
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
   const [foundAppointments, setFoundAppointments] = useState([]);
-  const [allAppointments, setAllAppointments] = useState([]); // All appointments loaded from database
+  const [allAppointments, setAllAppointments] = useState({
+    today: [],
+    missed: [],
+  });
+  const [filterStatus, setFilterStatus] = useState("today"); // 'today' or 'missed'
+  const getLocalDateString = () => {
+    return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+  };
+  const [calendarDate, setCalendarDate] = useState(getLocalDateString());
   const [isSearching, setIsSearching] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Show spinner while loading
-  const [checkInResult, setCheckInResult] = useState(null); // Result of check-in action
-  const [isCheckingIn, setIsCheckingIn] = useState(false); // Spinner for check-in
-  const [currentStaff, setCurrentStaff] = useState(null); // Current staff member
+  const [isLoading, setIsLoading] = useState(true);
+  const [checkInResult, setCheckInResult] = useState(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState(null);
 
   // When a check-in happens, show the result for 5 seconds
   useEffect(() => {
@@ -45,10 +71,10 @@ const PatientCheckIn = () => {
     }
   }, [checkInResult]);
 
-  // When the page loads, get all online appointments from the database
+  // When the page loads or calendarDate changes, get all online appointments for the selected date
   useEffect(() => {
-    loadAllOnlineAppointments();
-  }, []);
+    loadAllOnlineAppointments(calendarDate);
+  }, [calendarDate]);
 
   // When staff types in the search box, filter appointments after a short delay
   // If the box is empty, show all appointments
@@ -57,30 +83,48 @@ const PatientCheckIn = () => {
       if (searchTerm.trim()) {
         filterAppointments();
       } else {
-        setFoundAppointments(allAppointments);
+        setFoundAppointments(allAppointments[filterStatus] || []);
         setCheckInResult(null);
       }
-    }, 300); // 300ms debounce for fast response
-
+    }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, allAppointments]);
+  }, [searchTerm, allAppointments, filterStatus]);
 
   // Get the current staff member when the page loads
   useEffect(() => {
     setCurrentStaff(authService.getCurrentStaff());
   }, []);
 
-  // Load all online appointments from the database
-  const loadAllOnlineAppointments = async () => {
+  // Load all online appointments for the selected date from the database
+  const loadAllOnlineAppointments = async (date) => {
     setIsLoading(true);
     try {
-      const result = await queueService.getAllOnlineAppointments();
+      const result = await queueService.getAllOnlineAppointments(date);
       if (result.success) {
-        setAllAppointments(result.appointments);
-        setFoundAppointments(result.appointments); // Show all by default
+        const getDateString = (d) => {
+          if (!d) return "";
+          return new Date(d).toISOString().split("T")[0];
+        };
+        const todayAppointments = result.appointments.filter(
+          (apt) =>
+            getDateString(apt.preferred_date) === date &&
+            apt.status !== "missed"
+        );
+        const missedAppointments = result.appointments.filter(
+          (apt) => apt.status === "missed"
+        );
+        const expectedAppointments = result.appointments.filter(
+          (apt) => apt.status !== "missed"
+        );
+        setAllAppointments({
+          today: todayAppointments,
+          missed: missedAppointments,
+          expected: expectedAppointments,
+        });
+        setFoundAppointments(todayAppointments); // Show all by default
         setCheckInResult(null);
       } else {
-        setAllAppointments([]);
+        setAllAppointments({ today: [], missed: [] });
         setFoundAppointments([]);
         setCheckInResult({
           success: false,
@@ -93,7 +137,7 @@ const PatientCheckIn = () => {
         success: false,
         message: "Error loading appointments",
       });
-      setAllAppointments([]);
+      setAllAppointments({ today: [], missed: [] });
       setFoundAppointments([]);
     } finally {
       setIsLoading(false);
@@ -103,15 +147,18 @@ const PatientCheckIn = () => {
   const filterAppointments = () => {
     setIsSearching(true);
     try {
-      const filtered = allAppointments.filter((appointment) => {
-        const searchLower = searchTerm.toLowerCase();
-        return (
-          appointment.patient_full_name?.toLowerCase().includes(searchLower) ||
-          appointment.email_address?.toLowerCase().includes(searchLower) ||
-          appointment.contact_number?.includes(searchTerm)
-        );
-      });
-
+      const filtered = (allAppointments[filterStatus] || []).filter(
+        (appointment) => {
+          const searchLower = searchTerm.toLowerCase();
+          return (
+            appointment.patient_full_name
+              ?.toLowerCase()
+              .includes(searchLower) ||
+            appointment.email_address?.toLowerCase().includes(searchLower) ||
+            appointment.contact_number?.includes(searchTerm)
+          );
+        }
+      );
       setFoundAppointments(filtered);
       if (filtered.length === 0 && searchTerm.trim()) {
         setCheckInResult({
@@ -147,10 +194,10 @@ const PatientCheckIn = () => {
           timestamp: new Date().toISOString(),
         });
 
-        // Remove the checked-in appointment from both lists
-        setAllAppointments((prev) =>
-          prev.filter((apt) => apt.id !== appointment.id)
-        );
+        setAllAppointments((prev) => ({
+          ...prev,
+          today: prev.today.filter((apt) => apt.id !== appointment.id),
+        }));
         setFoundAppointments((prev) =>
           prev.filter((apt) => apt.id !== appointment.id)
         );
@@ -176,208 +223,282 @@ const PatientCheckIn = () => {
     });
   };
 
+  // Mark appointment as missed
+  const handleMarkMissed = async (appointment) => {
+    try {
+      // Update queue item status
+      await queueService.updateQueueStatus(appointment.id, "missed");
+      // Also update appointment status in appointments collection
+      if (appointment.id) {
+        // The appointment id may be different from the queue id, so check for appointment_ref or appointment_id
+        // If appointment.id is the appointment id, use it directly
+        // If not, try to extract from appointment.appointment_id or appointment.appointment_ref
+        let appointmentId = appointment.id;
+        if (appointment.appointment_id)
+          appointmentId = appointment.appointment_id;
+        if (appointment.appointment_ref)
+          appointmentId = appointment.appointment_ref.split("/")[1];
+        // Update appointment status
+        const { ref, update } = await import("firebase/database");
+        const { database } = await import("../../shared/config/firebase");
+        const appointmentRef = ref(database, `appointments/${appointmentId}`);
+        await update(appointmentRef, {
+          status: "missed",
+          updated_at: new Date().toISOString(),
+        });
+      }
+      setCheckInResult({ success: true, message: "Marked as missed." });
+      setAllAppointments((prev) => ({
+        ...prev,
+        today: prev.today.filter((apt) => apt.id !== appointment.id),
+        missed: [...prev.missed, { ...appointment, status: "missed" }],
+      }));
+      setFoundAppointments((prev) =>
+        prev.filter((apt) => apt.id !== appointment.id)
+      );
+    } catch (error) {
+      setCheckInResult({ success: false, message: "Error marking as missed." });
+    }
+  };
+
+  // Reschedule appointment (simple: set status to 'rescheduled')
+  const handleReschedule = async (appointment) => {
+    try {
+      await queueService.updateQueueStatus(appointment.id, "rescheduled");
+      setCheckInResult({ success: true, message: "Appointment rescheduled." });
+      setAllAppointments((prev) => ({
+        ...prev,
+        today: prev.today.filter((apt) => apt.id !== appointment.id),
+      }));
+      setFoundAppointments((prev) =>
+        prev.filter((apt) => apt.id !== appointment.id)
+      );
+    } catch (error) {
+      setCheckInResult({
+        success: false,
+        message: "Error rescheduling appointment.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Update foundAppointments when calendarDate or filterStatus changes
+    const getDateString = (date) => {
+      if (!date) return "";
+      return new Date(date).toISOString().split("T")[0];
+    };
+    if (filterStatus === "today") {
+      setFoundAppointments(
+        (allAppointments.today || []).filter(
+          (apt) =>
+            getDateString(apt.preferred_date) === calendarDate &&
+            apt.status !== "missed"
+        )
+      );
+    } else if (filterStatus === "missed") {
+      setFoundAppointments(
+        (allAppointments.missed || []).filter(
+          (apt) =>
+            getDateString(apt.preferred_date) === calendarDate &&
+            apt.status === "missed"
+        )
+      );
+    }
+  }, [calendarDate, allAppointments, filterStatus]);
+
   return (
-    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Patient Check-in
-        </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Search and check-in online appointments
+    <div className="p-4 space-y-6 bg-gradient-to-br from-blue-50 via-gray-100 to-blue-100 dark:from-gray-900 dark:via-blue-900 dark:to-gray-900 min-h-screen">
+      {/* Filter buttons and calendar date picker row - improved responsiveness */}
+      <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
+        <div className="flex gap-2 flex-wrap w-full md:w-auto">
+          <Button
+            variant={filterStatus === "today" ? "default" : "outline"}
+            className={`rounded-full px-6 py-2 font-semibold ${
+              filterStatus === "today"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-blue-600 border-blue-600"
+            }`}
+            onClick={() => {
+              setFilterStatus("today");
+              setCalendarDate(getLocalDateString());
+            }}
+          >
+            Today's Appointments
+            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">
+              {
+                (allAppointments.today || []).filter((apt) => {
+                  const todayDate = new Date().toISOString().split("T")[0];
+                  return (
+                    apt.preferred_date === todayDate && apt.status !== "missed"
+                  );
+                }).length
+              }
+            </span>
+          </Button>
+          <Button
+            variant={filterStatus === "missed" ? "default" : "outline"}
+            className={`rounded-full px-6 py-2 font-semibold ${
+              filterStatus === "missed"
+                ? "bg-red-600 text-white"
+                : "bg-white text-red-600 border-red-600"
+            }`}
+            onClick={() => setFilterStatus("missed")}
+          >
+            Missed Appointments
+            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-red-200 text-red-800">
+              {
+                (allAppointments.missed || []).filter(
+                  (apt) =>
+                    apt.preferred_date === calendarDate &&
+                    apt.status === "missed"
+                ).length
+              }
+            </span>
+          </Button>
+        </div>
+        <div className="flex-1 flex items-center gap-2 justify-end w-full md:w-auto">
+          <label
+            htmlFor="calendarDate"
+            className="font-semibold text-gray-700 dark:text-gray-200"
+          >
+            Select Date:
+          </label>
+          <input
+            type="date"
+            id="calendarDate"
+            value={calendarDate}
+            onChange={(e) => setCalendarDate(e.target.value)}
+            className="rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full max-w-xs"
+          />
         </div>
       </div>
 
-      {/* Search Section */}
-      <Card className="border border-gray-200 dark:border-gray-700 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Search className="h-5 w-5" />
-            Search Online Appointments
-          </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
-            {isLoading
-              ? "Loading online appointments..."
-              : searchTerm
-              ? `Filtering ${allAppointments.length} appointments...`
-              : `Showing all ${allAppointments.length} online appointments`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label
-              htmlFor="search"
-              className="text-gray-700 dark:text-gray-300"
-            >
-              Search Term
-            </Label>
-            <Input
-              id="search"
-              type="text"
-              placeholder={
-                isLoading
-                  ? "Loading appointments..."
-                  : "Filter by patient name, email, or phone... (leave empty to show all)"
-              }
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isLoading}
-              className="mt-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
-            {isLoading && (
-              <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
-                <span className="animate-spin">⚡</span>
-                Loading appointments...
-              </p>
-            )}
-            {isSearching && !isLoading && (
-              <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
-                <span className="animate-spin">🔍</span>
-                Filtering...
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results Section */}
-      {checkInResult && (
-        <div
-          className={`p-4 rounded-lg border ${
-            checkInResult.success
-              ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-              : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-          }`}
+      {/* Search input */}
+      <div className="mb-4 flex items-center gap-2">
+        <Input
+          type="text"
+          placeholder="Search by name, email, or phone..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-md"
+        />
+        <Button
+          variant="outline"
+          onClick={filterAppointments}
+          className="px-4 py-2"
         >
-          <div className="flex items-center gap-2">
-            {checkInResult.success ? (
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            )}
-            <span
-              className={`font-medium ${
-                checkInResult.success
-                  ? "text-green-800 dark:text-green-200"
-                  : "text-red-800 dark:text-red-200"
-              }`}
-            >
-              {checkInResult.message}
-            </span>
-          </div>
-          {checkInResult.success && checkInResult.queueNumber && (
-            <div className="mt-2 text-lg font-bold text-green-700 dark:text-green-300">
-              Queue Number: {checkInResult.queueNumber}
-            </div>
-          )}
-        </div>
-      )}
+          <Search className="h-4 w-4 mr-2" /> Search
+        </Button>
+      </div>
 
       {/* Found Appointments */}
       {foundAppointments.length > 0 && (
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-lg">
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-xl bg-gradient-to-r from-white via-blue-50 to-white dark:from-gray-800 dark:via-blue-900 dark:to-gray-800">
           <CardHeader>
             <CardTitle className="text-gray-900 dark:text-white">
-              Found Appointments ({foundAppointments.length})
+              Appointments for {calendarDate} ({foundAppointments.length})
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
-              Select an appointment to check in
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {foundAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
+              {foundAppointments.map((appointment) => {
+                const todayDate = getLocalDateString();
+                const isToday = appointment.preferred_date === todayDate;
+                return (
+                  <div
+                    key={appointment.id}
+                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 w-full"
+                  >
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="font-semibold text-gray-900 dark:text-white">
+                        <span className="font-semibold text-lg text-gray-900 dark:text-white truncate">
                           {appointment.patient_full_name}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Mail className="h-4 w-4" />
-                        <span>{appointment.email_address}</span>
+                      <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        <span className="flex items-center gap-1 truncate">
+                          <Mail className="h-4 w-4" />
+                          {appointment.email_address}
+                        </span>
+                        <span className="flex items-center gap-1 truncate">
+                          <Phone className="h-4 w-4" />
+                          {appointment.contact_number}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          Booked: {formatDate(appointment.booked_at)}
+                        </span>
+                        {appointment.service_ref && (
+                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
+                            Service:{" "}
+                            {(() => {
+                              const ref = appointment.service_ref;
+                              const id = ref?.split("/")[1];
+                              return servicesMap[id] || ref;
+                            })()}
+                          </span>
+                        )}
                       </div>
-
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Phone className="h-4 w-4" />
-                        <span>{appointment.contact_number}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Clock className="h-4 w-4" />
-                        <span>Booked: {formatDate(appointment.booked_at)}</span>
-                      </div>
-
-                      {appointment.service_ref && (
-                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                          Service: {appointment.service_ref}
-                        </div>
-                      )}
                     </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                    <div className="flex flex-col md:flex-row items-end md:items-center gap-2 min-w-fit">
+                      <span className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full mb-2 md:mb-0">
                         Online Appointment
                       </span>
-
-                      <Button
-                        onClick={() => handleCheckIn(appointment)}
-                        disabled={isCheckingIn}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {isCheckingIn ? "Checking In..." : "Check In"}
-                      </Button>
+                      {isToday && appointment.status === "scheduled" && (
+                        <>
+                          <Button
+                            onClick={() => handleCheckIn(appointment)}
+                            className="bg-green-500 hover:bg-green-600 text-white"
+                          >
+                            Check In
+                          </Button>
+                          <Button
+                            onClick={() => handleMarkMissed(appointment)}
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                          >
+                            Mark as Missed
+                          </Button>
+                        </>
+                      )}
+                      {appointment.status === "checked-in" && (
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 font-semibold">
+                          Checked In
+                          {appointment.queue_number && (
+                            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">
+                              Queue #: {appointment.queue_number}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {appointment.status === "missed" && (
+                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
+                          Missed
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* No Results */}
-      {searchTerm &&
-        foundAppointments.length === 0 &&
-        !isSearching &&
-        !checkInResult && (
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardContent className="py-8 text-center">
-              <AlertCircle className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No appointments found
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Try searching with a different name, email, or phone number.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-      {/* No Appointments Available */}
-      {!searchTerm &&
-        foundAppointments.length === 0 &&
-        !isLoading &&
-        !checkInResult && (
-          <Card className="border border-gray-200 dark:border-gray-700">
-            <CardContent className="py-8 text-center">
-              <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No online appointments available
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                There are currently no online appointments waiting to be checked
-                in.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {foundAppointments.length === 0 && !isLoading && (
+        <Card className="border border-gray-200 dark:border-gray-700">
+          <CardContent className="py-8 text-center">
+            <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              No appointments found for {calendarDate}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Try selecting a different date or check the appointment details.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Instructions */}
       <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">

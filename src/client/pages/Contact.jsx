@@ -222,9 +222,6 @@ export default function Contact() {
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base mb-1">
                     (237) 681-812-255
                   </p>
-                  <p className="text-primary font-worksans text-xs sm:text-sm md:text-base">
-                    (237) 666-331-894
-                  </p>
                 </div>
 
                 {/* Location */}
@@ -251,9 +248,7 @@ export default function Contact() {
                   <h3 className="text-sm sm:text-base md:text-lg font-worksans font-bold text-primary mb-1 sm:mb-2">
                     EMAIL
                   </h3>
-                  <p className="text-primary font-worksans text-xs sm:text-sm md:text-base mb-1">
-                    fildineeesoe@gmil.com
-                  </p>
+
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base">
                     myebstudios@gmail.com
                   </p>
@@ -269,9 +264,6 @@ export default function Contact() {
                   </h3>
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base mb-1">
                     Mon-Sat 09:00-20:00
-                  </p>
-                  <p className="text-primary font-worksans text-xs sm:text-sm md:text-base">
-                    Sunday Emergency only
                   </p>
                 </div>
               </div>

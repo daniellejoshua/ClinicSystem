@@ -20,7 +20,7 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Important Links */}
+          {/* Will convert this to use react router */}
           <div>
             <h4 className="text-lg font-worksans font-semibold mb-4">
               Important Links
@@ -39,7 +39,7 @@ export default function Footer() {
                   href="#"
                   className="text-gray-300 hover:text-accent transition-colors font-worksans"
                 >
-                  Doctors
+                  Contacts
                 </a>
               </li>
               <li>
@@ -67,7 +67,7 @@ export default function Footer() {
               Contact Us
             </h4>
             <div className="space-y-2 text-gray-300 font-worksans">
-              <p>Call: 09291329240</p>
+              <p> (237) 681-812-255</p>
               <p>Email: justinnabunturan@gmail.com</p>
               <p>Address: Ortega St. Tonsuya, Malabon City</p>
               <p>Philippines</p>

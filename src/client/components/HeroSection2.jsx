@@ -1,4 +1,5 @@
 import MedicalTeam from "../../assets/images/MedicalTeam.png";
+import { Link } from "react-router-dom";
 
 export default function HeroSection2() {
   return (
@@ -18,10 +19,12 @@ export default function HeroSection2() {
             tortor augue. Velit neque proin massa in. Consequat mauris rhoncus
             feugiat porttitor eniet.
           </p>
-          <button className="text-secondary font-worksans font-medium text-lg hover:text-accent/80 transition-colors flex items-center gap-2">
-            Learn More
-            <span className="text-xl text-primary">→</span>
-          </button>
+          <Link to="/about">
+            <button className="text-secondary font-worksans font-medium text-lg hover:text-accent/80 transition-colors flex items-center gap-2">
+              Learn More
+              <span className="text-xl text-primary">→</span>
+            </button>
+          </Link>
         </div>
 
         {/* Medical Team Image - Responsive */}

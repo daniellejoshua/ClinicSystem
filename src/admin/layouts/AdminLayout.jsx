@@ -8,7 +8,7 @@ const AdminLayout = () => {
     document.title = "Tonsuya Super Health Center Admin";
     // Set favicon to tonuysa image
     const favicon = document.querySelector("link[rel~='icon']");
-    if (favicon) favicon.href = "/Tonsuya.jpg";
+    if (favicon) favicon.href = "/Tonsuya.png";
   }, []);
 
   return (
