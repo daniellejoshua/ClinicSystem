@@ -34,10 +34,12 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import queueService from "../../shared/services/queueService";
+import customDataService from "../../shared/services/customDataService";
 import { Badge } from "../../components/ui/badge";
 
 const QueueManagement = () => {
   const [queueData, setQueueData] = useState([]);
+  const [services, setServices] = useState([]);
   const [queueStats, setQueueStats] = useState({
     total: 0,
     waiting: 0,
@@ -58,7 +60,18 @@ const QueueManagement = () => {
   });
 
   // Removed walk-in modal state for cleaner UI
+  // Helper to resolve service name from reference
+  const getServiceName = (serviceRef) => {
+    if (!serviceRef || !services.length) return "Unknown Service";
+    const serviceId = serviceRef.split("/").pop();
+    const service = services.find((s) => s.id === serviceId);
+    return service ? service.service_name : serviceRef;
+  };
+
   useEffect(() => {
+    // Load all services for reference resolution
+    customDataService.getAllData("services").then(setServices);
+
     // Helper to check if we need to reset queue
     const checkAndResetQueue = () => {
       const now = new Date();
@@ -235,7 +248,7 @@ const QueueManagement = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-6">
         {/* Header */}
         <Card>
           <CardContent className="p-6">
@@ -388,127 +401,147 @@ const QueueManagement = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {queueData.map((queueEntry) => (
-                  <div
-                    key={queueEntry.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        {/* Queue Number with Type Indicator */}
-                        {getQueueNumberDisplay(
-                          queueEntry.queue_number,
-                          queueEntry.appointment_type
-                        )}
-
-                        {/* Patient Info */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg text-gray-900 dark:text-white">
-                              {queueEntry.full_name}
-                            </h3>
-
-                            <Badge
-                              className={getTypeColor(
-                                queueEntry.appointment_type
-                              )}
-                            >
-                              {queueEntry.appointment_type === "online" ? (
-                                <>
-                                  <FaStar className="w-3 h-3 mr-1" />
-                                  Priority (Online)
-                                </>
-                              ) : (
-                                <>
-                                  <FaWalking className="w-3 h-3 mr-1" />
-                                  Walk-in
-                                </>
-                              )}
-                            </Badge>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400">
-                            <div className="flex items-center gap-1">
-                              <FaCalendarCheck className="w-4 h-4" />
-                              <span>{queueEntry.service_ref}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <FaClock className="w-4 h-4" />
-                              <span>
-                                {queueEntry.appointment_type === "online"
-                                  ? `Booked: ${
-                                      queueEntry.booked_at
-                                        ? new Date(
-                                            queueEntry.booked_at
-                                          ).toLocaleTimeString()
-                                        : "-"
-                                    }`
-                                  : `Arrived: ${
-                                      queueEntry.arrival_time
-                                        ? new Date(
-                                            queueEntry.arrival_time
-                                          ).toLocaleTimeString()
-                                        : "-"
-                                    }`}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <FaBell className="w-4 h-4" />
-                              <span>{queueEntry.phone_number}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status and Actions */}
-                      <div className="flex items-center gap-3">
-                        <Badge className={getStatusColor(queueEntry.status)}>
-                          {queueEntry.status.charAt(0).toUpperCase() +
-                            queueEntry.status.slice(1)}
-                        </Badge>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          {queueEntry.status === "waiting" && (
-                            <Button
-                              onClick={() =>
-                                updateQueueStatus(queueEntry.id, "in-progress")
-                              }
-                              size="sm"
-                              className="bg-blue-500 hover:bg-blue-600 text-white"
-                            >
-                              <FaPlayCircle className="w-3 h-3 mr-1" />
-                              Call
-                            </Button>
+              <div className="overflow-x-auto max-h-[500px]">
+                <table className="min-w-full border-collapse">
+                  <thead className="sticky top-0 z-10 bg-white dark:bg-gray-900 shadow">
+                    <tr>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Queue #
+                      </th>
+                      <th className="px-6 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 min-w-[180px]">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Service
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Time
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Phone
+                      </th>
+                      <th className="px-4 py-3 border-b text-left font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queueData.map((queueEntry) => (
+                      <tr
+                        key={queueEntry.id}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        <td className="px-4 py-3 border-b">
+                          {getQueueNumberDisplay(
+                            queueEntry.queue_number,
+                            queueEntry.appointment_type
                           )}
-
-                          {queueEntry.status === "in-progress" && (
-                            <Button
-                              onClick={() =>
-                                updateQueueStatus(queueEntry.id, "completed")
-                              }
-                              size="sm"
-                              className="bg-green-500 hover:bg-green-600 text-white"
-                            >
-                              <FaCheckCircle className="w-3 h-3 mr-1" />
-                              Complete
-                            </Button>
-                          )}
-
-                          <Button
-                            onClick={() => setSelectedPatient(queueEntry)}
-                            size="sm"
-                            variant="outline"
+                        </td>
+                        <td className="px-6 py-3 border-b font-semibold text-gray-900 dark:text-white min-w-[180px]">
+                          <span
+                            className="block truncate max-w-[220px] cursor-pointer"
+                            title={queueEntry.full_name}
                           >
-                            <FaEye className="w-3 h-3 mr-1" />
-                            Details
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                            {queueEntry.full_name}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          {getServiceName(queueEntry.service_ref)}
+                        </td>
+                        <td className="px-6 py-3 border-b min-w-[160px]">
+                          <Badge
+                            className={getTypeColor(
+                              queueEntry.appointment_type
+                            )}
+                          >
+                            {queueEntry.appointment_type === "online" ? (
+                              <>
+                                <FaStar className="w-3 h-3 mr-1" />
+                                Online
+                              </>
+                            ) : (
+                              <>
+                                <FaWalking className="w-3 h-3 mr-1" />
+                                Walk-in
+                              </>
+                            )}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <Badge className={getStatusColor(queueEntry.status)}>
+                            {queueEntry.status.charAt(0).toUpperCase() +
+                              queueEntry.status.slice(1)}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          {queueEntry.appointment_type === "online"
+                            ? `Booked: ${
+                                queueEntry.booked_at
+                                  ? new Date(
+                                      queueEntry.booked_at
+                                    ).toLocaleTimeString()
+                                  : "-"
+                              }`
+                            : `Arrived: ${
+                                queueEntry.arrival_time
+                                  ? new Date(
+                                      queueEntry.arrival_time
+                                    ).toLocaleTimeString()
+                                  : "-"
+                              }`}
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          {queueEntry.phone_number}
+                        </td>
+                        <td className="px-4 py-3 border-b">
+                          <div className="flex gap-2">
+                            {queueEntry.status === "waiting" && (
+                              <Button
+                                onClick={() =>
+                                  updateQueueStatus(
+                                    queueEntry.id,
+                                    "in-progress"
+                                  )
+                                }
+                                size="sm"
+                                className="bg-blue-500 hover:bg-blue-600 text-white"
+                              >
+                                <FaPlayCircle className="w-3 h-3 mr-1" />
+                                Call
+                              </Button>
+                            )}
+                            {queueEntry.status === "in-progress" && (
+                              <Button
+                                onClick={() =>
+                                  updateQueueStatus(queueEntry.id, "completed")
+                                }
+                                size="sm"
+                                className="bg-green-500 hover:bg-green-600 text-white"
+                              >
+                                <FaCheckCircle className="w-3 h-3 mr-1" />
+                                Complete
+                              </Button>
+                            )}
+                            <Button
+                              onClick={() => setSelectedPatient(queueEntry)}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <FaEye className="w-3 h-3 mr-1" />
+                              Details
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
