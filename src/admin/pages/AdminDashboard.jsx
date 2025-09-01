@@ -37,16 +37,19 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { BarChart, Bar, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import customDataService from "../../shared/services/customDataService";
 import analyticsService from "../../shared/services/analyticsService";
 import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
+// Remove ChartBar import, use Recharts BarChart instead
 
 // Chart colors for light and dark mode
 const chartColors = {
   light: {
     online: "#159EEC",
     walkin: "#9BDBFF",
+    bar: "#159EEC",
     background: "#ffffff",
     grid: "#e5e7eb",
     text: "#374151",
@@ -54,6 +57,7 @@ const chartColors = {
   dark: {
     online: "#3B82F6",
     walkin: "#10B981",
+    bar: "#3B82F6",
     background: "#1f2937",
     grid: "#374151",
     text: "#f9fafb",
@@ -121,6 +125,64 @@ const AdminDashboard = () => {
     service_ref: "",
     priority_flag: "normal",
     appointment_type: "walkin", // New field for appointment type
+  });
+
+  // Service Utilization filtering logic
+  const [servicePeriod, setServicePeriod] = useState("7days");
+  const getServicePeriodLabel = (period) => {
+    const labels = {
+      "7days": "Last 7 days",
+      "30days": "Last 30 days",
+      "3months": "Last 3 months",
+      all: "All time",
+    };
+    return labels[period] || "Last 7 days";
+  };
+
+  // Filter appointments by selected period
+  const filterAppointmentsByPeriod = (appointments, period) => {
+    const now = new Date();
+    let filtered = [];
+    if (period === "7days") {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= sevenDaysAgo
+      );
+    } else if (period === "30days") {
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= thirtyDaysAgo
+      );
+    } else if (period === "3months") {
+      const threeMonthsAgo = new Date(now);
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= threeMonthsAgo
+      );
+    } else {
+      filtered = appointments;
+    }
+    return filtered;
+  };
+
+  const filteredAppointments = filterAppointmentsByPeriod(
+    appointments,
+    servicePeriod
+  );
+
+  // Prepare service utilization data for selected period
+  const serviceUtilization = services.map((service) => {
+    const count = filteredAppointments.filter(
+      (appt) =>
+        appt.service_ref?.includes(service.id) ||
+        appt.service_ref === service.service_name
+    ).length;
+    return {
+      name: service.service_name,
+      count,
+    };
   });
 
   useEffect(() => {
@@ -447,8 +509,9 @@ const AdminDashboard = () => {
       </div>
 
       {/* Chart Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        {/* Appointment Overview AreaChart card */}
+        <Card className="w-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -574,7 +637,8 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        {/* Recent Activity Card */}
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
@@ -671,176 +735,132 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Patients Table */}
-      <Card>
+      {/* Service Utilization Stats Card - full width below */}
+      <Card className="w-full mt-4">
         <CardHeader>
-          <CardTitle>Recent Patients</CardTitle>
-          <CardDescription>
-            A list of recent patient registrations in your clinic.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Service Utilization Stats</CardTitle>
+              <CardDescription>
+                Number of appointments per service -{" "}
+                {getServicePeriodLabel(servicePeriod)}
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+              {[
+                { key: "7days", label: "7 days" },
+                { key: "30days", label: "30 days" },
+                { key: "3months", label: "3 months" },
+                { key: "all", label: "All" },
+              ].map((period) => (
+                <Button
+                  key={period.key}
+                  variant={servicePeriod === period.key ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setServicePeriod(period.key)}
+                  className={`text-xs px-3 py-1 h-8 ${
+                    servicePeriod === period.key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {patients.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                No patients registered yet. Click "Register New Patient" to add
-                your first patient.
-              </p>
+          {serviceUtilization.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No service utilization data yet.
             </div>
           ) : (
-            <div className="rounded-md border">
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left py-3 px-4 font-medium">
-                        Queue #
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">Name</th>
-                      <th className="text-left py-3 px-4 font-medium">Phone</th>
-                      <th className="text-left py-3 px-4 font-medium">Type</th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Service
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Priority
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patients
-                      .sort((a, b) => {
-                        // Show pending online appointments first, then queue order
-                        if (a.status === "pending" && b.status !== "pending")
-                          return -1;
-                        if (b.status === "pending" && a.status !== "pending")
-                          return 1;
-                        if (a.queue_number && b.queue_number)
-                          return a.queue_number - b.queue_number;
-                        return 0;
-                      })
-                      .slice(-15)
-                      .map((patient) => {
-                        // Find matching queue entry for more accurate status
-                        const queueEntry = queue.find(
-                          (q) =>
-                            q.full_name === patient.full_name &&
-                            q.appointment_type === patient.appointment_type &&
-                            q.email === patient.email
-                        );
-                        const status = queueEntry
-                          ? queueEntry.status
-                          : patient.status;
-                        const queueNumber = queueEntry
-                          ? queueEntry.queue_number
-                          : patient.queue_number;
-                        return (
-                          <tr
-                            key={patient.id}
-                            className="border-b hover:bg-muted/50"
-                          >
-                            <td className="py-3 px-4">
-                              {queueNumber || (
-                                <span className="text-orange-600 text-sm font-medium">
-                                  Pending Check-in
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 font-medium">
-                              {patient.full_name}
-                            </td>
-                            <td className="py-3 px-4">
-                              {patient.phone_number}
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center">
-                                {patient.appointment_type === "online" ? (
-                                  <>
-                                    <FaGlobe className="mr-1 h-3 w-3" /> Online
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaWalking className="mr-1 h-3 w-3" />{" "}
-                                    Walk-in
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              {(() => {
-                                if (patient.appointment_type === "online") {
-                                  // Online: resolve service name from service_ref
-                                  const serviceId =
-                                    patient.service_ref?.split("/")[1];
-                                  const service = services.find(
-                                    (s) => s.id === serviceId
-                                  );
-                                  return (
-                                    service?.service_name ||
-                                    patient.service_ref ||
-                                    "N/A"
-                                  );
-                                } else {
-                                  // Walk-in: show service name directly
-                                  return patient.service_ref?.includes(
-                                    "services/"
-                                  )
-                                    ? (() => {
-                                        const serviceId =
-                                          patient.service_ref?.split("/")[1];
-                                        const service = services.find(
-                                          (s) => s.id === serviceId
-                                        );
-                                        return (
-                                          service?.service_name ||
-                                          patient.service_ref ||
-                                          "N/A"
-                                        );
-                                      })()
-                                    : patient.service_ref || "N/A";
-                                }
-                              })()}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  status === "waiting"
-                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-neutral-100"
-                                    : status === "in-progress"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-neutral-100"
-                                    : status === "pending"
-                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-neutral-100"
-                                    : status === "completed"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-neutral-100"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
-                                }`}
-                              >
-                                {status === "pending"
-                                  ? "Pending Check-in"
-                                  : status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  patient.priority_flag === "high"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                                    : "bg-gray-100 text-gray-800 dark:bg-neutral-900 dark:text-neutral-100"
-                                }`}
-                              >
-                                {patient.priority_flag}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={serviceUtilization}
+                barCategoryGap="20%"
+                margin={{ top: 30, right: 30, left: 0, bottom: 10 }}
+              >
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor={currentColors.bar}
+                      stopOpacity={0.9}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={isDarkMode ? "#374151" : "#e0f2fe"}
+                      stopOpacity={0.7}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={currentColors.grid}
+                  opacity={0.25}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{
+                    fill: currentColors.text,
+                    fontWeight: 500,
+                    fontSize: 13,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: currentColors.text, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={
+                    isDarkMode ? false : { fill: "#e0f2fe", opacity: 0.15 }
+                  }
+                  contentStyle={{
+                    background: currentColors.background,
+                    borderRadius: "10px",
+                    border: `1px solid ${currentColors.bar}`,
+                    color: currentColors.text,
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  }}
+                  formatter={(value, name, props) => [value, "Appointments"]}
+                  labelFormatter={(label) => `Service: ${label}`}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="url(#barGradient)"
+                  radius={[12, 12, 0, 0]}
+                  maxBarSize={38}
+                  label={({ x, y, width, value }) => (
+                    <text
+                      x={x + width / 2}
+                      y={y - 8}
+                      textAnchor="middle"
+                      fill={currentColors.bar}
+                      fontWeight="bold"
+                      fontSize={14}
+                      style={{ textShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+                    >
+                      {value}
+                    </text>
+                  )}
+                >
+                  {/* Add subtle shadow to bars */}
+                  <animate
+                    attributeName="opacity"
+                    from="0.7"
+                    to="1"
+                    dur="0.6s"
+                    fill="freeze"
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>

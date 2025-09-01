@@ -20,6 +20,29 @@ import {
 import customDataService from "../../shared/services/customDataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+
+// Example data
+const chartData = [
+  { name: "General", value: 40 },
+  { name: "Pediatrics", value: 30 },
+  { name: "Dental", value: 20 },
+  { name: "OB-GYN", value: 10 },
+];
+
 const AppointmentBooking = () => {
   // PIN confirmation dialog state
   const [showPinDialog, setShowPinDialog] = useState(false);
@@ -29,14 +52,14 @@ const AppointmentBooking = () => {
   const nextStep = () => {
     if (currentStep < totalSteps && validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
-      setErrors({});
+      setErrors({}); // Clear errors when moving to next step
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
-      setErrors({});
+      setErrors({}); // Clear errors when moving to previous step
     }
   };
 
@@ -44,7 +67,7 @@ const AppointmentBooking = () => {
   const goToStep = (step) => {
     if (step < currentStep) {
       setCurrentStep(step);
-      setErrors({});
+      setErrors({}); // Clear errors when jumping to a previous step
     }
   };
   const handleInputChange = (e) => {
@@ -247,7 +270,7 @@ const AppointmentBooking = () => {
   // Main submit handler for booking appointment with PIN confirmation
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm()) return; // Only show errors on submit
     setIsLoading(true);
     setSubmitStatus(null);
     try {
@@ -301,6 +324,8 @@ const AppointmentBooking = () => {
           },
           import.meta.env.VITE_EMAILJS_USER_ID
         );
+
+        console.log("Sending to email:", appointmentForm.email_address);
 
         // Save PIN with patient record (for later verification)
         const patientData = {
@@ -522,20 +547,13 @@ const AppointmentBooking = () => {
 
               {/* Status Messages */}
               {submitStatus === "success" && !showPinDialog && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800 mb-2">
-                    <FaCheckCircle className="text-green-600" />
-                    <span className="font-bold font-worksans">
-                      Appointment Booked Successfully!
-                    </span>
-                  </div>
-                  <div className="text-sm text-green-700 space-y-1">
-                    <p>✅ Your online appointment has been confirmed</p>
-                    <p>🏥 Please check in at the clinic when you arrive</p>
-                    <p>
-                      ⭐ You'll receive a priority queue number upon check-in
-                    </p>
-                    <p>📧 A confirmation has been sent to your email</p>
+                <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg shadow flex flex-col items-center">
+                  <FaCheckCircle className="text-green-600 text-3xl mb-2" />
+                  <h3 className="font-bold text-green-800 text-xl mb-2 font-yeseva">
+                    Appointment Booked Successfully!
+                  </h3>
+                  <div className="text-sm text-green-700 space-y-2 text-center font-worksans">
+                    <p>✅ Your online appointment has been confirmed.</p>
                   </div>
                 </div>
               )}
@@ -929,49 +947,66 @@ const AppointmentBooking = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Schedule Hours */}
-            <div className="bg-white rounded-lg shadow-xl p-5 h-fit">
-              <h3 className="text-2xl font-bold text-primary mb-8 font-yeseva">
-                Schedule Hours
+            {/* Clinic Hours Card */}
+            <div className="bg-white rounded-lg shadow-xl p-5 h-fit flex flex-col items-center">
+              <h3 className="text-xl font-bold text-primary mb-2 font-yeseva">
+                Clinic Hours
               </h3>
-              <div className="space-y-6 text-base font-worksans mb-8">
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Monday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Tuesday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Wednesday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Thursday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Friday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Saturday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
+              <div className="text-lg font-worksans text-gray-700 mb-2">
+                <span className="font-semibold">Monday to Saturday</span>
+                <br />
+                <span className="text-primary font-bold">
+                  8:00 AM – 8:00 PM
+                </span>
               </div>
+              <div className="text-sm text-gray-500 font-worksans">
+                Sunday: <span className="font-bold text-red-500">Closed</span>
+              </div>
+            </div>
+
+            {/* Important Notice Card */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow p-4 flex items-start gap-3">
+              <FaExclamationTriangle className="text-yellow-500 text-2xl mt-1" />
+              <div>
+                <h4 className="font-bold text-yellow-700 mb-1 font-yeseva">
+                  Important Notice
+                </h4>
+                <ul className="list-disc ml-5 text-yellow-800 text-sm font-worksans">
+                  <li>Please bring a valid ID on your appointment day.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Service Utilization Chart */}
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+              <h3 className="text-xl font-bold text-primary mb-4 font-yeseva">
+                Service Utilization
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#159EEC" />
+                  <YAxis stroke="#159EEC" />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#fff",
+                      borderRadius: "8px",
+                      border: "1px solid #159EEC",
+                      color: "#159EEC",
+                    }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    fill="#159EEC"
+                    radius={[8, 8, 0, 0]} // Rounded top corners
+                    label={{
+                      position: "top",
+                      fill: "#159EEC",
+                      fontWeight: "bold",
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
