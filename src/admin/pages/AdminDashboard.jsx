@@ -263,6 +263,7 @@ const AdminDashboard = () => {
         if (currentStaff) {
           await customDataService.addDataWithAutoId("audit_logs", {
             user_ref: `staff/${currentStaff.id}`,
+            staff_full_name: currentStaff.full_name,
             action: `Walk-in patient registered: ${patientForm.full_name} - Queue #${result.queueNumber}`,
             ip_address: "192.168.1.100",
             timestamp: new Date().toISOString(),
@@ -639,7 +640,22 @@ const AdminDashboard = () => {
                             {log.action}
                           </span>
                           <span className="text-xs text-gray-600 dark:text-gray-300">
-                            {log.user_ref} •{" "}
+                            {(() => {
+                              if (
+                                log.user_ref &&
+                                log.user_ref.startsWith("staff/")
+                              ) {
+                                const staffId = log.user_ref.split("/")[1];
+                                const staffMember = staff.find(
+                                  (s) => s.id === staffId
+                                );
+                                return staffMember &&
+                                  staffMember.full_name.trim() !== ""
+                                  ? `${staffMember.full_name} • `
+                                  : "Unknown Staff • ";
+                              }
+                              return `${log.user_ref} • `;
+                            })()}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
                         </div>

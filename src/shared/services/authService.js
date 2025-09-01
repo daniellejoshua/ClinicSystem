@@ -49,6 +49,7 @@ class AuthService {
       // Log the login activity
       await customDataService.addDataWithAutoId("audit_logs", {
         user_ref: `staff/${staffMember.id}`,
+        staff_full_name: staffMember.full_name,
         action: `Staff login - ${staffMember.role}`,
         ip_address: this.getClientIP(),
         timestamp: new Date().toISOString(),
@@ -91,6 +92,7 @@ class AuthService {
         // Log the logout activity
         await customDataService.addDataWithAutoId("audit_logs", {
           user_ref: `staff/${staffData.id}`,
+          staff_full_name: staffData.full_name,
           action: `Staff logout - ${staffData.role}`,
           ip_address: this.getClientIP(),
           timestamp: new Date().toISOString(),
@@ -100,6 +102,8 @@ class AuthService {
       localStorage.removeItem("staffData");
       localStorage.removeItem("isStaffLoggedIn");
       localStorage.removeItem("adminToken");
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("userRole");
 
       console.log("✅ Staff logout successful");
     } catch (error) {
