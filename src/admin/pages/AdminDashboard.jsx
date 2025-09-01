@@ -312,6 +312,35 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
+      // Fetch all patients for duplicate check
+      const allPatients = await customDataService.getAllData("patients");
+      // Normalize and match fields
+      const normalize = (str) => (str ? str.trim().toLowerCase() : "");
+      const existingPatient = allPatients.find(
+        (p) =>
+          normalize(p.full_name) === normalize(patientForm.full_name) &&
+          normalize(p.email) === normalize(patientForm.email) &&
+          normalize(p.phone_number) === normalize(patientForm.phone_number)
+      );
+
+      let patientId;
+      if (existingPatient) {
+        patientId = existingPatient.id;
+      } else {
+        // Create new patient record
+        const newPatient = await customDataService.addDataWithAutoId(
+          "patients",
+          {
+            full_name: patientForm.full_name,
+            email: patientForm.email,
+            phone_number: patientForm.phone_number,
+            date_of_birth: patientForm.date_of_birth || "",
+            address: patientForm.address || "",
+          }
+        );
+        patientId = newPatient.id;
+      }
+
       // Use the queue service to add walk-in patient, including priority_flag
       const result = await queueService.addWalkinToQueue({
         full_name: patientForm.full_name,
@@ -333,8 +362,9 @@ const AdminDashboard = () => {
           });
         }
 
-        // Create walk-in appointment in appointments collection
+        // Create walk-in appointment in appointments collection, link to patientId
         const appointmentData = {
+          patient_ref: patientId,
           patient_full_name: patientForm.full_name,
           email_address: patientForm.email,
           contact_number: patientForm.phone_number,

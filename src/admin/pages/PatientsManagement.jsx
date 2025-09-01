@@ -28,6 +28,7 @@ const PatientsManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [patientFilter, setPatientFilter] = useState("all");
 
   // Load all data with references
   useEffect(() => {
@@ -91,19 +92,19 @@ const PatientsManagement = () => {
     );
   };
 
-  // Filter patients based on search and checked-in status
-  // Show all walk-ins, but only include online appointments if checked in
+  // Filtering logic: filter by patient status and search
   const filteredPatients = patients.filter((patient) => {
-    const isWalkin = patient.appointment_type === "walkin";
-    const isOnlineCheckedIn =
-      patient.appointment_type === "online" &&
-      (patient.checked_in ||
-        ["checkedin", "checked-in"].includes(patient.status));
+    // Search filter
     const matchesSearch =
       patient.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.phone_number?.includes(searchTerm);
-    return (isWalkin || isOnlineCheckedIn) && matchesSearch;
+
+    // Status filter
+    if (patientFilter !== "all") {
+      return matchesSearch && patient.status === patientFilter;
+    }
+    return matchesSearch;
   });
 
   const viewPatientDetails = (patient) => {
@@ -193,6 +194,24 @@ const PatientsManagement = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
           />
         </div>
+      </div>
+
+      {/* Filter Dropdown */}
+      <div className="flex items-center gap-4 mb-4">
+        <label className="font-medium text-gray-700">Filter by Status:</label>
+        <select
+          value={patientFilter}
+          onChange={(e) => setPatientFilter(e.target.value)}
+          className="border border-gray-300 rounded px-2 py-1"
+        >
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="checked-in">Checked-in</option>
+          <option value="completed">Completed</option>
+          <option value="waiting">Waiting</option>
+          <option value="in-progress">In Progress</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
       </div>
 
       {/* Patients Table - scrollable, sticky header, no queue column */}

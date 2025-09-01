@@ -18,6 +18,7 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import customDataService from "../../shared/services/customDataService";
+import dataService from "../../shared/services/dataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 import {
@@ -270,16 +271,58 @@ const AppointmentBooking = () => {
   // Main submit handler for booking appointment with PIN confirmation
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return; // Only show errors on submit
+    if (!validateForm()) return;
     setIsLoading(true);
     setSubmitStatus(null);
     try {
       const fullName =
         `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim();
+      // Deduplication: fetch all patients and check for match
+      const allPatients = await customDataService.getAllData("patients");
+      const normalize = (str) => (str ? str.trim().toLowerCase() : "");
+      const existingPatient = allPatients.find(
+        (p) =>
+          normalize(p.full_name) === normalize(fullName) &&
+          normalize(p.email) === normalize(appointmentForm.email_address) &&
+          normalize(p.phone_number) ===
+            normalize(appointmentForm.contact_number) &&
+          normalize(p.date_of_birth) ===
+            normalize(appointmentForm.patient_birthdate) &&
+          normalize(p.patient_sex || p.sex) ===
+            normalize(appointmentForm.patient_sex)
+      );
+
+      let patientId;
+      if (existingPatient) {
+        patientId = existingPatient.id;
+      } else {
+        // Create new patient record
+        const newPatient = await customDataService.addDataWithAutoId(
+          "patients",
+          {
+            full_name: fullName,
+            email: appointmentForm.email_address,
+            phone_number: appointmentForm.contact_number,
+            date_of_birth: appointmentForm.patient_birthdate,
+            sex: appointmentForm.patient_sex,
+            address: "",
+            service_ref: appointmentForm.service_ref,
+            status: "pending",
+            priority_flag: "normal",
+            appointment_type: "online",
+            preferred_date: appointmentForm.preferred_date,
+            current_medications: appointmentForm.current_medications,
+            booking_source: "online",
+            created_at: new Date().toISOString(),
+          }
+        );
+        patientId = newPatient.id;
+      }
+
       // Prepare appointment data
       const appointmentData = {
-        patient_full_name:
-          `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim(),
+        patient_ref: `patients/${patientId}`,
+        patient_full_name: fullName,
         patient_first_name: appointmentForm.patient_first_name,
         patient_middle_name: appointmentForm.patient_middle_name,
         patient_last_name: appointmentForm.patient_last_name,
@@ -300,80 +343,32 @@ const AppointmentBooking = () => {
         created_at: new Date().toISOString(),
       };
 
-      // Create appointment in queue
-      const result = await queueService.createOnlineAppointment(
-        appointmentData
+      // Do NOT push appointment to DB yet. Just store all info for later.
+      // Generate 6-digit PIN
+      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedPin(pin);
+      window._pendingAppointment = {
+        patientId,
+        fullName,
+        pin,
+        appointmentForm: { ...appointmentForm },
+        appointmentData,
+      };
+      // Send PIN via EmailJS
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        {
+          to_name: fullName,
+          appointment_date: appointmentForm.preferred_date,
+          appointment_time: appointmentForm.preferred_time,
+          pin: pin,
+          to_email: appointmentForm.email_address,
+        },
+        import.meta.env.VITE_EMAILJS_USER_ID
       );
-
-      if (result.success) {
-        // Generate 6-digit PIN
-        const pin = Math.floor(100000 + Math.random() * 900000).toString();
-        console.log("Generated PIN:", pin); // <-- Add this line
-        setGeneratedPin(pin);
-
-        // Send PIN via EmailJS
-        await emailjs.send(
-          import.meta.env.VITE_EMAILJS_SERVICE_ID,
-          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-          {
-            to_name: fullName,
-            appointment_date: appointmentForm.preferred_date,
-            appointment_time: appointmentForm.preferred_time, // add this field if needed
-            pin: pin,
-            to_email: appointmentForm.email_address,
-          },
-          import.meta.env.VITE_EMAILJS_USER_ID
-        );
-
-        console.log("Sending to email:", appointmentForm.email_address);
-
-        // Save PIN with patient record (for later verification)
-        const patientData = {
-          full_name: fullName,
-          email: appointmentForm.email_address,
-          phone_number: appointmentForm.contact_number,
-          date_of_birth: appointmentForm.patient_birthdate,
-          address: "", // Not collected in online form, can be updated later
-          service_ref: appointmentForm.service_ref,
-          status: "pending", // Pending until checked in
-          priority_flag: "normal",
-          appointment_type: "online",
-          preferred_date: appointmentForm.preferred_date,
-          current_medications: appointmentForm.current_medications,
-          booking_source: "online",
-          appointment_id: result.appointmentId,
-          created_at: new Date().toISOString(),
-          pin_code: pin,
-        };
-
-        await customDataService.addDataWithAutoId("patients", patientData);
-
-        // Also create fill-up form record for admin reference
-        const formData = {
-          appointment_id: result.appointmentId,
-          patient_full_name:
-            `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim(),
-          patient_birthdate: appointmentForm.patient_birthdate,
-          patient_sex: appointmentForm.patient_sex,
-          appointment_date: new Date().toISOString(),
-          booked_by_name: appointmentForm.booked_by_name,
-          relationship_to_patient: appointmentForm.relationship_to_patient,
-          contact_number: appointmentForm.contact_number,
-          email_address: appointmentForm.email_address,
-          present_checkbox: appointmentForm.present_checkbox,
-          current_medications: appointmentForm.current_medications,
-          booking_source: "online",
-          created_at: new Date().toISOString(),
-          pin_code: pin,
-        };
-
-        await customDataService.addDataWithAutoId("fill_up_forms", formData);
-
-        setShowPinDialog(true); // Show PIN entry dialog
-        setIsLoading(false);
-      } else {
-        throw new Error(result.error || "Failed to book appointment");
-      }
+      setShowPinDialog(true);
+      setIsLoading(false);
     } catch (error) {
       console.error("Error booking appointment:", error);
       setSubmitStatus("error");
@@ -383,14 +378,60 @@ const AppointmentBooking = () => {
 
   // Handle PIN entry and confirmation
   const handlePinConfirm = () => {
-    if (enteredPin === generatedPin) {
+    if (enteredPin === generatedPin && window._pendingAppointment) {
       setSubmitStatus("success");
       setShowPinDialog(false);
       setPinError("");
+      // Push to DB only after PIN confirmation
+      const {
+        patientId,
+        fullName,
+        pin,
+        appointmentForm: form,
+        appointmentData,
+      } = window._pendingAppointment;
+      // Push appointment to DB now (after PIN confirmation)
+      queueService.createOnlineAppointment(appointmentData).then((result) => {
+        if (result.success) {
+          // Update patient record with appointment and PIN
+          dataService.updateData(`patients/${patientId}`, {
+            appointment_id: result.appointmentId,
+            pin_code: pin,
+            preferred_date: form.preferred_date,
+            current_medications: form.current_medications,
+            service_ref: form.service_ref,
+            status: "pending",
+            booking_source: "online",
+            updated_at: new Date().toISOString(),
+          });
+          // Also create fill-up form record for admin reference
+          const formData = {
+            appointment_id: result.appointmentId,
+            patient_ref: `patients/${patientId}`,
+            patient_full_name: fullName,
+            patient_birthdate: form.patient_birthdate,
+            patient_sex: form.patient_sex,
+            appointment_date: new Date().toISOString(),
+            booked_by_name: form.booked_by_name,
+            relationship_to_patient: form.relationship_to_patient,
+            contact_number: form.contact_number,
+            email_address: form.email_address,
+            present_checkbox: form.present_checkbox,
+            current_medications: form.current_medications,
+            booking_source: "online",
+            created_at: new Date().toISOString(),
+            pin_code: pin,
+          };
+          customDataService.addDataWithAutoId("fill_up_forms", formData);
+        }
+        // Clean up pending data
+        window._pendingAppointment = null;
+      });
       // Reset form after successful submission and re-enable button
       setTimeout(() => {
         setAppointmentForm({
           patient_first_name: "",
+          patient_middle_name: "",
           patient_last_name: "",
           patient_birthdate: "",
           patient_sex: "",
@@ -977,37 +1018,7 @@ const AppointmentBooking = () => {
               </div>
             </div>
 
-            {/* Service Utilization Chart */}
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <h3 className="text-xl font-bold text-primary mb-4 font-yeseva">
-                Service Utilization
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" stroke="#159EEC" />
-                  <YAxis stroke="#159EEC" />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#fff",
-                      borderRadius: "8px",
-                      border: "1px solid #159EEC",
-                      color: "#159EEC",
-                    }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    fill="#159EEC"
-                    radius={[8, 8, 0, 0]} // Rounded top corners
-                    label={{
-                      position: "top",
-                      fill: "#159EEC",
-                      fontWeight: "bold",
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {/* ...existing code... */}
           </div>
         </div>
       </div>
