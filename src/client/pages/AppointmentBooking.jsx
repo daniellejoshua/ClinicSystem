@@ -5,6 +5,7 @@
 // The UI shows progress, errors, and feedback to help patients book easily
 
 import React, { useState, useEffect } from "react";
+import emailjs from "emailjs-com";
 import {
   FaCalendar,
   FaUser,
@@ -20,6 +21,11 @@ import customDataService from "../../shared/services/customDataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 const AppointmentBooking = () => {
+  // PIN confirmation dialog state
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState("");
+  const [enteredPin, setEnteredPin] = useState("");
+  const [pinError, setPinError] = useState("");
   const nextStep = () => {
     if (currentStep < totalSteps && validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
@@ -238,13 +244,7 @@ const AppointmentBooking = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handles the logic for booking an appointment:
-  // 1. Patient fills out the form step by step
-  // 2. Each step collects specific info (personal, contact, service, date)
-  // 3. When the form is submitted, validate all fields
-  // 4. If valid, send the data to the backend to save the appointment
-  // 5. Show feedback to the patient (success or error)
-  // Main submit handler for booking appointment
+  // Main submit handler for booking appointment with PIN confirmation
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -255,7 +255,8 @@ const AppointmentBooking = () => {
         `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim();
       // Prepare appointment data
       const appointmentData = {
-        patient_full_name: fullName,
+        patient_full_name:
+          `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim(),
         patient_first_name: appointmentForm.patient_first_name,
         patient_middle_name: appointmentForm.patient_middle_name,
         patient_last_name: appointmentForm.patient_last_name,
@@ -282,9 +283,26 @@ const AppointmentBooking = () => {
       );
 
       if (result.success) {
-        setSubmitStatus("success");
+        // Generate 6-digit PIN
+        const pin = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log("Generated PIN:", pin); // <-- Add this line
+        setGeneratedPin(pin);
 
-        // Create patient record in patients collection for patient management
+        // Send PIN via EmailJS
+        await emailjs.send(
+          import.meta.env.VITE_EMAILJS_SERVICE_ID,
+          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+          {
+            to_name: fullName,
+            appointment_date: appointmentForm.preferred_date,
+            appointment_time: appointmentForm.preferred_time, // add this field if needed
+            pin: pin,
+            to_email: appointmentForm.email_address,
+          },
+          import.meta.env.VITE_EMAILJS_USER_ID
+        );
+
+        // Save PIN with patient record (for later verification)
         const patientData = {
           full_name: fullName,
           email: appointmentForm.email_address,
@@ -300,6 +318,7 @@ const AppointmentBooking = () => {
           booking_source: "online",
           appointment_id: result.appointmentId,
           created_at: new Date().toISOString(),
+          pin_code: pin,
         };
 
         await customDataService.addDataWithAutoId("patients", patientData);
@@ -307,7 +326,8 @@ const AppointmentBooking = () => {
         // Also create fill-up form record for admin reference
         const formData = {
           appointment_id: result.appointmentId,
-          patient_full_name: appointmentForm.patient_full_name,
+          patient_full_name:
+            `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim(),
           patient_birthdate: appointmentForm.patient_birthdate,
           patient_sex: appointmentForm.patient_sex,
           appointment_date: new Date().toISOString(),
@@ -319,42 +339,56 @@ const AppointmentBooking = () => {
           current_medications: appointmentForm.current_medications,
           booking_source: "online",
           created_at: new Date().toISOString(),
+          pin_code: pin,
         };
 
         await customDataService.addDataWithAutoId("fill_up_forms", formData);
 
-        // Reset form after successful submission and re-enable button
-        setTimeout(() => {
-          setAppointmentForm({
-            patient_first_name: "",
-            patient_middle_name: "",
-            patient_last_name: "",
-            patient_birthdate: "",
-            patient_sex: "",
-            contact_number: "",
-            email_address: "",
-            booked_by_name: "",
-            relationship_to_patient: "Self",
-            service_ref: "",
-            preferred_date: "",
-            additional_notes: "",
-            current_medications: "",
-            present_checkbox: false,
-            booking_source: "online",
-          });
-          setCurrentStep(1);
-          setSubmitStatus(null);
-          setIsLoading(false);
-          setErrors({}); // Clear errors after success
-        }, 3000);
+        setShowPinDialog(true); // Show PIN entry dialog
+        setIsLoading(false);
       } else {
         throw new Error(result.error || "Failed to book appointment");
       }
     } catch (error) {
       console.error("Error booking appointment:", error);
       setSubmitStatus("error");
-    } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle PIN entry and confirmation
+  const handlePinConfirm = () => {
+    if (enteredPin === generatedPin) {
+      setSubmitStatus("success");
+      setShowPinDialog(false);
+      setPinError("");
+      // Reset form after successful submission and re-enable button
+      setTimeout(() => {
+        setAppointmentForm({
+          patient_first_name: "",
+          patient_last_name: "",
+          patient_birthdate: "",
+          patient_sex: "",
+          contact_number: "",
+          email_address: "",
+          booked_by_name: "",
+          relationship_to_patient: "Self",
+          service_ref: "",
+          preferred_date: "",
+          additional_notes: "",
+          current_medications: "",
+          present_checkbox: false,
+          booking_source: "online",
+        });
+        setCurrentStep(1);
+        setSubmitStatus(null);
+        setIsLoading(false);
+        setErrors({});
+        setEnteredPin("");
+        setGeneratedPin("");
+      }, 3000);
+    } else {
+      setPinError("Incorrect PIN. Please check your email and try again.");
     }
   };
 
@@ -450,8 +484,44 @@ const AppointmentBooking = () => {
                 </p>
               </div>
 
+              {/* PIN Confirmation Dialog */}
+              {showPinDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                  <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+                    <h2 className="text-xl font-bold text-primary mb-4 font-yeseva text-center">
+                      Enter Your 6-Digit PIN
+                    </h2>
+                    <p className="text-gray-700 mb-4 text-center font-worksans">
+                      We've sent a 6-digit PIN to your email address. Please
+                      enter it below to confirm your appointment.
+                    </p>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={enteredPin}
+                      onChange={(e) =>
+                        setEnteredPin(e.target.value.replace(/[^0-9]/g, ""))
+                      }
+                      className="w-full bg-primary text-white border-0 rounded px-4 py-3 mb-2 text-center text-lg font-bold font-worksans focus:outline-none focus:ring-2 focus:ring-accent"
+                      placeholder="Enter 6-digit PIN"
+                    />
+                    {pinError && (
+                      <p className="text-red-500 text-sm mb-2 text-center font-worksans">
+                        {pinError}
+                      </p>
+                    )}
+                    <button
+                      onClick={handlePinConfirm}
+                      className="bg-accent text-primary py-2 px-6 rounded font-semibold hover:bg-accent/90 transition-colors w-full font-worksans"
+                    >
+                      Confirm PIN
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Status Messages */}
-              {submitStatus === "success" && (
+              {submitStatus === "success" && !showPinDialog && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-2 text-green-800 mb-2">
                     <FaCheckCircle className="text-green-600" />

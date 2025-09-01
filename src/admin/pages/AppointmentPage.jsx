@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Badge from "../../components/ui/badge";
 import dataService from "../../shared/services/dataService";
+import emailjs from "emailjs-com";
 
 function AppointmentPage() {
   const [services, setServices] = useState([]);
@@ -42,7 +43,6 @@ function AppointmentPage() {
     switch (status) {
       case "completed":
         return "bg-green-100 text-green-700";
-      case "no-show":
         return "bg-red-100 text-red-700";
       case "confirmed":
         return "bg-blue-100 text-blue-700";
@@ -67,6 +67,36 @@ function AppointmentPage() {
         ? a.appointment_date - b.appointment_date
         : b.appointment_date - a.appointment_date
     );
+
+  // Generate a random 6-digit PIN
+  function generatePin() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  // Call this when booking an appointment
+  async function sendConfirmationEmail(appointment) {
+    const pin = generatePin();
+
+    // Save the PIN with the appointment (add to your DB logic)
+    // appointment.pin = pin;
+
+    // EmailJS send
+    const templateParams = {
+      to_email: appointment.email_address,
+      to_name: appointment.patient_full_name,
+      pin_code: pin,
+      // ...other params
+    };
+
+    await emailjs.send(
+      "YOUR_SERVICE_ID",
+      "YOUR_TEMPLATE_ID",
+      templateParams,
+      "YOUR_USER_ID"
+    );
+
+    // Save appointment with pin to DB here
+  }
 
   // Render appointment list
   return (
