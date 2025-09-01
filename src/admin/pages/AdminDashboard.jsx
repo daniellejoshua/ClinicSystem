@@ -121,10 +121,10 @@ const AdminDashboard = () => {
     email: "",
     phone_number: "",
     date_of_birth: "",
-    address: "",
+    gender: "",
     service_ref: "",
     priority_flag: "normal",
-    appointment_type: "walkin", // New field for appointment type
+    appointment_type: "walkin",
   });
 
   // Service Utilization filtering logic
@@ -312,15 +312,35 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Fetch all patients for duplicate check
+      // Validation
+      const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+      const phoneRegex = /^(\+63|0)9\d{9}$/;
+      if (!emailRegex.test(patientForm.email)) {
+        alert("❌ Please enter a valid email address.");
+        setIsLoading(false);
+        return;
+      }
+      if (!phoneRegex.test(patientForm.phone_number)) {
+        alert("❌ Please enter a valid Philippine mobile number.");
+        setIsLoading(false);
+        return;
+      }
+      if (!patientForm.gender) {
+        alert("❌ Please select a gender.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Deduplication: fetch all patients and check for match
       const allPatients = await customDataService.getAllData("patients");
-      // Normalize and match fields
-      const normalize = (str) => (str ? str.trim().toLowerCase() : "");
-      const existingPatient = allPatients.find(
+      const normalize = (str) => (str ? String(str).trim().toLowerCase() : "");
+      let existingPatient = allPatients.find(
         (p) =>
           normalize(p.full_name) === normalize(patientForm.full_name) &&
           normalize(p.email) === normalize(patientForm.email) &&
-          normalize(p.phone_number) === normalize(patientForm.phone_number)
+          normalize(p.phone_number) === normalize(patientForm.phone_number) &&
+          normalize(p.date_of_birth) === normalize(patientForm.date_of_birth) &&
+          normalize(p.sex || p.gender) === normalize(patientForm.gender)
       );
 
       let patientId;
@@ -328,6 +348,7 @@ const AdminDashboard = () => {
         patientId = existingPatient.id;
       } else {
         // Create new patient record
+        const now = new Date().toISOString();
         const newPatient = await customDataService.addDataWithAutoId(
           "patients",
           {
@@ -335,20 +356,74 @@ const AdminDashboard = () => {
             email: patientForm.email,
             phone_number: patientForm.phone_number,
             date_of_birth: patientForm.date_of_birth || "",
-            address: patientForm.address || "",
+            sex: patientForm.gender,
+            service_ref: patientForm.service_ref || "General Consultation",
+            status: "waiting",
+            priority_flag: patientForm.priority_flag || "normal",
+            appointment_type: "walkin",
+            booking_source: "walkin",
+            created_at: now,
           }
         );
         patientId = newPatient.id;
       }
 
-      // Use the queue service to add walk-in patient, including priority_flag
+      // Always create a new appointment for every registration
+      const appointmentData = {
+        patient_ref: `patients/${patientId}`,
+        patient_full_name: patientForm.full_name,
+        email_address: patientForm.email,
+        contact_number: patientForm.phone_number,
+        service_ref: patientForm.service_ref || "General Consultation",
+        appointment_type: "walkin",
+        status: "waiting",
+        checked_in: false,
+        priority_flag: patientForm.priority_flag || "normal",
+        booking_source: "walkin",
+        created_at: new Date().toISOString(),
+        appointment_date: new Date().toISOString(),
+        gender: patientForm.gender,
+        date_of_birth: patientForm.date_of_birth,
+      };
+      // Create appointment record
+      const appointmentResult = await import(
+        "../../shared/services/dataService"
+      ).then((mod) =>
+        mod.default.addDataWithAutoId("appointments", appointmentData)
+      );
+
+      // Add to queue, always pass patient id
       const result = await queueService.addWalkinToQueue({
+        id: patientId,
         full_name: patientForm.full_name,
         email: patientForm.email,
         phone_number: patientForm.phone_number,
+        date_of_birth: patientForm.date_of_birth,
+        gender: patientForm.gender,
         service_ref: patientForm.service_ref || "General Consultation",
         priority_flag: patientForm.priority_flag || "normal",
       });
+
+      // Create fill_up_forms record for admin reference
+      const fillUpFormData = {
+        appointment_id: appointmentResult.id,
+        patient_ref: `patients/${patientId}`,
+        patient_full_name: patientForm.full_name,
+        patient_birthdate: patientForm.date_of_birth,
+        patient_sex: patientForm.gender,
+        appointment_date: new Date().toISOString(),
+        booked_by_name: currentStaff?.full_name || "Walk-in",
+        contact_number: patientForm.phone_number,
+        email_address: patientForm.email,
+        present_checkbox: true,
+        current_medications: "",
+        booking_source: "walkin",
+        created_at: new Date().toISOString(),
+      };
+      await customDataService.addDataWithAutoId(
+        "fill_up_forms",
+        fillUpFormData
+      );
 
       if (result.success) {
         // Log the activity
@@ -362,36 +437,13 @@ const AdminDashboard = () => {
           });
         }
 
-        // Create walk-in appointment in appointments collection, link to patientId
-        const appointmentData = {
-          patient_ref: patientId,
-          patient_full_name: patientForm.full_name,
-          email_address: patientForm.email,
-          contact_number: patientForm.phone_number,
-          service_ref: patientForm.service_ref || "General Consultation",
-          appointment_type: "walk-in",
-          status: "checked-in",
-          checked_in: true,
-          priority_flag: patientForm.priority_flag || "normal",
-          created_at: new Date().toISOString(),
-          appointment_date: new Date().toISOString(),
-          queue_number: result.queueNumber,
-        };
-        try {
-          await import("../../shared/services/dataService").then((mod) =>
-            mod.default.addDataWithAutoId("appointments", appointmentData)
-          );
-        } catch (err) {
-          console.error("Error creating walk-in appointment:", err);
-        }
-
         // Reset form and close modal
         setPatientForm({
           full_name: "",
           email: "",
           phone_number: "",
           date_of_birth: "",
-          address: "",
+          gender: "",
           service_ref: "",
           priority_flag: "normal",
           appointment_type: "walkin",
@@ -1024,19 +1076,21 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">
-                        Complete Address *
+                      <Label htmlFor="gender" className="text-sm font-medium">
+                        Gender *
                       </Label>
-                      <textarea
-                        id="address"
-                        name="address"
-                        value={patientForm.address}
+                      <select
+                        id="gender"
+                        name="gender"
+                        value={patientForm.gender}
                         onChange={handleInputChange}
                         required
-                        className="flex min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                        placeholder="Enter complete address with barangay, city, province"
-                        rows="3"
-                      />
+                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select gender...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
                     </div>
                   </div>
                 </div>

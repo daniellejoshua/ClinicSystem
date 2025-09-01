@@ -31,31 +31,29 @@ class QueueService {
         walkinQueueId = `E-${walkinQueueId}`;
       }
 
-      // Create patient record first
-      const patientRecord = {
-        full_name: patientData.full_name,
-        email: patientData.email,
-        phone_number: patientData.phone_number,
-        date_of_birth: patientData.date_of_birth || "",
-        address: patientData.address || "",
-        appointment_type: "walkin",
-        service_ref: patientData.service_ref,
-        priority_flag: patientData.priority_flag || "normal",
-        status: "waiting",
-        queue_number: walkinQueueId,
-        created_at: new Date().toISOString(),
-        booking_source: "walk-in",
-      };
-
-      // Add to patients collection
-      const patientsRef = ref(database, "patients");
-      const newPatientRef = push(patientsRef);
-      await set(newPatientRef, patientRecord);
+      let patientId = patientData.id;
+      // Only create patient if no id is provided
+      if (!patientId) {
+        // Only add minimal patient info to 'patients', not queue info
+        const patientRecord = {
+          full_name: patientData.full_name,
+          email: patientData.email,
+          phone_number: patientData.phone_number,
+          date_of_birth: patientData.date_of_birth || "",
+          address: patientData.address || "",
+          gender: patientData.gender || "",
+          created_at: new Date().toISOString(),
+        };
+        const patientsRef = ref(database, "patients");
+        const newPatientRef = push(patientsRef);
+        await set(newPatientRef, patientRecord);
+        patientId = newPatientRef.key;
+      }
 
       // Create queue entry
       const queueEntry = {
         queue_number: walkinQueueId,
-        patient_id: newPatientRef.key,
+        patient_id: patientId,
         full_name: patientData.full_name,
         email: patientData.email,
         phone_number: patientData.phone_number,
@@ -119,7 +117,7 @@ class QueueService {
       return {
         success: true,
         queueNumber: walkinQueueId,
-        patientId: newPatientRef.key,
+        patientId: patientId,
         message: `Walk-in registered! Your queue number is ${walkinQueueId}`,
       };
     } catch (error) {

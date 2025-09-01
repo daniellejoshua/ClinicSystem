@@ -230,9 +230,6 @@ const PatientsManagement = () => {
                   Service (Referenced)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Priority
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -313,15 +310,6 @@ const PatientsManagement = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            patient.status
-                          )}`}
-                        >
-                          {patient.status || "unknown"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
                             patient.priority_flag
                           )}`}
@@ -375,94 +363,80 @@ const PatientsManagement = () => {
 
       {/* Patient Details Modal */}
       {showModal && selectedPatient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full m-4 max-h-screen overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white border-2 border-primary rounded-2xl shadow-2xl max-w-2xl w-full m-4 max-h-[90%] overflow-y-auto">
+            <div className="p-8">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-8 border-b pb-4">
                 <h2 className="text-2xl font-yeseva text-primary">
                   Patient Details: {selectedPatient.full_name}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
+                  aria-label="Close"
                 >
                   ×
                 </button>
               </div>
-
               {/* Patient Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
-                    Personal Information
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Full Name:</strong> {selectedPatient.full_name}
-                    </p>
-                    <p>
-                      <strong>Email:</strong> {selectedPatient.email}
-                    </p>
-                    <p>
-                      <strong>Phone:</strong> {selectedPatient.phone_number}
-                    </p>
-                    <p>
-                      <strong>Date of Birth:</strong>{" "}
-                      {selectedPatient.date_of_birth}
-                    </p>
-                    <p>
-                      <strong>Address:</strong> {selectedPatient.address}
-                    </p>
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
-                    Queue Information
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Queue Number:</strong> #
-                      {selectedPatient.queue_number}
-                    </p>
-                    <p>
-                      <strong>Status:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                          selectedPatient.status
-                        )}`}
-                      >
-                        {selectedPatient.status}
+              <div className="flex flex-col items-center mb-8">
+                <div className="bg-white rounded-2xl border-2 border-primary shadow-lg p-8 w-full max-w-md">
+                  <div className="flex flex-col items-center mb-4">
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2">
+                      {selectedPatient.full_name?.charAt(0) || "P"}
+                    </div>
+                    <h3 className="text-xl font-yeseva text-primary font-bold mb-1">
+                      {selectedPatient.full_name}
+                    </h3>
+                    <span className="text-sm text-gray-500">
+                      Patient ID: {selectedPatient.id}
+                    </span>
+                  </div>
+                  <div className="space-y-3 text-base text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <FaEnvelope className="text-primary" />
+                      <span>
+                        <strong>Email:</strong>{" "}
+                        {selectedPatient.email || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
                       </span>
-                    </p>
-                    <p>
-                      <strong>Priority:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
-                          selectedPatient.priority_flag
-                        )}`}
-                      >
-                        {selectedPatient.priority_flag}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaPhone className="text-primary" />
+                      <span>
+                        <strong>Phone:</strong>{" "}
+                        {selectedPatient.phone_number || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
                       </span>
-                    </p>
-                    <p>
-                      <strong>Service:</strong>{" "}
-                      {getServiceName(selectedPatient.service_ref)}
-                    </p>
-                    <p>
-                      <strong>Service Reference:</strong>
-                      <code className="ml-2 bg-gray-100 px-2 py-1 rounded text-xs">
-                        {selectedPatient.service_ref}
-                      </code>
-                    </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaCalendar className="text-primary" />
+                      <span>
+                        <strong>Date of Birth:</strong>{" "}
+                        {selectedPatient.date_of_birth || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaUser className="text-primary" />
+                      <span>
+                        <strong>Sex:</strong>{" "}
+                        {selectedPatient.sex || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Appointments */}
-              <div className="mb-6">
-                <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
+              {/* Appointments - Improved Design, Only Relevant Data */}
+              <div className="mb-8">
+                <h3 className="text-lg font-worksans font-bold text-primary mb-3">
                   Related Appointments
                 </h3>
                 {getPatientAppointments(selectedPatient.id).length === 0 ? (
@@ -470,91 +444,62 @@ const PatientsManagement = () => {
                     No appointments found.
                   </p>
                 ) : (
-                  <div className="space-y-3">
-                    {getPatientAppointments(selectedPatient.id).map(
-                      (appointment, index) => (
-                        <div
-                          key={appointment.id}
-                          className="bg-gray-50 p-4 rounded-lg"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p>
-                                <strong>Appointment #{index + 1}</strong>
-                              </p>
-                              <p>
-                                <strong>Date:</strong>{" "}
-                                {new Date(
-                                  appointment.appointment_date
-                                ).toLocaleString()}
-                              </p>
-                              <p>
-                                <strong>Status:</strong> {appointment.status}
-                              </p>
-                            </div>
-                            <div>
-                              <p>
-                                <strong>Doctor:</strong>{" "}
-                                {getStaffName(appointment.staff_ref)}
-                              </p>
-                              <p>
-                                <strong>Service:</strong>{" "}
-                                {getServiceName(appointment.service_ref)}
-                              </p>
-                              <p>
-                                <strong>References:</strong>
-                              </p>
-                              <div className="text-xs bg-white p-2 rounded mt-1">
-                                <p>
-                                  Patient:{" "}
-                                  <code>{appointment.patient_ref}</code>
+                  getPatientAppointments(selectedPatient.id).map(
+                    (appointment, index) => (
+                      <div
+                        key={appointment.id}
+                        className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm mb-4"
+                      >
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                          <div>
+                            <p className="font-semibold text-lg text-primary mb-1">
+                              Appointment #{index + 1}
+                            </p>
+                            <p className="text-sm text-gray-700 mb-1">
+                              <FaCalendar className="inline mr-1" />{" "}
+                              <strong>Date Booked:</strong>{" "}
+                              {appointment.appointment_date
+                                ? new Date(
+                                    appointment.appointment_date
+                                  ).toLocaleString()
+                                : "N/A"}
+                            </p>
+                            {appointment.appointment_type === "online" &&
+                              appointment.preferred_date && (
+                                <p className="text-sm text-blue-700 mb-1">
+                                  <FaCalendar className="inline mr-1" />{" "}
+                                  <strong>Preferred Date:</strong>{" "}
+                                  {new Date(
+                                    appointment.preferred_date
+                                  ).toLocaleDateString()}
                                 </p>
-                                <p>
-                                  Staff: <code>{appointment.staff_ref}</code>
-                                </p>
-                                <p>
-                                  Service:{" "}
-                                  <code>{appointment.service_ref}</code>
-                                </p>
-                              </div>
-                            </div>
+                              )}
+                            <p className="text-sm text-gray-700 mb-1">
+                              <strong>Status:</strong>{" "}
+                              <span
+                                className={`px-2 py-1 rounded ${getStatusColor(
+                                  appointment.status
+                                )}`}
+                              >
+                                {appointment.status}
+                              </span>
+                            </p>
+                            <p className="text-sm text-gray-700 mb-1">
+                              <strong>Type:</strong>{" "}
+                              {appointment.appointment_type === "online"
+                                ? "Online"
+                                : "Walk-in"}
+                            </p>
+                            <p className="text-sm text-gray-700 mb-1">
+                              <strong>Service:</strong>{" "}
+                              {getServiceName(appointment.service_ref)}
+                            </p>
                           </div>
                         </div>
-                      )
-                    )}
-                  </div>
+                      </div>
+                    )
+                  )
                 )}
-              </div>
-
-              {/* Database References */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="text-lg font-worksans font-bold text-blue-800 mb-3">
-                  🔗 Database References (How it works)
-                </h3>
-                <div className="text-sm text-blue-700">
-                  <p className="mb-2">
-                    This patient record demonstrates Firebase references:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>
-                      <strong>Patient ID:</strong>{" "}
-                      <code>{selectedPatient.id}</code>
-                    </li>
-                    <li>
-                      <strong>Service Reference:</strong>{" "}
-                      <code>{selectedPatient.service_ref}</code>
-                    </li>
-                    <li>
-                      <strong>Related Appointments:</strong>{" "}
-                      {getPatientAppointments(selectedPatient.id).length} found
-                      by patient_ref
-                    </li>
-                    <li>
-                      <strong>Created:</strong>{" "}
-                      {new Date(selectedPatient.created_at).toLocaleString()}
-                    </li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
