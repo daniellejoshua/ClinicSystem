@@ -73,10 +73,18 @@ const AppointmentBooking = () => {
   };
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setAppointmentForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    // For service_ref, always set as 'services/{id}' or 'General Consultation'
+    if (name === "service_ref") {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        service_ref: value ? value : "General Consultation",
+      }));
+    } else {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
   };
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -277,6 +285,19 @@ const AppointmentBooking = () => {
     try {
       const fullName =
         `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim();
+
+      // Find service name from selected service_ref
+      let serviceName = "";
+      if (appointmentForm.service_ref) {
+        const foundService = services.find(
+          (s) => `services/${s.id}` === appointmentForm.service_ref
+        );
+        serviceName = foundService
+          ? foundService.service_name
+          : "General Consultation";
+      }
+
+      // Prepare all info for later DB push (after PIN confirmation)
       // Deduplication: fetch all patients and check for match
       const allPatients = await customDataService.getAllData("patients");
       const normalize = (str) => (str ? str.trim().toLowerCase() : "");
@@ -292,68 +313,19 @@ const AppointmentBooking = () => {
             normalize(appointmentForm.patient_sex)
       );
 
-      let patientId;
-      if (existingPatient) {
-        patientId = existingPatient.id;
-      } else {
-        // Create new patient record
-        const newPatient = await customDataService.addDataWithAutoId(
-          "patients",
-          {
-            full_name: fullName,
-            email: appointmentForm.email_address,
-            phone_number: appointmentForm.contact_number,
-            date_of_birth: appointmentForm.patient_birthdate,
-            sex: appointmentForm.patient_sex,
-            address: "",
-            service_ref: appointmentForm.service_ref,
-            status: "pending",
-            priority_flag: "normal",
-            appointment_type: "online",
-            preferred_date: appointmentForm.preferred_date,
-            current_medications: appointmentForm.current_medications,
-            booking_source: "online",
-            created_at: new Date().toISOString(),
-          }
-        );
-        patientId = newPatient.id;
-      }
-
-      // Prepare appointment data
-      const appointmentData = {
-        patient_ref: `patients/${patientId}`,
-        patient_full_name: fullName,
-        patient_first_name: appointmentForm.patient_first_name,
-        patient_middle_name: appointmentForm.patient_middle_name,
-        patient_last_name: appointmentForm.patient_last_name,
-        patient_birthdate: appointmentForm.patient_birthdate,
-        patient_sex: appointmentForm.patient_sex,
-        contact_number: appointmentForm.contact_number,
-        email_address: appointmentForm.email_address,
-        booked_by_name: appointmentForm.booked_by_name,
-        relationship_to_patient: appointmentForm.relationship_to_patient,
-        service_ref: appointmentForm.service_ref,
-        preferred_date: appointmentForm.preferred_date,
-        additional_notes:
-          appointmentForm.additional_notes || "No additional notes",
-        current_medications: appointmentForm.current_medications,
-        present_checkbox: appointmentForm.present_checkbox,
-        booking_source: "online",
-        appointment_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
+      // Store all info for later DB push (after PIN confirmation)
+      window._pendingAppointment = {
+        fullName,
+        appointmentForm: { ...appointmentForm },
+        serviceName,
+        existingPatient,
       };
 
-      // Do NOT push appointment to DB yet. Just store all info for later.
       // Generate 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedPin(pin);
-      window._pendingAppointment = {
-        patientId,
-        fullName,
-        pin,
-        appointmentForm: { ...appointmentForm },
-        appointmentData,
-      };
+      window._pendingAppointment.pin = pin;
+
       // Send PIN via EmailJS
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
@@ -384,49 +356,103 @@ const AppointmentBooking = () => {
       setPinError("");
       // Push to DB only after PIN confirmation
       const {
-        patientId,
         fullName,
-        pin,
         appointmentForm: form,
-        appointmentData,
+        existingPatient,
+        pin,
       } = window._pendingAppointment;
-      // Push appointment to DB now (after PIN confirmation)
-      queueService.createOnlineAppointment(appointmentData).then((result) => {
-        if (result.success) {
-          // Update patient record with appointment and PIN
-          dataService.updateData(`patients/${patientId}`, {
-            appointment_id: result.appointmentId,
-            pin_code: pin,
-            preferred_date: form.preferred_date,
-            current_medications: form.current_medications,
-            service_ref: form.service_ref,
+
+      // Use the selected service_ref or fallback to 'General Consultation'
+      const serviceRef = form.service_ref || "General Consultation";
+      console.log("[DEBUG] serviceRef being saved:", serviceRef);
+
+      // Create or update patient record
+      let patientIdPromise;
+      if (existingPatient) {
+        patientIdPromise = Promise.resolve(existingPatient.id);
+      } else {
+        patientIdPromise = customDataService
+          .addDataWithAutoId("patients", {
+            full_name: fullName,
+            email: form.email_address,
+            phone_number: form.contact_number,
+            date_of_birth: form.patient_birthdate,
+            sex: form.patient_sex,
+            address: "",
+            service_ref: serviceRef,
             status: "pending",
-            booking_source: "online",
-            updated_at: new Date().toISOString(),
-          });
-          // Also create fill-up form record for admin reference
-          const formData = {
-            appointment_id: result.appointmentId,
-            patient_ref: `patients/${patientId}`,
-            patient_full_name: fullName,
-            patient_birthdate: form.patient_birthdate,
-            patient_sex: form.patient_sex,
-            appointment_date: new Date().toISOString(),
-            booked_by_name: form.booked_by_name,
-            relationship_to_patient: form.relationship_to_patient,
-            contact_number: form.contact_number,
-            email_address: form.email_address,
-            present_checkbox: form.present_checkbox,
+            priority_flag: "normal",
+            appointment_type: "online",
+            preferred_date: form.preferred_date,
             current_medications: form.current_medications,
             booking_source: "online",
             created_at: new Date().toISOString(),
-            pin_code: pin,
-          };
-          customDataService.addDataWithAutoId("fill_up_forms", formData);
-        }
-        // Clean up pending data
-        window._pendingAppointment = null;
+          })
+          .then((newPatient) => newPatient.id);
+      }
+
+      patientIdPromise.then((patientId) => {
+        // Prepare appointment data
+        const appointmentData = {
+          patient_ref: `patients/${patientId}`,
+          patient_full_name: fullName,
+          patient_first_name: form.patient_first_name,
+          patient_middle_name: form.patient_middle_name,
+          patient_last_name: form.patient_last_name,
+          patient_birthdate: form.patient_birthdate,
+          patient_sex: form.patient_sex,
+          contact_number: form.contact_number,
+          email_address: form.email_address,
+          booked_by_name: form.booked_by_name,
+          relationship_to_patient: form.relationship_to_patient,
+          service_ref: serviceRef,
+          preferred_date: form.preferred_date,
+          additional_notes: form.additional_notes || "No additional notes",
+          current_medications: form.current_medications,
+          present_checkbox: form.present_checkbox,
+          booking_source: "online",
+          appointment_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+
+        queueService.createOnlineAppointment(appointmentData).then((result) => {
+          if (result.success) {
+            // Update patient record with appointment and PIN
+            dataService.updateData(`patients/${patientId}`, {
+              appointment_id: result.appointmentId,
+              pin_code: pin,
+              preferred_date: form.preferred_date,
+              current_medications: form.current_medications,
+              service_ref: serviceRef,
+              status: "pending",
+              booking_source: "online",
+              updated_at: new Date().toISOString(),
+            });
+            // Also create fill-up form record for admin reference
+            const formData = {
+              appointment_id: result.appointmentId,
+              patient_ref: `patients/${patientId}`,
+              patient_full_name: fullName,
+              patient_birthdate: form.patient_birthdate,
+              patient_sex: form.patient_sex,
+              appointment_date: new Date().toISOString(),
+              booked_by_name: form.booked_by_name,
+              relationship_to_patient: form.relationship_to_patient,
+              contact_number: form.contact_number,
+              email_address: form.email_address,
+              present_checkbox: form.present_checkbox,
+              current_medications: form.current_medications,
+              booking_source: "online",
+              created_at: new Date().toISOString(),
+              pin_code: pin,
+            };
+            customDataService.addDataWithAutoId("fill_up_forms", formData);
+          }
+          // Clean up pending data
+          window._pendingAppointment = null;
+        });
       });
+
       // Reset form after successful submission and re-enable button
       setTimeout(() => {
         setAppointmentForm({

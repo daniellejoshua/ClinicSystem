@@ -72,8 +72,20 @@ const PatientsManagement = () => {
 
     // Extract service ID from reference (e.g., "services/abc123" -> "abc123")
     const serviceId = serviceRef.split("/").pop();
-    const service = services.find((s) => s.id === serviceId);
-    return service ? service.service_name : "Unknown Service";
+    let service = services.find((s) => s.id === serviceId);
+    if (service) return service.service_name;
+
+    // Fallback: try to match by service name (in case serviceRef is a name)
+    service = services.find((s) => s.service_name === serviceRef);
+    if (service) return service.service_name;
+
+    // Fallback: try to match by partial name (case-insensitive)
+    service = services.find(
+      (s) => s.service_name.toLowerCase() === serviceRef.toLowerCase()
+    );
+    if (service) return service.service_name;
+
+    return "Unknown Service";
   };
 
   // Helper function to resolve staff reference
