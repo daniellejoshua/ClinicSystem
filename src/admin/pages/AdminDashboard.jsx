@@ -392,9 +392,10 @@ const AdminDashboard = () => {
         mod.default.addDataWithAutoId("appointments", appointmentData)
       );
 
-      // Add to queue, always pass patient id
+      // Add to queue, always pass patient id and appointment id
       const result = await queueService.addWalkinToQueue({
         id: patientId,
+        appointment_id: appointmentResult.id,
         full_name: patientForm.full_name,
         email: patientForm.email,
         phone_number: patientForm.phone_number,

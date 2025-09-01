@@ -5,6 +5,7 @@
 // The UI updates in real time as patients move through the queue
 
 import React, { useState, useEffect } from "react";
+import { getDatabase, ref, update, get } from "firebase/database";
 import {
   FaClock,
   FaUsers,
@@ -89,6 +90,19 @@ const QueueManagement = () => {
       );
       // If now is after 3:00AM and lastUpdated is before 3:00AM today, reset
       if (now >= resetTime && last < resetTime) {
+        // Mark all non-completed appointments as missed
+        queueData.forEach(async (entry) => {
+          if (entry.appointment_id && entry.status !== "completed") {
+            const db = require("firebase/database").getDatabase();
+            const appointmentRef = require("firebase/database").ref(
+              db,
+              `appointments/${entry.appointment_id}`
+            );
+            await require("firebase/database").update(appointmentRef, {
+              status: "missed",
+            });
+          }
+        });
         setQueueData([]);
         setQueueStats({
           total: 0,
@@ -166,21 +180,46 @@ const QueueManagement = () => {
       // Find the queue entry to get appointment_id or patient_id
       const queueEntry = queueData.find((entry) => entry.id === queueId);
       if (queueEntry) {
+        const db = getDatabase();
         // Try appointment_id first (for online), fallback to patient_id (for walk-in)
         const patientId = queueEntry.appointment_id || queueEntry.patient_id;
         if (patientId) {
           // Update patient status in 'patients' collection
-          const db = require("firebase/database").getDatabase();
-          const patientRef = require("firebase/database").ref(
-            db,
-            `patients/${patientId}`
-          );
-          await require("firebase/database").update(patientRef, {
+          const patientRef = ref(db, `patients/${patientId}`);
+          await update(patientRef, {
             status: newStatus,
           });
         }
+
+        // Robust appointment status sync
+        let appointmentUpdated = false;
+        if (queueEntry.appointment_id) {
+          // Direct update for online appointments
+          const appointmentRef = ref(
+            db,
+            `appointments/${queueEntry.appointment_id}`
+          );
+          await update(appointmentRef, {
+            status: newStatus,
+          });
+          appointmentUpdated = true;
+          console.log(
+            "Updated appointment status by appointment_id:",
+            queueEntry.appointment_id,
+            newStatus
+          );
+          // Fetch and log appointment after update
+          const updatedSnap = await get(appointmentRef);
+          if (updatedSnap.exists()) {
+            console.log("Fetched appointment after update:", updatedSnap.val());
+          } else {
+            console.warn(
+              "Appointment not found after update:",
+              queueEntry.appointment_id
+            );
+          }
+        }
       }
-      // Real-time subscription will update the UI automatically
     } catch (error) {
       console.error("Error updating queue status:", error);
     }

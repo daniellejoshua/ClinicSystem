@@ -50,10 +50,11 @@ class QueueService {
         patientId = newPatientRef.key;
       }
 
-      // Create queue entry
+      // Create queue entry, include appointment_id if provided
       const queueEntry = {
         queue_number: walkinQueueId,
         patient_id: patientId,
+        appointment_id: patientData.appointment_id || null,
         full_name: patientData.full_name,
         email: patientData.email,
         phone_number: patientData.phone_number,
