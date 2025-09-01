@@ -37,16 +37,19 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { BarChart, Bar, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import customDataService from "../../shared/services/customDataService";
 import analyticsService from "../../shared/services/analyticsService";
 import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
+// Remove ChartBar import, use Recharts BarChart instead
 
 // Chart colors for light and dark mode
 const chartColors = {
   light: {
     online: "#159EEC",
     walkin: "#9BDBFF",
+    bar: "#159EEC",
     background: "#ffffff",
     grid: "#e5e7eb",
     text: "#374151",
@@ -54,6 +57,7 @@ const chartColors = {
   dark: {
     online: "#3B82F6",
     walkin: "#10B981",
+    bar: "#3B82F6",
     background: "#1f2937",
     grid: "#374151",
     text: "#f9fafb",
@@ -117,10 +121,68 @@ const AdminDashboard = () => {
     email: "",
     phone_number: "",
     date_of_birth: "",
-    address: "",
+    gender: "",
     service_ref: "",
     priority_flag: "normal",
-    appointment_type: "walkin", // New field for appointment type
+    appointment_type: "walkin",
+  });
+
+  // Service Utilization filtering logic
+  const [servicePeriod, setServicePeriod] = useState("7days");
+  const getServicePeriodLabel = (period) => {
+    const labels = {
+      "7days": "Last 7 days",
+      "30days": "Last 30 days",
+      "3months": "Last 3 months",
+      all: "All time",
+    };
+    return labels[period] || "Last 7 days";
+  };
+
+  // Filter appointments by selected period
+  const filterAppointmentsByPeriod = (appointments, period) => {
+    const now = new Date();
+    let filtered = [];
+    if (period === "7days") {
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(now.getDate() - 7);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= sevenDaysAgo
+      );
+    } else if (period === "30days") {
+      const thirtyDaysAgo = new Date(now);
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= thirtyDaysAgo
+      );
+    } else if (period === "3months") {
+      const threeMonthsAgo = new Date(now);
+      threeMonthsAgo.setMonth(now.getMonth() - 3);
+      filtered = appointments.filter(
+        (a) => new Date(a.appointment_date) >= threeMonthsAgo
+      );
+    } else {
+      filtered = appointments;
+    }
+    return filtered;
+  };
+
+  const filteredAppointments = filterAppointmentsByPeriod(
+    appointments,
+    servicePeriod
+  );
+
+  // Prepare service utilization data for selected period
+  const serviceUtilization = services.map((service) => {
+    const count = filteredAppointments.filter(
+      (appt) =>
+        appt.service_ref?.includes(service.id) ||
+        appt.service_ref === service.service_name
+    ).length;
+    return {
+      name: service.service_name,
+      count,
+    };
   });
 
   useEffect(() => {
@@ -250,44 +312,130 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Use the queue service to add walk-in patient
+      // Validation
+      const emailRegex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+      const phoneRegex = /^(\+63|0)9\d{9}$/;
+      if (!emailRegex.test(patientForm.email)) {
+        alert("❌ Please enter a valid email address.");
+        setIsLoading(false);
+        return;
+      }
+      if (!phoneRegex.test(patientForm.phone_number)) {
+        alert("❌ Please enter a valid Philippine mobile number.");
+        setIsLoading(false);
+        return;
+      }
+      if (!patientForm.gender) {
+        alert("❌ Please select a gender.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Deduplication: fetch all patients and check for match
+      const allPatients = await customDataService.getAllData("patients");
+      const normalize = (str) => (str ? String(str).trim().toLowerCase() : "");
+      let existingPatient = allPatients.find(
+        (p) =>
+          normalize(p.full_name) === normalize(patientForm.full_name) &&
+          normalize(p.email) === normalize(patientForm.email) &&
+          normalize(p.phone_number) === normalize(patientForm.phone_number) &&
+          normalize(p.date_of_birth) === normalize(patientForm.date_of_birth) &&
+          normalize(p.sex || p.gender) === normalize(patientForm.gender)
+      );
+
+      let patientId;
+      if (existingPatient) {
+        patientId = existingPatient.id;
+      } else {
+        // Create new patient record
+        const now = new Date().toISOString();
+        const newPatient = await customDataService.addDataWithAutoId(
+          "patients",
+          {
+            full_name: patientForm.full_name,
+            email: patientForm.email,
+            phone_number: patientForm.phone_number,
+            date_of_birth: patientForm.date_of_birth || "",
+            sex: patientForm.gender,
+            service_ref: patientForm.service_ref || "General Consultation",
+            status: "waiting",
+            priority_flag: patientForm.priority_flag || "normal",
+            appointment_type: "walkin",
+            booking_source: "walkin",
+            created_at: now,
+          }
+        );
+        patientId = newPatient.id;
+      }
+
+      // Always create a new appointment for every registration
+      const appointmentData = {
+        patient_ref: `patients/${patientId}`,
+        patient_full_name: patientForm.full_name,
+        email_address: patientForm.email,
+        contact_number: patientForm.phone_number,
+        service_ref: patientForm.service_ref || "General Consultation",
+        appointment_type: "walkin",
+        status: "waiting",
+        checked_in: false,
+        priority_flag: patientForm.priority_flag || "normal",
+        booking_source: "walkin",
+        created_at: new Date().toISOString(),
+        appointment_date: new Date().toISOString(),
+        gender: patientForm.gender,
+        date_of_birth: patientForm.date_of_birth,
+      };
+      // Create appointment record
+      const appointmentResult = await import(
+        "../../shared/services/dataService"
+      ).then((mod) =>
+        mod.default.addDataWithAutoId("appointments", appointmentData)
+      );
+
+      // Add to queue, always pass patient id and appointment id
       const result = await queueService.addWalkinToQueue({
+        id: patientId,
+        appointment_id: appointmentResult.id,
         full_name: patientForm.full_name,
         email: patientForm.email,
         phone_number: patientForm.phone_number,
+        date_of_birth: patientForm.date_of_birth,
+        gender: patientForm.gender,
         service_ref: patientForm.service_ref || "General Consultation",
+        priority_flag: patientForm.priority_flag || "normal",
       });
+
+      // Create fill_up_forms record for admin reference
+      const fillUpFormData = {
+        appointment_id: appointmentResult.id,
+        patient_ref: `patients/${patientId}`,
+        patient_full_name: patientForm.full_name,
+        patient_birthdate: patientForm.date_of_birth,
+        patient_sex: patientForm.gender,
+        appointment_date: new Date().toISOString(),
+        booked_by_name: currentStaff?.full_name || "Walk-in",
+        contact_number: patientForm.phone_number,
+        email_address: patientForm.email,
+        present_checkbox: true,
+        current_medications: "",
+        booking_source: "walkin",
+        created_at: new Date().toISOString(),
+      };
+      await customDataService.addDataWithAutoId(
+        "fill_up_forms",
+        fillUpFormData
+      );
 
       if (result.success) {
         // Log the activity
         if (currentStaff) {
           await customDataService.addDataWithAutoId("audit_logs", {
             user_ref: `staff/${currentStaff.id}`,
+            staff_full_name: currentStaff.full_name,
             action: `Walk-in patient registered: ${patientForm.full_name} - Queue #${result.queueNumber}`,
             ip_address: "192.168.1.100",
             timestamp: new Date().toISOString(),
           });
-        }
-
-        // Create walk-in appointment in appointments collection
-        const appointmentData = {
-          patient_full_name: patientForm.full_name,
-          email_address: patientForm.email,
-          contact_number: patientForm.phone_number,
-          service_ref: patientForm.service_ref || "General Consultation",
-          appointment_type: "walk-in",
-          status: "checkedin",
-          checked_in: true,
-          created_at: new Date().toISOString(),
-          appointment_date: new Date().toISOString(),
-          queue_number: result.queueNumber,
-        };
-        try {
-          await import("../../shared/services/dataService").then((mod) =>
-            mod.default.addDataWithAutoId("appointments", appointmentData)
-          );
-        } catch (err) {
-          console.error("Error creating walk-in appointment:", err);
         }
 
         // Reset form and close modal
@@ -296,7 +444,7 @@ const AdminDashboard = () => {
           email: "",
           phone_number: "",
           date_of_birth: "",
-          address: "",
+          gender: "",
           service_ref: "",
           priority_flag: "normal",
           appointment_type: "walkin",
@@ -446,8 +594,9 @@ const AdminDashboard = () => {
       </div>
 
       {/* Chart Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+        {/* Appointment Overview AreaChart card */}
+        <Card className="w-full">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -573,7 +722,8 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        {/* Recent Activity Card */}
+        <Card className="w-full">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
@@ -639,7 +789,22 @@ const AdminDashboard = () => {
                             {log.action}
                           </span>
                           <span className="text-xs text-gray-600 dark:text-gray-300">
-                            {log.user_ref} •{" "}
+                            {(() => {
+                              if (
+                                log.user_ref &&
+                                log.user_ref.startsWith("staff/")
+                              ) {
+                                const staffId = log.user_ref.split("/")[1];
+                                const staffMember = staff.find(
+                                  (s) => s.id === staffId
+                                );
+                                return staffMember &&
+                                  staffMember.full_name.trim() !== ""
+                                  ? `${staffMember.full_name} • `
+                                  : "Unknown Staff • ";
+                              }
+                              return `${log.user_ref} • `;
+                            })()}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
                         </div>
@@ -655,176 +820,132 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Patients Table */}
-      <Card>
+      {/* Service Utilization Stats Card - full width below */}
+      <Card className="w-full mt-4">
         <CardHeader>
-          <CardTitle>Recent Patients</CardTitle>
-          <CardDescription>
-            A list of recent patient registrations in your clinic.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Service Utilization Stats</CardTitle>
+              <CardDescription>
+                Number of appointments per service -{" "}
+                {getServicePeriodLabel(servicePeriod)}
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-1 bg-muted p-1 rounded-lg">
+              {[
+                { key: "7days", label: "7 days" },
+                { key: "30days", label: "30 days" },
+                { key: "3months", label: "3 months" },
+                { key: "all", label: "All" },
+              ].map((period) => (
+                <Button
+                  key={period.key}
+                  variant={servicePeriod === period.key ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setServicePeriod(period.key)}
+                  className={`text-xs px-3 py-1 h-8 ${
+                    servicePeriod === period.key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {patients.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                No patients registered yet. Click "Register New Patient" to add
-                your first patient.
-              </p>
+          {serviceUtilization.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No service utilization data yet.
             </div>
           ) : (
-            <div className="rounded-md border">
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left py-3 px-4 font-medium">
-                        Queue #
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">Name</th>
-                      <th className="text-left py-3 px-4 font-medium">Phone</th>
-                      <th className="text-left py-3 px-4 font-medium">Type</th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Service
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium">
-                        Priority
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patients
-                      .sort((a, b) => {
-                        // Show pending online appointments first, then queue order
-                        if (a.status === "pending" && b.status !== "pending")
-                          return -1;
-                        if (b.status === "pending" && a.status !== "pending")
-                          return 1;
-                        if (a.queue_number && b.queue_number)
-                          return a.queue_number - b.queue_number;
-                        return 0;
-                      })
-                      .slice(-15)
-                      .map((patient) => {
-                        // Find matching queue entry for more accurate status
-                        const queueEntry = queue.find(
-                          (q) =>
-                            q.full_name === patient.full_name &&
-                            q.appointment_type === patient.appointment_type &&
-                            q.email === patient.email
-                        );
-                        const status = queueEntry
-                          ? queueEntry.status
-                          : patient.status;
-                        const queueNumber = queueEntry
-                          ? queueEntry.queue_number
-                          : patient.queue_number;
-                        return (
-                          <tr
-                            key={patient.id}
-                            className="border-b hover:bg-muted/50"
-                          >
-                            <td className="py-3 px-4">
-                              {queueNumber || (
-                                <span className="text-orange-600 text-sm font-medium">
-                                  Pending Check-in
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 font-medium">
-                              {patient.full_name}
-                            </td>
-                            <td className="py-3 px-4">
-                              {patient.phone_number}
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center">
-                                {patient.appointment_type === "online" ? (
-                                  <>
-                                    <FaGlobe className="mr-1 h-3 w-3" /> Online
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaWalking className="mr-1 h-3 w-3" />{" "}
-                                    Walk-in
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              {(() => {
-                                if (patient.appointment_type === "online") {
-                                  // Online: resolve service name from service_ref
-                                  const serviceId =
-                                    patient.service_ref?.split("/")[1];
-                                  const service = services.find(
-                                    (s) => s.id === serviceId
-                                  );
-                                  return (
-                                    service?.service_name ||
-                                    patient.service_ref ||
-                                    "N/A"
-                                  );
-                                } else {
-                                  // Walk-in: show service name directly
-                                  return patient.service_ref?.includes(
-                                    "services/"
-                                  )
-                                    ? (() => {
-                                        const serviceId =
-                                          patient.service_ref?.split("/")[1];
-                                        const service = services.find(
-                                          (s) => s.id === serviceId
-                                        );
-                                        return (
-                                          service?.service_name ||
-                                          patient.service_ref ||
-                                          "N/A"
-                                        );
-                                      })()
-                                    : patient.service_ref || "N/A";
-                                }
-                              })()}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  status === "waiting"
-                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-neutral-100"
-                                    : status === "in-progress"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-neutral-100"
-                                    : status === "pending"
-                                    ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-neutral-100"
-                                    : status === "completed"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-neutral-100"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100"
-                                }`}
-                              >
-                                {status === "pending"
-                                  ? "Pending Check-in"
-                                  : status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  patient.priority_flag === "high"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                                    : "bg-gray-100 text-gray-800 dark:bg-neutral-900 dark:text-neutral-100"
-                                }`}
-                              >
-                                {patient.priority_flag}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={serviceUtilization}
+                barCategoryGap="20%"
+                margin={{ top: 30, right: 30, left: 0, bottom: 10 }}
+              >
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor={currentColors.bar}
+                      stopOpacity={0.9}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor={isDarkMode ? "#374151" : "#e0f2fe"}
+                      stopOpacity={0.7}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke={currentColors.grid}
+                  opacity={0.25}
+                />
+                <XAxis
+                  dataKey="name"
+                  tick={{
+                    fill: currentColors.text,
+                    fontWeight: 500,
+                    fontSize: 13,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: currentColors.text, fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={
+                    isDarkMode ? false : { fill: "#e0f2fe", opacity: 0.15 }
+                  }
+                  contentStyle={{
+                    background: currentColors.background,
+                    borderRadius: "10px",
+                    border: `1px solid ${currentColors.bar}`,
+                    color: currentColors.text,
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                  }}
+                  formatter={(value, name, props) => [value, "Appointments"]}
+                  labelFormatter={(label) => `Service: ${label}`}
+                />
+                <Bar
+                  dataKey="count"
+                  fill="url(#barGradient)"
+                  radius={[12, 12, 0, 0]}
+                  maxBarSize={38}
+                  label={({ x, y, width, value }) => (
+                    <text
+                      x={x + width / 2}
+                      y={y - 8}
+                      textAnchor="middle"
+                      fill={currentColors.bar}
+                      fontWeight="bold"
+                      fontSize={14}
+                      style={{ textShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+                    >
+                      {value}
+                    </text>
+                  )}
+                >
+                  {/* Add subtle shadow to bars */}
+                  <animate
+                    attributeName="opacity"
+                    from="0.7"
+                    to="1"
+                    dur="0.6s"
+                    fill="freeze"
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
@@ -956,19 +1077,21 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="address" className="text-sm font-medium">
-                        Complete Address *
+                      <Label htmlFor="gender" className="text-sm font-medium">
+                        Gender *
                       </Label>
-                      <textarea
-                        id="address"
-                        name="address"
-                        value={patientForm.address}
+                      <select
+                        id="gender"
+                        name="gender"
+                        value={patientForm.gender}
                         onChange={handleInputChange}
                         required
-                        className="flex min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                        placeholder="Enter complete address with barangay, city, province"
-                        rows="3"
-                      />
+                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select gender...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                      </select>
                     </div>
                   </div>
                 </div>

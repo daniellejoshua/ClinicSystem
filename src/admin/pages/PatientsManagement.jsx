@@ -28,6 +28,7 @@ const PatientsManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [patientFilter, setPatientFilter] = useState("all");
 
   // Load all data with references
   useEffect(() => {
@@ -71,8 +72,20 @@ const PatientsManagement = () => {
 
     // Extract service ID from reference (e.g., "services/abc123" -> "abc123")
     const serviceId = serviceRef.split("/").pop();
-    const service = services.find((s) => s.id === serviceId);
-    return service ? service.service_name : "Unknown Service";
+    let service = services.find((s) => s.id === serviceId);
+    if (service) return service.service_name;
+
+    // Fallback: try to match by service name (in case serviceRef is a name)
+    service = services.find((s) => s.service_name === serviceRef);
+    if (service) return service.service_name;
+
+    // Fallback: try to match by partial name (case-insensitive)
+    service = services.find(
+      (s) => s.service_name.toLowerCase() === serviceRef.toLowerCase()
+    );
+    if (service) return service.service_name;
+
+    return "Unknown Service";
   };
 
   // Helper function to resolve staff reference
@@ -91,13 +104,20 @@ const PatientsManagement = () => {
     );
   };
 
-  // Filter patients based on search
-  const filteredPatients = patients.filter(
-    (patient) =>
+  // Filtering logic: filter by patient status and search
+  const filteredPatients = patients.filter((patient) => {
+    // Search filter
+    const matchesSearch =
       patient.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone_number?.includes(searchTerm)
-  );
+      patient.phone_number?.includes(searchTerm);
+
+    // Status filter
+    if (patientFilter !== "all") {
+      return matchesSearch && patient.status === patientFilter;
+    }
+    return matchesSearch;
+  });
 
   const viewPatientDetails = (patient) => {
     setSelectedPatient(patient);
@@ -157,8 +177,8 @@ const PatientsManagement = () => {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      {/* Stats Card: Only Total Patients */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -166,45 +186,10 @@ const PatientsManagement = () => {
                 Total Patients
               </p>
               <p className="text-2xl font-bold text-primary">
-                {patients.length}
+                {filteredPatients.length}
               </p>
             </div>
             <FaUsers className="text-3xl text-primary opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">Waiting</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {patients.filter((p) => p.status === "waiting").length}
-              </p>
-            </div>
-            <FaClock className="text-3xl text-blue-600 opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">
-                High Priority
-              </p>
-              <p className="text-2xl font-bold text-red-600">
-                {patients.filter((p) => p.priority_flag === "high").length}
-              </p>
-            </div>
-            <FaFlag className="text-3xl text-red-600 opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">Services</p>
-              <p className="text-2xl font-bold text-green-600">
-                {services.length}
-              </p>
-            </div>
-            <FaStethoscope className="text-3xl text-green-600 opacity-20" />
           </div>
         </div>
       </div>
@@ -223,6 +208,24 @@ const PatientsManagement = () => {
         </div>
       </div>
 
+      {/* Filter Dropdown */}
+      <div className="flex items-center gap-4 mb-4">
+        <label className="font-medium text-gray-700">Filter by Status:</label>
+        <select
+          value={patientFilter}
+          onChange={(e) => setPatientFilter(e.target.value)}
+          className="border border-gray-300 rounded px-2 py-1"
+        >
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="checked-in">Checked-in</option>
+          <option value="completed">Completed</option>
+          <option value="waiting">Waiting</option>
+          <option value="in-progress">In Progress</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
       {/* Patients Table - scrollable, sticky header, no queue column */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto max-h-[60vh]">
@@ -239,12 +242,6 @@ const PatientsManagement = () => {
                   Service (Referenced)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Appointments
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -256,7 +253,7 @@ const PatientsManagement = () => {
               {filteredPatients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="6"
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     {searchTerm
@@ -321,25 +318,6 @@ const PatientsManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            patient.status
-                          )}`}
-                        >
-                          {patient.status || "unknown"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
-                            patient.priority_flag
-                          )}`}
-                        >
-                          <FaFlag className="w-2 h-2 mr-1" />
-                          {patient.priority_flag || "normal"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
                           {patientAppointments.length} appointment(s)
                         </div>
@@ -384,186 +362,178 @@ const PatientsManagement = () => {
 
       {/* Patient Details Modal */}
       {showModal && selectedPatient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full m-4 max-h-screen overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white border-2 border-primary rounded-2xl shadow-2xl max-w-2xl w-full m-4 max-h-[90%] overflow-y-auto">
+            <div className="p-8">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-8 border-b pb-4">
                 <h2 className="text-2xl font-yeseva text-primary">
                   Patient Details: {selectedPatient.full_name}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
+                  aria-label="Close"
                 >
                   ×
                 </button>
               </div>
-
               {/* Patient Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
-                    Personal Information
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Full Name:</strong> {selectedPatient.full_name}
-                    </p>
-                    <p>
-                      <strong>Email:</strong> {selectedPatient.email}
-                    </p>
-                    <p>
-                      <strong>Phone:</strong> {selectedPatient.phone_number}
-                    </p>
-                    <p>
-                      <strong>Date of Birth:</strong>{" "}
-                      {selectedPatient.date_of_birth}
-                    </p>
-                    <p>
-                      <strong>Address:</strong> {selectedPatient.address}
-                    </p>
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
-                    Queue Information
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Queue Number:</strong> #
-                      {selectedPatient.queue_number}
-                    </p>
-                    <p>
-                      <strong>Status:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                          selectedPatient.status
-                        )}`}
-                      >
-                        {selectedPatient.status}
-                      </span>
-                    </p>
-                    <p>
-                      <strong>Priority:</strong>
-                      <span
-                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(
+              <div className="flex flex-col items-center mb-8">
+                <div className="bg-white rounded-2xl border-2 border-primary shadow-lg p-8 w-full max-w-md">
+                  <div className="flex flex-col items-center mb-4">
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2">
+                      {selectedPatient.full_name?.charAt(0) || "P"}
+                    </div>
+                    <h3 className="text-xl font-yeseva text-primary font-bold mb-1">
+                      {selectedPatient.full_name}
+                    </h3>
+                    <span className="text-sm text-gray-500">
+                      Patient ID: {selectedPatient.id}
+                    </span>
+                  </div>
+                  <div className="space-y-3 text-base text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <FaFlag
+                        className={getPriorityColor(
                           selectedPatient.priority_flag
-                        )}`}
-                      >
-                        {selectedPatient.priority_flag}
+                        )}
+                      />
+                      <span>
+                        <strong>Priority:</strong>{" "}
+                        {selectedPatient.priority_flag || "normal"}
                       </span>
-                    </p>
-                    <p>
-                      <strong>Service:</strong>{" "}
-                      {getServiceName(selectedPatient.service_ref)}
-                    </p>
-                    <p>
-                      <strong>Service Reference:</strong>
-                      <code className="ml-2 bg-gray-100 px-2 py-1 rounded text-xs">
-                        {selectedPatient.service_ref}
-                      </code>
-                    </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaEnvelope className="text-primary" />
+                      <span>
+                        <strong>Email:</strong>{" "}
+                        {selectedPatient.email || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaPhone className="text-primary" />
+                      <span>
+                        <strong>Phone:</strong>{" "}
+                        {selectedPatient.phone_number || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaCalendar className="text-primary" />
+                      <span>
+                        <strong>Date of Birth:</strong>{" "}
+                        {selectedPatient.date_of_birth || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaUser className="text-primary" />
+                      <span>
+                        <strong>Sex:</strong>{" "}
+                        {selectedPatient.sex || (
+                          <span className="text-gray-400">N/A</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Appointments */}
-              <div className="mb-6">
-                <h3 className="text-lg font-worksans font-bold text-gray-800 mb-3">
+              {/* Appointments - Improved Design, Only Relevant Data */}
+              <div className="mb-8">
+                <h3 className="text-lg font-yeseva font-bold text-primary mb-4 tracking-wide">
                   Related Appointments
                 </h3>
                 {getPatientAppointments(selectedPatient.id).length === 0 ? (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-400 text-base italic">
                     No appointments found.
                   </p>
                 ) : (
-                  <div className="space-y-3">
-                    {getPatientAppointments(selectedPatient.id).map(
-                      (appointment, index) => (
-                        <div
-                          key={appointment.id}
-                          className="bg-gray-50 p-4 rounded-lg"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p>
-                                <strong>Appointment #{index + 1}</strong>
-                              </p>
-                              <p>
-                                <strong>Date:</strong>{" "}
-                                {new Date(
-                                  appointment.appointment_date
-                                ).toLocaleString()}
-                              </p>
-                              <p>
-                                <strong>Status:</strong> {appointment.status}
-                              </p>
-                            </div>
-                            <div>
-                              <p>
-                                <strong>Doctor:</strong>{" "}
-                                {getStaffName(appointment.staff_ref)}
-                              </p>
-                              <p>
-                                <strong>Service:</strong>{" "}
-                                {getServiceName(appointment.service_ref)}
-                              </p>
-                              <p>
-                                <strong>References:</strong>
-                              </p>
-                              <div className="text-xs bg-white p-2 rounded mt-1">
-                                <p>
-                                  Patient:{" "}
-                                  <code>{appointment.patient_ref}</code>
-                                </p>
-                                <p>
-                                  Staff: <code>{appointment.staff_ref}</code>
-                                </p>
-                                <p>
-                                  Service:{" "}
-                                  <code>{appointment.service_ref}</code>
-                                </p>
-                              </div>
-                            </div>
+                  getPatientAppointments(selectedPatient.id).map(
+                    (appointment, index) => (
+                      <div
+                        key={appointment.id}
+                        className="bg-white border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-12 items-center shadow-sm hover:shadow-md transition"
+                      >
+                        {/* Left: Info */}
+                        <div className="col-span-10 flex flex-col gap-2 justify-center">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="inline-flex items-center gap-2 bg-primary text-white rounded px-3 py-1 text-xs font-bold font-yeseva">
+                              <FaStethoscope className="inline mr-1" />
+                              Appointment #{index + 1}
+                            </span>
+                            <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700">
+                              <FaCalendar className="inline" />
+                              {appointment.appointment_date
+                                ? new Date(
+                                    appointment.appointment_date
+                                  ).toLocaleString()
+                                : "N/A"}
+                            </span>
+                            {appointment.appointment_type === "online" &&
+                              appointment.preferred_date && (
+                                <span className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700">
+                                  <FaCalendar className="inline" />
+                                  Preferred:{" "}
+                                  {new Date(
+                                    appointment.preferred_date
+                                  ).toLocaleDateString()}
+                                </span>
+                              )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="flex items-center gap-2 text-xs text-gray-700">
+                              <FaClock className="text-primary" />
+                              <strong>Status:</strong>
+                              <span
+                                className={`px-2 py-0.5 rounded font-semibold ${getStatusColor(
+                                  appointment.status
+                                )}`}
+                              >
+                                {appointment.status}
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-2 text-xs text-gray-700">
+                              <FaUser className="text-primary" />
+                              <strong>Type:</strong>
+                              {appointment.appointment_type === "online"
+                                ? "Online"
+                                : "Walk-in"}
+                            </span>
+                            <span className="flex items-center gap-2 text-xs text-gray-700">
+                              <FaStethoscope className="text-primary" />
+                              <strong>Service:</strong>
+                              {getServiceName(appointment.service_ref)}
+                            </span>
                           </div>
                         </div>
-                      )
-                    )}
-                  </div>
+                        {/* Divider */}
+                        <div className="col-span-1 flex justify-center">
+                          <div className="w-0.5 h-12 bg-gray-200" />
+                        </div>
+                        {/* Right: Priority */}
+                        <div className="col-span-1 flex flex-col items-center justify-center">
+                          <span
+                            className={`inline-flex items-center px-3 py-0.5 rounded text-xs font-semibold ${getPriorityColor(
+                              appointment.priority_flag
+                            )}`}
+                          >
+                            <FaFlag className="mr-1" />
+                            {appointment.priority_flag || "normal"}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            Priority
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )
                 )}
-              </div>
-
-              {/* Database References */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="text-lg font-worksans font-bold text-blue-800 mb-3">
-                  🔗 Database References (How it works)
-                </h3>
-                <div className="text-sm text-blue-700">
-                  <p className="mb-2">
-                    This patient record demonstrates Firebase references:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>
-                      <strong>Patient ID:</strong>{" "}
-                      <code>{selectedPatient.id}</code>
-                    </li>
-                    <li>
-                      <strong>Service Reference:</strong>{" "}
-                      <code>{selectedPatient.service_ref}</code>
-                    </li>
-                    <li>
-                      <strong>Related Appointments:</strong>{" "}
-                      {getPatientAppointments(selectedPatient.id).length} found
-                      by patient_ref
-                    </li>
-                    <li>
-                      <strong>Created:</strong>{" "}
-                      {new Date(selectedPatient.created_at).toLocaleString()}
-                    </li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>

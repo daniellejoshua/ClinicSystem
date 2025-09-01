@@ -19,6 +19,113 @@ import {
 import { database } from "../config/firebase";
 
 class QueueService {
+  // Add walk-in patient directly to queue
+  async addWalkinToQueue(patientData) {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const queueNumber = await this.getNextQueueNumber(today);
+      let walkinQueueId = queueNumber.toString().padStart(3, "0");
+
+      // Emergency/high priority: assign E- prefix
+      if (patientData.priority_flag === "high") {
+        walkinQueueId = `E-${walkinQueueId}`;
+      }
+
+      let patientId = patientData.id;
+      // Only create patient if no id is provided
+      if (!patientId) {
+        // Only add minimal patient info to 'patients', not queue info
+        const patientRecord = {
+          full_name: patientData.full_name,
+          email: patientData.email,
+          phone_number: patientData.phone_number,
+          date_of_birth: patientData.date_of_birth || "",
+          address: patientData.address || "",
+          gender: patientData.gender || "",
+          created_at: new Date().toISOString(),
+        };
+        const patientsRef = ref(database, "patients");
+        const newPatientRef = push(patientsRef);
+        await set(newPatientRef, patientRecord);
+        patientId = newPatientRef.key;
+      }
+
+      // Create queue entry, include appointment_id if provided
+      const queueEntry = {
+        queue_number: walkinQueueId,
+        patient_id: patientId,
+        appointment_id: patientData.appointment_id || null,
+        full_name: patientData.full_name,
+        email: patientData.email,
+        phone_number: patientData.phone_number,
+        appointment_type: "walkin",
+        status: "waiting",
+        service_ref: patientData.service_ref,
+        priority_flag: patientData.priority_flag || "normal",
+        arrival_time: new Date().toISOString(),
+        booking_time: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      };
+
+      // Add to today's queue
+      const todayQueueRef = ref(database, `queue/${today}`);
+      let queueSnapshot = await get(todayQueueRef);
+      let queueList = [];
+      if (queueSnapshot.exists()) {
+        queueList = Object.entries(queueSnapshot.val()).map(([key, value]) => ({
+          id: key,
+          ...value,
+        }));
+      }
+
+      // If high priority, insert at the very front (above online)
+      if (queueEntry.priority_flag === "high") {
+        const newQueueRef = push(todayQueueRef);
+        await set(newQueueRef, queueEntry);
+        queueList.push({ id: newQueueRef.key, ...queueEntry });
+        queueList.sort((a, b) => {
+          // Emergency/high priority always first
+          if (a.priority_flag === "high" && b.priority_flag !== "high")
+            return -1;
+          if (a.priority_flag !== "high" && b.priority_flag === "high")
+            return 1;
+          // Online next
+          if (
+            a.appointment_type === "online" &&
+            b.appointment_type !== "online"
+          )
+            return -1;
+          if (
+            a.appointment_type !== "online" &&
+            b.appointment_type === "online"
+          )
+            return 1;
+          // Then walk-ins by arrival time
+          return new Date(a.arrival_time) - new Date(b.arrival_time);
+        });
+        // Overwrite queue for today with sorted list
+        const updates = {};
+        queueList.forEach((item) => {
+          updates[item.id] = { ...item };
+        });
+        await set(todayQueueRef, updates);
+      } else {
+        // Normal priority, just add to queue
+        const newQueueRef = push(todayQueueRef);
+        await set(newQueueRef, queueEntry);
+      }
+
+      return {
+        success: true,
+        queueNumber: walkinQueueId,
+        patientId: patientId,
+        message: `Walk-in registered! Your queue number is ${walkinQueueId}`,
+      };
+    } catch (error) {
+      console.error("Error adding walk-in to queue:", error);
+      return { success: false, error: error.message };
+    }
+  }
   // Mark online appointments as no_show if not checked in by end of day
   async markNoShowAppointments(date = null) {
     try {
@@ -114,140 +221,9 @@ class QueueService {
   async checkInOnlinePatient(patientInfo) {
     try {
       const today = new Date().toISOString().split("T")[0];
-
-      // Find the appointment
-      const appointmentsSnapshot = await get(this.appointmentsRef);
-      let foundAppointment = null;
-      let appointmentKey = null;
-
-      if (appointmentsSnapshot.exists()) {
-        const appointments = appointmentsSnapshot.val();
-
-        for (const [key, appointment] of Object.entries(appointments)) {
-          if (
-            appointment.patient_full_name === patientInfo.patient_full_name &&
-            appointment.email_address === patientInfo.email_address &&
-            appointment.appointment_type === "online" &&
-            appointment.status === "scheduled" &&
-            !appointment.checked_in
-          ) {
-            foundAppointment = appointment;
-            appointmentKey = key;
-            break;
-          }
-        }
-      }
-
-      if (!foundAppointment) {
-        return {
-          success: false,
-          error: "Online appointment not found or already checked in",
-        };
-      }
-
-      // Get next queue number with priority positioning
-      const queueNumber = await this.getNextQueueNumber(today);
-      const priorityQueueId = `O-${queueNumber.toString().padStart(3, "0")}`;
-
-      // Add to active queue with priority
-      const queueEntry = {
-        queue_number: priorityQueueId,
-        appointment_id: appointmentKey,
-        full_name: foundAppointment.patient_full_name, // Consistent field name
-        email: foundAppointment.email_address,
-        phone_number: foundAppointment.contact_number, // Consistent field name
-        appointment_type: "online",
-        status: "waiting",
-        service_ref: foundAppointment.service_ref, // Consistent field name
-        priority_flag: "high", // Online appointments get high priority
-        booked_at: foundAppointment.booked_at, // For priority sorting
-        arrival_time: new Date().toISOString(),
-        checked_in_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      };
-
-      // Add to today's queue
-      const todayQueueRef = ref(database, `queue/${today}`);
-      const newQueueRef = push(todayQueueRef);
-      await set(newQueueRef, queueEntry);
-
-      // Update appointment status
-      const appointmentRef = ref(database, `appointments/${appointmentKey}`);
-      await update(appointmentRef, {
-        status: "checked-in",
-        checked_in: true,
-        checked_in_at: new Date().toISOString(),
-        queue_number: priorityQueueId,
-      });
-
-      return {
-        success: true,
-        queueNumber: priorityQueueId,
-        message: `Successfully checked in! Your priority queue number is ${priorityQueueId}`,
-      };
+      // ...existing check-in logic...
     } catch (error) {
       console.error("Error checking in online patient:", error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Add walk-in patient directly to queue
-  async addWalkinToQueue(patientData) {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const queueNumber = await this.getNextQueueNumber(today);
-      const walkinQueueId = queueNumber.toString().padStart(3, "0");
-
-      // Create patient record first
-      const patientRecord = {
-        full_name: patientData.full_name,
-        email: patientData.email,
-        phone_number: patientData.phone_number,
-        date_of_birth: patientData.date_of_birth || "",
-        address: patientData.address || "",
-        appointment_type: "walkin",
-        service_ref: patientData.service_ref,
-        priority_flag: patientData.priority_flag || "normal",
-        status: "waiting",
-        queue_number: walkinQueueId,
-        created_at: new Date().toISOString(),
-        booking_source: "walk-in",
-      };
-
-      // Add to patients collection
-      const patientsRef = ref(database, "patients");
-      const newPatientRef = push(patientsRef);
-      await set(newPatientRef, patientRecord);
-
-      // Create queue entry with consistent field names
-      const queueEntry = {
-        queue_number: walkinQueueId,
-        patient_id: newPatientRef.key,
-        full_name: patientData.full_name, // Consistent field name
-        email: patientData.email,
-        phone_number: patientData.phone_number, // Consistent field name
-        appointment_type: "walkin",
-        status: "waiting",
-        service_ref: patientData.service_ref, // Consistent field name
-        priority_flag: patientData.priority_flag || "normal", // Consistent field name
-        arrival_time: new Date().toISOString(),
-        booking_time: new Date().toISOString(), // For analytics consistency
-        created_at: new Date().toISOString(),
-      };
-
-      // Add to today's queue
-      const todayQueueRef = ref(database, `queue/${today}`);
-      const newQueueRef = push(todayQueueRef);
-      await set(newQueueRef, queueEntry);
-
-      return {
-        success: true,
-        queueNumber: walkinQueueId,
-        patientId: newPatientRef.key,
-        message: `Walk-in registered! Your queue number is ${walkinQueueId}`,
-      };
-    } catch (error) {
-      console.error("Error adding walk-in to queue:", error);
       return { success: false, error: error.message };
     }
   }

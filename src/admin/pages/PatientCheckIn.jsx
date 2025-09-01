@@ -189,6 +189,7 @@ const PatientCheckIn = () => {
         // Log the check-in action
         await customDataService.addDataWithAutoId("audit_logs", {
           user_ref: `staff/${currentStaff.id}`,
+          staff_full_name: currentStaff.full_name,
           action: `Checked in online appointment for: ${appointment.patient_full_name}`,
           ip_address: "192.168.1.100",
           timestamp: new Date().toISOString(),

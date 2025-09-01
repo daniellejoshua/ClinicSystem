@@ -118,7 +118,10 @@ const AdminLogin = () => {
       let matchedStaff = null;
       if (staffSnapshot.exists()) {
         const staffData = staffSnapshot.val();
-        staffList = Object.values(staffData);
+        staffList = Object.entries(staffData).map(([id, staff]) => ({
+          id,
+          ...staff,
+        }));
         matchedStaff = staffList.find(
           (staff) =>
             staff.email &&
@@ -127,6 +130,18 @@ const AdminLogin = () => {
       }
 
       if (matchedStaff) {
+        // Save the matched staff record to localStorage for dashboard and audit logs
+        const staffData = {
+          id: matchedStaff.id,
+          full_name: matchedStaff.full_name,
+          email: matchedStaff.email,
+          role: matchedStaff.role,
+          loginTime: new Date().toISOString(),
+        };
+        localStorage.setItem("staffData", JSON.stringify(staffData));
+        localStorage.setItem("isStaffLoggedIn", "true");
+        localStorage.setItem("adminToken", "staff-" + matchedStaff.id);
+
         logAudit("firebase_login_success", user.email);
         showWelcomeModal(
           matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
@@ -164,12 +179,27 @@ const AdminLogin = () => {
       }
 
       const staffData = staffSnapshot.val();
-      const staffList = Object.values(staffData);
+      const staffList = Object.entries(staffData).map(([id, staff]) => ({
+        id,
+        ...staff,
+      }));
       const matchedStaff = staffList.find(
         (staff) =>
           staff.email.trim().toLowerCase() === user.email.trim().toLowerCase()
       );
       if (matchedStaff) {
+        // Save the matched staff record to localStorage for dashboard and audit logs
+        const staffDataObj = {
+          id: matchedStaff.id,
+          full_name: matchedStaff.full_name,
+          email: matchedStaff.email,
+          role: matchedStaff.role,
+          loginTime: new Date().toISOString(),
+        };
+        localStorage.setItem("staffData", JSON.stringify(staffDataObj));
+        localStorage.setItem("isStaffLoggedIn", "true");
+        localStorage.setItem("adminToken", "staff-" + matchedStaff.id);
+
         showWelcomeModal(
           matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
             ? "/admin/dashboard"

@@ -5,6 +5,7 @@
 // The UI shows progress, errors, and feedback to help patients book easily
 
 import React, { useState, useEffect } from "react";
+import emailjs from "emailjs-com";
 import {
   FaCalendar,
   FaUser,
@@ -17,20 +18,49 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import customDataService from "../../shared/services/customDataService";
+import dataService from "../../shared/services/dataService";
 import queueService from "../../shared/services/queueService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+
+// Example data
+const chartData = [
+  { name: "General", value: 40 },
+  { name: "Pediatrics", value: 30 },
+  { name: "Dental", value: 20 },
+  { name: "OB-GYN", value: 10 },
+];
+
 const AppointmentBooking = () => {
+  // PIN confirmation dialog state
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [generatedPin, setGeneratedPin] = useState("");
+  const [enteredPin, setEnteredPin] = useState("");
+  const [pinError, setPinError] = useState("");
   const nextStep = () => {
     if (currentStep < totalSteps && validateStep(currentStep)) {
       setCurrentStep((prev) => prev + 1);
-      setErrors({});
+      setErrors({}); // Clear errors when moving to next step
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
-      setErrors({});
+      setErrors({}); // Clear errors when moving to previous step
     }
   };
 
@@ -38,15 +68,23 @@ const AppointmentBooking = () => {
   const goToStep = (step) => {
     if (step < currentStep) {
       setCurrentStep(step);
-      setErrors({});
+      setErrors({}); // Clear errors when jumping to a previous step
     }
   };
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setAppointmentForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    // For service_ref, always set as 'services/{id}' or 'General Consultation'
+    if (name === "service_ref") {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        service_ref: value ? value : "General Consultation",
+      }));
+    } else {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+    }
   };
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -238,13 +276,7 @@ const AppointmentBooking = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handles the logic for booking an appointment:
-  // 1. Patient fills out the form step by step
-  // 2. Each step collects specific info (personal, contact, service, date)
-  // 3. When the form is submitted, validate all fields
-  // 4. If valid, send the data to the backend to save the appointment
-  // 5. Show feedback to the patient (success or error)
-  // Main submit handler for booking appointment
+  // Main submit handler for booking appointment with PIN confirmation
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -253,108 +285,202 @@ const AppointmentBooking = () => {
     try {
       const fullName =
         `${appointmentForm.patient_first_name} ${appointmentForm.patient_middle_name} ${appointmentForm.patient_last_name}`.trim();
-      // Prepare appointment data
-      const appointmentData = {
-        patient_full_name: fullName,
-        patient_first_name: appointmentForm.patient_first_name,
-        patient_middle_name: appointmentForm.patient_middle_name,
-        patient_last_name: appointmentForm.patient_last_name,
-        patient_birthdate: appointmentForm.patient_birthdate,
-        patient_sex: appointmentForm.patient_sex,
-        contact_number: appointmentForm.contact_number,
-        email_address: appointmentForm.email_address,
-        booked_by_name: appointmentForm.booked_by_name,
-        relationship_to_patient: appointmentForm.relationship_to_patient,
-        service_ref: appointmentForm.service_ref,
-        preferred_date: appointmentForm.preferred_date,
-        additional_notes:
-          appointmentForm.additional_notes || "No additional notes",
-        current_medications: appointmentForm.current_medications,
-        present_checkbox: appointmentForm.present_checkbox,
-        booking_source: "online",
-        appointment_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      };
 
-      // Create appointment in queue
-      const result = await queueService.createOnlineAppointment(
-        appointmentData
+      // Find service name from selected service_ref
+      let serviceName = "";
+      if (appointmentForm.service_ref) {
+        const foundService = services.find(
+          (s) => `services/${s.id}` === appointmentForm.service_ref
+        );
+        serviceName = foundService
+          ? foundService.service_name
+          : "General Consultation";
+      }
+
+      // Prepare all info for later DB push (after PIN confirmation)
+      // Deduplication: fetch all patients and check for match
+      const allPatients = await customDataService.getAllData("patients");
+      const normalize = (str) => (str ? str.trim().toLowerCase() : "");
+      const existingPatient = allPatients.find(
+        (p) =>
+          normalize(p.full_name) === normalize(fullName) &&
+          normalize(p.email) === normalize(appointmentForm.email_address) &&
+          normalize(p.phone_number) ===
+            normalize(appointmentForm.contact_number) &&
+          normalize(p.date_of_birth) ===
+            normalize(appointmentForm.patient_birthdate) &&
+          normalize(p.patient_sex || p.sex) ===
+            normalize(appointmentForm.patient_sex)
       );
 
-      if (result.success) {
-        setSubmitStatus("success");
+      // Store all info for later DB push (after PIN confirmation)
+      window._pendingAppointment = {
+        fullName,
+        appointmentForm: { ...appointmentForm },
+        serviceName,
+        existingPatient,
+      };
 
-        // Create patient record in patients collection for patient management
-        const patientData = {
-          full_name: fullName,
-          email: appointmentForm.email_address,
-          phone_number: appointmentForm.contact_number,
-          date_of_birth: appointmentForm.patient_birthdate,
-          address: "", // Not collected in online form, can be updated later
-          service_ref: appointmentForm.service_ref,
-          status: "pending", // Pending until checked in
-          priority_flag: "normal",
-          appointment_type: "online",
-          preferred_date: appointmentForm.preferred_date,
-          current_medications: appointmentForm.current_medications,
-          booking_source: "online",
-          appointment_id: result.appointmentId,
-          created_at: new Date().toISOString(),
-        };
+      // Generate 6-digit PIN
+      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedPin(pin);
+      window._pendingAppointment.pin = pin;
 
-        await customDataService.addDataWithAutoId("patients", patientData);
-
-        // Also create fill-up form record for admin reference
-        const formData = {
-          appointment_id: result.appointmentId,
-          patient_full_name: appointmentForm.patient_full_name,
-          patient_birthdate: appointmentForm.patient_birthdate,
-          patient_sex: appointmentForm.patient_sex,
-          appointment_date: new Date().toISOString(),
-          booked_by_name: appointmentForm.booked_by_name,
-          relationship_to_patient: appointmentForm.relationship_to_patient,
-          contact_number: appointmentForm.contact_number,
-          email_address: appointmentForm.email_address,
-          present_checkbox: appointmentForm.present_checkbox,
-          current_medications: appointmentForm.current_medications,
-          booking_source: "online",
-          created_at: new Date().toISOString(),
-        };
-
-        await customDataService.addDataWithAutoId("fill_up_forms", formData);
-
-        // Reset form after successful submission and re-enable button
-        setTimeout(() => {
-          setAppointmentForm({
-            patient_first_name: "",
-            patient_middle_name: "",
-            patient_last_name: "",
-            patient_birthdate: "",
-            patient_sex: "",
-            contact_number: "",
-            email_address: "",
-            booked_by_name: "",
-            relationship_to_patient: "Self",
-            service_ref: "",
-            preferred_date: "",
-            additional_notes: "",
-            current_medications: "",
-            present_checkbox: false,
-            booking_source: "online",
-          });
-          setCurrentStep(1);
-          setSubmitStatus(null);
-          setIsLoading(false);
-          setErrors({}); // Clear errors after success
-        }, 3000);
-      } else {
-        throw new Error(result.error || "Failed to book appointment");
-      }
+      // Send PIN via EmailJS
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        {
+          to_name: fullName,
+          appointment_date: appointmentForm.preferred_date,
+          appointment_time: appointmentForm.preferred_time,
+          pin: pin,
+          to_email: appointmentForm.email_address,
+        },
+        import.meta.env.VITE_EMAILJS_USER_ID
+      );
+      setShowPinDialog(true);
+      setIsLoading(false);
     } catch (error) {
       console.error("Error booking appointment:", error);
       setSubmitStatus("error");
-    } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle PIN entry and confirmation
+  const handlePinConfirm = () => {
+    if (enteredPin === generatedPin && window._pendingAppointment) {
+      setSubmitStatus("success");
+      setShowPinDialog(false);
+      setPinError("");
+      // Push to DB only after PIN confirmation
+      const {
+        fullName,
+        appointmentForm: form,
+        existingPatient,
+        pin,
+      } = window._pendingAppointment;
+
+      // Use the selected service_ref or fallback to 'General Consultation'
+      const serviceRef = form.service_ref || "General Consultation";
+      console.log("[DEBUG] serviceRef being saved:", serviceRef);
+
+      // Create or update patient record
+      let patientIdPromise;
+      if (existingPatient) {
+        patientIdPromise = Promise.resolve(existingPatient.id);
+      } else {
+        patientIdPromise = customDataService
+          .addDataWithAutoId("patients", {
+            full_name: fullName,
+            email: form.email_address,
+            phone_number: form.contact_number,
+            date_of_birth: form.patient_birthdate,
+            sex: form.patient_sex,
+            address: "",
+            service_ref: serviceRef,
+            status: "pending",
+            priority_flag: "normal",
+            appointment_type: "online",
+            preferred_date: form.preferred_date,
+            current_medications: form.current_medications,
+            booking_source: "online",
+            created_at: new Date().toISOString(),
+          })
+          .then((newPatient) => newPatient.id);
+      }
+
+      patientIdPromise.then((patientId) => {
+        // Prepare appointment data
+        const appointmentData = {
+          patient_ref: `patients/${patientId}`,
+          patient_full_name: fullName,
+          patient_first_name: form.patient_first_name,
+          patient_middle_name: form.patient_middle_name,
+          patient_last_name: form.patient_last_name,
+          patient_birthdate: form.patient_birthdate,
+          patient_sex: form.patient_sex,
+          contact_number: form.contact_number,
+          email_address: form.email_address,
+          booked_by_name: form.booked_by_name,
+          relationship_to_patient: form.relationship_to_patient,
+          service_ref: serviceRef,
+          preferred_date: form.preferred_date,
+          additional_notes: form.additional_notes || "No additional notes",
+          current_medications: form.current_medications,
+          present_checkbox: form.present_checkbox,
+          booking_source: "online",
+          appointment_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        };
+
+        queueService.createOnlineAppointment(appointmentData).then((result) => {
+          if (result.success) {
+            // Update patient record with appointment and PIN
+            dataService.updateData(`patients/${patientId}`, {
+              appointment_id: result.appointmentId,
+              pin_code: pin,
+              preferred_date: form.preferred_date,
+              current_medications: form.current_medications,
+              service_ref: serviceRef,
+              status: "pending",
+              booking_source: "online",
+              updated_at: new Date().toISOString(),
+            });
+            // Also create fill-up form record for admin reference
+            const formData = {
+              appointment_id: result.appointmentId,
+              patient_ref: `patients/${patientId}`,
+              patient_full_name: fullName,
+              patient_birthdate: form.patient_birthdate,
+              patient_sex: form.patient_sex,
+              appointment_date: new Date().toISOString(),
+              booked_by_name: form.booked_by_name,
+              relationship_to_patient: form.relationship_to_patient,
+              contact_number: form.contact_number,
+              email_address: form.email_address,
+              present_checkbox: form.present_checkbox,
+              current_medications: form.current_medications,
+              booking_source: "online",
+              created_at: new Date().toISOString(),
+              pin_code: pin,
+            };
+            customDataService.addDataWithAutoId("fill_up_forms", formData);
+          }
+          // Clean up pending data
+          window._pendingAppointment = null;
+        });
+      });
+
+      // Reset form after successful submission and re-enable button
+      setTimeout(() => {
+        setAppointmentForm({
+          patient_first_name: "",
+          patient_middle_name: "",
+          patient_last_name: "",
+          patient_birthdate: "",
+          patient_sex: "",
+          contact_number: "",
+          email_address: "",
+          booked_by_name: "",
+          relationship_to_patient: "Self",
+          service_ref: "",
+          preferred_date: "",
+          additional_notes: "",
+          current_medications: "",
+          present_checkbox: false,
+          booking_source: "online",
+        });
+        setCurrentStep(1);
+        setSubmitStatus(null);
+        setIsLoading(false);
+        setErrors({});
+        setEnteredPin("");
+        setGeneratedPin("");
+      }, 3000);
+    } else {
+      setPinError("Incorrect PIN. Please check your email and try again.");
     }
   };
 
@@ -450,22 +576,51 @@ const AppointmentBooking = () => {
                 </p>
               </div>
 
-              {/* Status Messages */}
-              {submitStatus === "success" && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-800 mb-2">
-                    <FaCheckCircle className="text-green-600" />
-                    <span className="font-bold font-worksans">
-                      Appointment Booked Successfully!
-                    </span>
-                  </div>
-                  <div className="text-sm text-green-700 space-y-1">
-                    <p>✅ Your online appointment has been confirmed</p>
-                    <p>🏥 Please check in at the clinic when you arrive</p>
-                    <p>
-                      ⭐ You'll receive a priority queue number upon check-in
+              {/* PIN Confirmation Dialog */}
+              {showPinDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                  <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+                    <h2 className="text-xl font-bold text-primary mb-4 font-yeseva text-center">
+                      Enter Your 6-Digit PIN
+                    </h2>
+                    <p className="text-gray-700 mb-4 text-center font-worksans">
+                      We've sent a 6-digit PIN to your email address. Please
+                      enter it below to confirm your appointment.
                     </p>
-                    <p>📧 A confirmation has been sent to your email</p>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={enteredPin}
+                      onChange={(e) =>
+                        setEnteredPin(e.target.value.replace(/[^0-9]/g, ""))
+                      }
+                      className="w-full bg-primary text-white border-0 rounded px-4 py-3 mb-2 text-center text-lg font-bold font-worksans focus:outline-none focus:ring-2 focus:ring-accent"
+                      placeholder="Enter 6-digit PIN"
+                    />
+                    {pinError && (
+                      <p className="text-red-500 text-sm mb-2 text-center font-worksans">
+                        {pinError}
+                      </p>
+                    )}
+                    <button
+                      onClick={handlePinConfirm}
+                      className="bg-accent text-primary py-2 px-6 rounded font-semibold hover:bg-accent/90 transition-colors w-full font-worksans"
+                    >
+                      Confirm PIN
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Messages */}
+              {submitStatus === "success" && !showPinDialog && (
+                <div className="mb-6 p-6 bg-green-50 border border-green-200 rounded-lg shadow flex flex-col items-center">
+                  <FaCheckCircle className="text-green-600 text-3xl mb-2" />
+                  <h3 className="font-bold text-green-800 text-xl mb-2 font-yeseva">
+                    Appointment Booked Successfully!
+                  </h3>
+                  <div className="text-sm text-green-700 space-y-2 text-center font-worksans">
+                    <p>✅ Your online appointment has been confirmed.</p>
                   </div>
                 </div>
               )}
@@ -859,50 +1014,37 @@ const AppointmentBooking = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Schedule Hours */}
-            <div className="bg-white rounded-lg shadow-xl p-5 h-fit">
-              <h3 className="text-2xl font-bold text-primary mb-8 font-yeseva">
-                Schedule Hours
+            {/* Clinic Hours Card */}
+            <div className="bg-white rounded-lg shadow-xl p-5 h-fit flex flex-col items-center">
+              <h3 className="text-xl font-bold text-primary mb-2 font-yeseva">
+                Clinic Hours
               </h3>
-              <div className="space-y-6 text-base font-worksans mb-8">
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Monday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Tuesday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Wednesday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Thursday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Friday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
-                <div className="flex justify-between py-4 border-b border-gray-100">
-                  <span className="font-semibold text-lg">Saturday</span>
-                  <span className="text-primary font-bold text-lg">
-                    8:00 AM - 8:00 PM
-                  </span>
-                </div>
+              <div className="text-lg font-worksans text-gray-700 mb-2">
+                <span className="font-semibold">Monday to Saturday</span>
+                <br />
+                <span className="text-primary font-bold">
+                  8:00 AM – 8:00 PM
+                </span>
+              </div>
+              <div className="text-sm text-gray-500 font-worksans">
+                Sunday: <span className="font-bold text-red-500">Closed</span>
               </div>
             </div>
+
+            {/* Important Notice Card */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow p-4 flex items-start gap-3">
+              <FaExclamationTriangle className="text-yellow-500 text-2xl mt-1" />
+              <div>
+                <h4 className="font-bold text-yellow-700 mb-1 font-yeseva">
+                  Important Notice
+                </h4>
+                <ul className="list-disc ml-5 text-yellow-800 text-sm font-worksans">
+                  <li>Please bring a valid ID on your appointment day.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* ...existing code... */}
           </div>
         </div>
       </div>
