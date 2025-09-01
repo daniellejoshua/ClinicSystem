@@ -312,12 +312,13 @@ const AdminDashboard = () => {
     try {
       setIsLoading(true);
 
-      // Use the queue service to add walk-in patient
+      // Use the queue service to add walk-in patient, including priority_flag
       const result = await queueService.addWalkinToQueue({
         full_name: patientForm.full_name,
         email: patientForm.email,
         phone_number: patientForm.phone_number,
         service_ref: patientForm.service_ref || "General Consultation",
+        priority_flag: patientForm.priority_flag || "normal",
       });
 
       if (result.success) {
@@ -339,8 +340,9 @@ const AdminDashboard = () => {
           contact_number: patientForm.phone_number,
           service_ref: patientForm.service_ref || "General Consultation",
           appointment_type: "walk-in",
-          status: "checkedin",
+          status: "checked-in",
           checked_in: true,
+          priority_flag: patientForm.priority_flag || "normal",
           created_at: new Date().toISOString(),
           appointment_date: new Date().toISOString(),
           queue_number: result.queueNumber,

@@ -91,13 +91,20 @@ const PatientsManagement = () => {
     );
   };
 
-  // Filter patients based on search
-  const filteredPatients = patients.filter(
-    (patient) =>
+  // Filter patients based on search and checked-in status
+  // Show all walk-ins, but only include online appointments if checked in
+  const filteredPatients = patients.filter((patient) => {
+    const isWalkin = patient.appointment_type === "walkin";
+    const isOnlineCheckedIn =
+      patient.appointment_type === "online" &&
+      (patient.checked_in ||
+        ["checkedin", "checked-in"].includes(patient.status));
+    const matchesSearch =
       patient.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone_number?.includes(searchTerm)
-  );
+      patient.phone_number?.includes(searchTerm);
+    return (isWalkin || isOnlineCheckedIn) && matchesSearch;
+  });
 
   const viewPatientDetails = (patient) => {
     setSelectedPatient(patient);
@@ -157,8 +164,8 @@ const PatientsManagement = () => {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      {/* Stats Card: Only Total Patients */}
+      <div className="grid grid-cols-1 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -166,45 +173,10 @@ const PatientsManagement = () => {
                 Total Patients
               </p>
               <p className="text-2xl font-bold text-primary">
-                {patients.length}
+                {filteredPatients.length}
               </p>
             </div>
             <FaUsers className="text-3xl text-primary opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">Waiting</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {patients.filter((p) => p.status === "waiting").length}
-              </p>
-            </div>
-            <FaClock className="text-3xl text-blue-600 opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">
-                High Priority
-              </p>
-              <p className="text-2xl font-bold text-red-600">
-                {patients.filter((p) => p.priority_flag === "high").length}
-              </p>
-            </div>
-            <FaFlag className="text-3xl text-red-600 opacity-20" />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">Services</p>
-              <p className="text-2xl font-bold text-green-600">
-                {services.length}
-              </p>
-            </div>
-            <FaStethoscope className="text-3xl text-green-600 opacity-20" />
           </div>
         </div>
       </div>

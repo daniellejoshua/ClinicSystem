@@ -105,8 +105,21 @@ const QueueManagement = () => {
 
     // Subscribe to real-time updates
     const unsubscribe = queueService.subscribeToTodayQueue((queue) => {
-      setQueueData(queue);
-      updateQueueStats(queue);
+      // Sort: emergency/high priority first, then online, then normal walk-ins
+      const sortedQueue = [...queue].sort((a, b) => {
+        // Emergency/high priority always first
+        if (a.priority_flag === "high" && b.priority_flag !== "high") return -1;
+        if (a.priority_flag !== "high" && b.priority_flag === "high") return 1;
+        // Online next
+        if (a.appointment_type === "online" && b.appointment_type !== "online")
+          return -1;
+        if (a.appointment_type !== "online" && b.appointment_type === "online")
+          return 1;
+        // Then walk-ins by arrival time
+        return new Date(a.arrival_time) - new Date(b.arrival_time);
+      });
+      setQueueData(sortedQueue);
+      updateQueueStats(sortedQueue);
       setLastUpdated(new Date());
       checkAndResetQueue();
     });
@@ -215,7 +228,17 @@ const QueueManagement = () => {
   };
 
   const getQueueNumberDisplay = (queueNumber, appointmentType) => {
-    if (appointmentType === "online") {
+    if (typeof queueNumber === "string" && queueNumber.startsWith("E-")) {
+      // Emergency/high priority walk-in
+      return (
+        <div className="bg-red-600 text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-lg">
+          <div className="text-center">
+            <div className="text-xs">⚡</div>
+            <div>{queueNumber}</div>
+          </div>
+        </div>
+      );
+    } else if (appointmentType === "online") {
       return (
         <div className="bg-blue-600 text-white rounded-full w-16 h-16 flex items-center justify-center font-bold text-sm">
           <div className="text-center">
@@ -249,6 +272,21 @@ const QueueManagement = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-[1600px] mx-auto space-y-6">
+        {/* Emergency Notification */}
+        {queueData.some(
+          (q) => q.priority_flag === "high" && q.status !== "completed"
+        ) && (
+          <div className="mb-4 p-4 rounded-lg bg-red-100 border border-red-400 flex items-center gap-3">
+            <FaExclamationTriangle className="text-red-600 text-2xl" />
+            <div>
+              <span className="font-bold text-red-800">Emergency Alert:</span>
+              <span className="ml-2 text-red-700">
+                There is a high priority patient in the queue. Please attend
+                immediately!
+              </span>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <Card>
           <CardContent className="p-6">
@@ -699,9 +737,11 @@ const QueueManagement = () => {
                       </p>
                       <p>
                         <span className="font-medium">Priority:</span>{" "}
-                        {selectedPatient.appointment_type === "online"
+                        {selectedPatient.priority_flag === "high"
+                          ? "High"
+                          : selectedPatient.appointment_type === "online"
                           ? "High (Online)"
-                          : "Normal (Walk-in)"}
+                          : "Normal"}
                       </p>
                       {selectedPatient.appointment_type === "online" ? (
                         <p>

@@ -12,6 +12,9 @@ function AppointmentPage() {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterService, setFilterService] = useState("");
+  const [filterType, setFilterType] = useState("");
 
   useEffect(() => {
     async function fetchAppointments() {
@@ -20,7 +23,12 @@ function AppointmentPage() {
           dataService.getAllData("appointments"),
           dataService.getAllData("services"),
         ]);
-        setAppointments(appointmentsData);
+        // Normalize status to 'checked-in' if it is 'checkedin'
+        const normalizedAppointments = appointmentsData.map((appt) => ({
+          ...appt,
+          status: appt.status === "checkedin" ? "checked-in" : appt.status,
+        }));
+        setAppointments(normalizedAppointments);
         setServices(servicesData);
       } catch (error) {
         setAppointments([]);
@@ -59,9 +67,21 @@ function AppointmentPage() {
 
   // Filter and sort appointments
   const filteredAppointments = appointments
-    .filter((appt) =>
-      appt.patient_full_name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter((appt) => {
+      const matchesSearch = appt.patient_full_name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus
+        ? appt.status === filterStatus
+        : appt.status !== "checkedin";
+      const matchesService = filterService
+        ? getServiceName(appt.service_ref) === filterService
+        : true;
+      const matchesType = filterType
+        ? appt.appointment_type === filterType
+        : true;
+      return matchesSearch && matchesStatus && matchesService && matchesType;
+    })
     .sort((a, b) =>
       sortOrder === "asc"
         ? a.appointment_date - b.appointment_date
@@ -103,7 +123,7 @@ function AppointmentPage() {
     <div className="p-6 w-full max-w-screen-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-primary">Appointments</h1>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="text"
             className="border rounded px-3 py-2 w-64 focus:outline-primary"
@@ -111,12 +131,40 @@ function AppointmentPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button
-            className="bg-primary text-white px-4 py-2 rounded shadow hover:bg-primary-dark"
-            onClick={() => setSearchTerm(searchTerm)}
+          <select
+            className="border rounded px-3 py-2"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
           >
-            Search
-          </button>
+            <option value="">All Status</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="checked-in">Checked-in</option>
+            <option value="completed">Completed</option>
+            <option value="missed">Missed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select
+            className="border rounded px-3 py-2"
+            value={filterService}
+            onChange={(e) => setFilterService(e.target.value)}
+          >
+            <option value="">All Services</option>
+            {services.map((service) => (
+              <option key={service.id} value={service.service_name}>
+                {service.service_name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="border rounded px-3 py-2"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="">All Types</option>
+            <option value="online">Online</option>
+            <option value="walkin">Walk-in</option>
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Sort by date:</span>
@@ -142,42 +190,89 @@ function AppointmentPage() {
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto max-h-[60vh]">
-          <table className="min-w-full bg-white">
+          <table className="w-full">
             <thead className="bg-primary text-white sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-2">Patient Name</th>
-                <th className="px-4 py-2">Type</th>
-                <th className="px-4 py-2">Service</th>
-                <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Patient Info
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Service
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAppointments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-500">
-                    No appointments found.
+                  <td
+                    colSpan="6"
+                    className="px-6 py-8 text-center text-gray-500"
+                  >
+                    {searchTerm
+                      ? "No appointments found matching your search."
+                      : "No appointments found. Create some sample data first."}
                   </td>
                 </tr>
               ) : (
                 filteredAppointments.map((appt, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 transition">
-                    <td className="px-4 py-2 font-semibold">
-                      {appt.patient_full_name}
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+                          {appt.patient_full_name?.charAt(0) || "P"}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {appt.patient_full_name || "Unknown Name"}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center gap-4">
+                            <span>{appt.email_address}</span>
+                            <span>{appt.contact_number}</span>
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-4 py-2">{appt.appointment_type}</td>
-                    <td className="px-4 py-2">
-                      {getServiceName(appt.service_ref)}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        {appt.appointment_type === "online" ? (
+                          <span className="text-sm font-medium text-blue-600">
+                            Online
+                          </span>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-600">
+                            Walk-in
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {getServiceName(appt.service_ref)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Ref: {appt.service_ref || "No reference"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       {appt.appointment_date
                         ? new Date(appt.appointment_date).toLocaleString()
                         : "-"}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
                           appt.status
@@ -186,13 +281,14 @@ function AppointmentPage() {
                         {appt.status}
                       </span>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       <button
-                        className="text-primary underline font-medium hover:text-primary-dark"
+                        className="text-primary hover:text-primary/80 p-1 rounded"
                         onClick={() => {
                           setSelectedAppointment(appt);
                           setShowDialog(true);
                         }}
+                        title="View Details"
                       >
                         View
                       </button>
