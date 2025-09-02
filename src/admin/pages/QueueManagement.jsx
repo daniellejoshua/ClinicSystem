@@ -69,16 +69,54 @@ const QueueManagement = () => {
     return service ? service.service_name : serviceRef;
   };
 
+  // Manual queue reset function for button
+  const manualQueueReset = async () => {
+    // Mark all 'waiting' patients as 'cut off' and 'in-progress' as 'completed'
+    const db = getDatabase();
+    for (const entry of queueData) {
+      // Update queue status in DB
+      const queueRef = ref(db, `queue/${entry.id}`);
+      if (entry.status === "waiting") {
+        await update(queueRef, { status: "cut off" });
+        if (entry.appointment_id) {
+          const appointmentRef = ref(
+            db,
+            `appointments/${entry.appointment_id}`
+          );
+          await update(appointmentRef, { status: "cut off" });
+        }
+      } else if (entry.status === "in-progress") {
+        await update(queueRef, { status: "completed" });
+        if (entry.appointment_id) {
+          const appointmentRef = ref(
+            db,
+            `appointments/${entry.appointment_id}`
+          );
+          await update(appointmentRef, { status: "completed" });
+        }
+      }
+    }
+    setQueueData([]);
+    setQueueStats({
+      total: 0,
+      waiting: 0,
+      inProgress: 0,
+      completed: 0,
+      online: 0,
+      walkin: 0,
+    });
+  };
+
   useEffect(() => {
     // Load all services for reference resolution
     customDataService.getAllData("services").then(setServices);
 
     // Helper to check if we need to reset queue
-    const checkAndResetQueue = () => {
+    const checkAndResetQueue = async () => {
       const now = new Date();
       const last =
         lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
-      // 3:00AM today
+      // 3:00AM today (reverted)
       const resetTime = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -90,28 +128,7 @@ const QueueManagement = () => {
       );
       // If now is after 3:00AM and lastUpdated is before 3:00AM today, reset
       if (now >= resetTime && last < resetTime) {
-        // Mark all non-completed appointments as missed
-        queueData.forEach(async (entry) => {
-          if (entry.appointment_id && entry.status !== "completed") {
-            const db = require("firebase/database").getDatabase();
-            const appointmentRef = require("firebase/database").ref(
-              db,
-              `appointments/${entry.appointment_id}`
-            );
-            await require("firebase/database").update(appointmentRef, {
-              status: "missed",
-            });
-          }
-        });
-        setQueueData([]);
-        setQueueStats({
-          total: 0,
-          waiting: 0,
-          inProgress: 0,
-          completed: 0,
-          online: 0,
-          walkin: 0,
-        });
+        await manualQueueReset();
       }
     };
 
