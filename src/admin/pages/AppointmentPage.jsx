@@ -15,7 +15,64 @@ function AppointmentPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterService, setFilterService] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
 
+  // Reschedule logic
+  const openRescheduleModal = (appointment) => {
+    setSelectedAppointment(appointment);
+    setRescheduleDate(
+      appointment.appointment_date
+        ? new Date(appointment.appointment_date).toISOString().slice(0, 10)
+        : ""
+    );
+    setRescheduleTime(
+      appointment.appointment_date
+        ? new Date(appointment.appointment_date).toISOString().slice(11, 16)
+        : ""
+    );
+    setShowRescheduleModal(true);
+    setRescheduleError("");
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleDate) {
+      setRescheduleError("Please select a new date.");
+      return;
+    }
+    // Check if selected date is at least tomorrow
+    const selected = new Date(rescheduleDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (selected < tomorrow) {
+      setRescheduleError("Please select a date that is at least tomorrow.");
+      return;
+    }
+
+    setRescheduleLoading(true);
+    try {
+      // Correct path for update: appointments/{id}
+      await dataService.updateData(`appointments/${selectedAppointment.id}`, {
+        preferred_date: rescheduleDate,
+        status: "scheduled",
+      });
+      setShowRescheduleModal(false);
+      setRescheduleLoading(false);
+      setRescheduleError("");
+      // Refresh appointments
+      const updatedAppointments = await dataService.getAllData("appointments");
+      setAppointments(updatedAppointments);
+    } catch (err) {
+      setRescheduleError("Failed to reschedule. Please try again.");
+      setRescheduleLoading(false);
+    }
+  };
   useEffect(() => {
     async function fetchAppointments() {
       try {
@@ -49,19 +106,22 @@ function AppointmentPage() {
   // Helper for status color
   const getStatusColor = (status) => {
     switch (status) {
+      case "waiting":
+        return "text-blue-600 bg-blue-100";
+      case "in-progress":
+        return "text-orange-600 bg-orange-100";
       case "completed":
-        return "bg-green-100 text-green-700";
-        return "bg-red-100 text-red-700";
-      case "confirmed":
-        return "bg-blue-100 text-blue-700";
-      case "checked-in":
-        return "bg-purple-100 text-purple-700";
-      case "scheduled":
-        return "bg-yellow-100 text-yellow-700";
+        return "text-green-600 bg-green-100";
+      case "cancelled":
+        return "text-red-600 bg-red-100";
       case "missed":
-        return "bg-red-100 text-red-700";
+        return "text-gray-600 bg-gray-200";
+      case "cutoff":
+        return "text-red-700 bg-red-200";
+      case "scheduled":
+        return "text-purple-600 bg-purple-100";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "text-gray-600 bg-gray-100";
     }
   };
 
@@ -69,8 +129,10 @@ function AppointmentPage() {
   const filteredAppointments = appointments
     .filter((appt) => {
       const matchesSearch = appt.patient_full_name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        ? appt.patient_full_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        : false;
       const matchesStatus = filterStatus
         ? appt.status === filterStatus
         : appt.status !== "checkedin";
@@ -282,16 +344,28 @@ function AppointmentPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      <button
-                        className="text-primary hover:text-primary/80 p-1 rounded"
-                        onClick={() => {
-                          setSelectedAppointment(appt);
-                          setShowDialog(true);
-                        }}
-                        title="View Details"
-                      >
-                        View
-                      </button>
+                      <div className="flex items-center gap-4">
+                        <button
+                          className="text-primary hover:text-primary/80 p-1 rounded transition"
+                          onClick={() => {
+                            setSelectedAppointment(appt);
+                            setShowDialog(true);
+                          }}
+                          title="View Details"
+                        >
+                          View
+                        </button>
+                        {appt.appointment_type === "online" &&
+                          appt.status === "scheduled" && (
+                            <button
+                              className="text-purple-600 hover:text-purple-800 p-1 rounded border border-purple-200 transition"
+                              onClick={() => openRescheduleModal(appt)}
+                              title="Reschedule Appointment"
+                            >
+                              Reschedule
+                            </button>
+                          )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -304,205 +378,246 @@ function AppointmentPage() {
       {/* Appointment Details Dialog */}
       {showDialog && selectedAppointment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop filter */}
+          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
             onClick={() => setShowDialog(false)}
           />
-          <div className="relative bg-white rounded-lg shadow-lg max-w-lg w-full p-6">
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-10 border-2 border-primary z-10 flex flex-col">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+              className="absolute top-4 right-4 text-gray-400 hover:text-primary text-2xl"
               onClick={() => setShowDialog(false)}
               title="Close"
             >
               &times;
             </button>
-            <h2 className="text-2xl font-bold text-primary mb-4">
+            <h2 className="text-3xl font-bold text-primary mb-8 text-center">
               Appointment Details
             </h2>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-2 gap-8 bg-primary/5 rounded-xl p-8 mb-8">
               <div>
-                <span className="block text-xs text-gray-500 mb-1">
-                  Patient Name
-                </span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Patient Name</div>
+                <div
+                  className="font-semibold text-base text-gray-800 truncate max-w-[260px]"
+                  title={selectedAppointment.patient_full_name}
+                  style={{ wordBreak: "break-all" }}
+                >
                   {selectedAppointment.patient_full_name}
-                </span>
+                </div>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">Email</span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Email</div>
+                <div
+                  className="font-semibold text-base text-gray-800 truncate max-w-[260px]"
+                  title={selectedAppointment.email_address}
+                  style={{ wordBreak: "break-all" }}
+                >
                   {selectedAppointment.email_address}
-                </span>
+                </div>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">
-                  Contact
-                </span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Contact</div>
+                <div className="font-semibold text-base text-gray-800">
                   {selectedAppointment.contact_number}
-                </span>
+                </div>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">Type</span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Type</div>
+                <div className="font-semibold text-base text-primary">
                   {selectedAppointment.appointment_type}
-                </span>
+                </div>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">
-                  Service
-                </span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Service</div>
+                <div className="font-semibold text-base text-gray-800">
                   {getServiceName(selectedAppointment.service_ref)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Status</div>
+                <span
+                  className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(
+                    selectedAppointment.status
+                  )}`}
+                >
+                  {selectedAppointment.status}
                 </span>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">Date</span>
-                <span className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 mb-1">Booking Date</div>
+                <div className="font-semibold text-base text-gray-800">
                   {selectedAppointment.appointment_date
                     ? new Date(
                         selectedAppointment.appointment_date
                       ).toLocaleString()
                     : "-"}
-                </span>
+                </div>
               </div>
               <div>
-                <span className="block text-xs text-gray-500 mb-1">Status</span>
-                <Badge
-                  variant={
-                    selectedAppointment.status === "completed"
-                      ? "secondary"
-                      : selectedAppointment.status === "no-show"
-                      ? "destructive"
-                      : selectedAppointment.status === "confirmed"
-                      ? "default"
-                      : selectedAppointment.status === "checked-in"
-                      ? "secondary"
-                      : "outline"
-                  }
+                <div className="text-xs text-gray-500 mb-1">Preferred Date</div>
+                <div className="font-semibold text-base text-primary">
+                  {selectedAppointment.preferred_date
+                    ? new Date(
+                        selectedAppointment.preferred_date
+                      ).toLocaleDateString()
+                    : "-"}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                className="py-2 px-10 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition"
+                onClick={() => setShowDialog(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {showRescheduleModal && selectedAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowRescheduleModal(false)}
+          />
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary z-10 flex flex-col">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-primary text-2xl"
+              onClick={() => setShowRescheduleModal(false)}
+              title="Close"
+            >
+              &times;
+            </button>
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-primary mb-1">
+                Reschedule Appointment
+              </h2>
+            </div>
+            {/* Step Indicator */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="flex flex-col items-center">
+                <span className="font-semibold text-base text-primary">
+                  Preferred Date
+                </span>
+                <span className="mt-1 text-lg font-bold text-primary">
+                  {selectedAppointment.preferred_date
+                    ? new Date(
+                        selectedAppointment.preferred_date
+                      ).toLocaleDateString()
+                    : "-"}
+                </span>
+              </div>
+              <div className="mx-6 flex flex-col items-center">
+                <svg
+                  width="40"
+                  height="40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M5 12h14M15 8l4 4-4 4" />
+                </svg>
+                <span className="text-xs text-gray-500 mt-1">Timeline</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-semibold text-base text-primary">
+                  New Date
+                </span>
+                <input
+                  type="date"
+                  className="mt-1 w-34 border-2 border-primary rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary bg-primary/5 text-primary font-bold"
+                  value={rescheduleDate}
+                  min={(() => {
+                    const today = new Date();
+                    today.setDate(today.getDate() + 1); // always tomorrow
+                    return today.toISOString().slice(0, 10);
+                  })()}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                />
+              </div>
+            </div>
+            {/* Appointment Details */}
+            <div className="mb-6 grid grid-cols-2 gap-4 bg-primary/5 rounded-lg p-4">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Patient Name</div>
+                <div
+                  className="font-semibold text-base text-gray-800 truncate max-w-[180px]"
+                  title={selectedAppointment.patient_full_name}
+                  style={{ wordBreak: "break-all" }}
+                >
+                  {selectedAppointment.patient_full_name}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Email</div>
+                <div
+                  className="font-semibold text-base text-gray-800 truncate max-w-[180px]"
+                  title={selectedAppointment.email_address}
+                  style={{ wordBreak: "break-all" }}
+                >
+                  {selectedAppointment.email_address}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Contact</div>
+                <div className="font-semibold text-base text-gray-800">
+                  {selectedAppointment.contact_number}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Type</div>
+                <div className="font-semibold text-base text-primary">
+                  {selectedAppointment.appointment_type}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Service</div>
+                <div className="font-semibold text-base text-gray-800">
+                  {getServiceName(selectedAppointment.service_ref)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Status</div>
+                <span
+                  className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(
+                    selectedAppointment.status
+                  )}`}
                 >
                   {selectedAppointment.status}
-                </Badge>
-              </div>
-              <div>
-                <span className="block text-xs text-gray-500 mb-1">
-                  Checked In
-                </span>
-                <span className="font-semibold text-base text-gray-800">
-                  {selectedAppointment.checked_in ? "Yes" : "No"}
                 </span>
               </div>
-              {selectedAppointment.additional_notes && (
-                <div className="col-span-2">
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Additional Notes
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.additional_notes}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.booked_by_name && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Booked By
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.booked_by_name}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.booking_source && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Booking Source
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.booking_source}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.checked_in_at && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Checked In At
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {new Date(
-                      selectedAppointment.checked_in_at
-                    ).toLocaleString()}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.patient_birthdate && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Birthdate
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.patient_birthdate}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.patient_sex && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">Sex</span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.patient_sex}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.preferred_date && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Preferred Date
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.preferred_date}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.present_checkbox !== undefined && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Present
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.present_checkbox ? "Yes" : "No"}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.queue_number && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Queue Number
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.queue_number}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.relation_to_patient && (
-                <div>
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Relation to Patient
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.relation_to_patient}
-                  </span>
-                </div>
-              )}
-              {selectedAppointment.current_medications && (
-                <div className="col-span-2">
-                  <span className="block text-xs text-gray-500 mb-1">
-                    Current Medications
-                  </span>
-                  <span className="font-semibold text-base text-gray-800">
-                    {selectedAppointment.current_medications}
-                  </span>
-                </div>
-              )}
+            </div>
+            {/* Summary of Changes */}
+
+            {rescheduleError && (
+              <div className="text-red-600 text-sm mb-2">{rescheduleError}</div>
+            )}
+            <div className="flex gap-2 mt-2">
+              <button
+                className={`flex-1 py-2 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition ${
+                  rescheduleLoading ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+                onClick={handleReschedule}
+                disabled={rescheduleLoading}
+              >
+                {rescheduleLoading ? "Rescheduling..." : "Confirm Reschedule"}
+              </button>
+              <button
+                className="flex-1 py-2 rounded-lg font-semibold text-primary bg-white border border-primary hover:bg-primary/10 transition"
+                onClick={() => setShowRescheduleModal(false)}
+                disabled={rescheduleLoading}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

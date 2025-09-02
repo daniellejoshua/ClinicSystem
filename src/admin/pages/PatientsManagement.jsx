@@ -164,34 +164,10 @@ const PatientsManagement = () => {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <FaUsers className="text-3xl text-primary" />
-          <h1 className="text-3xl font-yeseva text-primary">
-            Patients Management
-          </h1>
-        </div>
-        <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
-          <FaPlus />
-          Add New Patient
-        </button>
-      </div>
 
       {/* Stats Card: Only Total Patients */}
-      <div className="grid grid-cols-1 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-worksans text-gray-600">
-                Total Patients
-              </p>
-              <p className="text-2xl font-bold text-primary">
-                {filteredPatients.length}
-              </p>
-            </div>
-            <FaUsers className="text-3xl text-primary opacity-20" />
-          </div>
-        </div>
+      <div className="mb-4 text-lg font-bold text-primary">
+        Total Patients: {filteredPatients.length}
       </div>
 
       {/* Search */}
@@ -208,27 +184,9 @@ const PatientsManagement = () => {
         </div>
       </div>
 
-      {/* Filter Dropdown */}
-      <div className="flex items-center gap-4 mb-4">
-        <label className="font-medium text-gray-700">Filter by Status:</label>
-        <select
-          value={patientFilter}
-          onChange={(e) => setPatientFilter(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1"
-        >
-          <option value="all">All</option>
-          <option value="pending">Pending</option>
-          <option value="checked-in">Checked-in</option>
-          <option value="completed">Completed</option>
-          <option value="waiting">Waiting</option>
-          <option value="in-progress">In Progress</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-      </div>
-
       {/* Patients Table - scrollable, sticky header, no queue column */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto max-h-[60vh]">
+        <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
@@ -236,7 +194,7 @@ const PatientsManagement = () => {
                   Patient Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
+                  Phone Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Service (Referenced)
@@ -253,7 +211,7 @@ const PatientsManagement = () => {
               {filteredPatients.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="5"
                     className="px-6 py-8 text-center text-gray-500"
                   >
                     {searchTerm
@@ -282,32 +240,15 @@ const PatientsManagement = () => {
                                 <FaEnvelope className="w-3 h-3" />
                                 {patient.email}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <FaPhone className="w-3 h-3" />
-                                {patient.phone_number}
-                              </span>
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          {patient.appointment_type === "online" ? (
-                            <>
-                              <FaGlobe className="mr-2 h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-600">
-                                Online
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <FaWalking className="mr-2 h-4 w-4 text-gray-600" />
-                              <span className="text-sm font-medium text-gray-600">
-                                Walk-in
-                              </span>
-                            </>
-                          )}
-                        </div>
+                        <span className="flex items-center gap-1">
+                          <FaPhone className="w-3 h-3" />
+                          {patient.phone_number}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
@@ -336,18 +277,6 @@ const PatientsManagement = () => {
                             title="View Details"
                           >
                             <FaEye />
-                          </button>
-                          <button
-                            className="text-blue-600 hover:text-blue-800 p-1 rounded"
-                            title="Edit Patient"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            className="text-red-600 hover:text-red-800 p-1 rounded"
-                            title="Delete Patient"
-                          >
-                            <FaTrash />
                           </button>
                         </div>
                       </td>
