@@ -477,10 +477,9 @@ const AdminDashboard = () => {
   };
 
   // Calculate stats from real data and analytics totals
-  // Count unique patients by email address
-  // Only count records from the 'patients' collection
   // Patient card count matches PatientsManagement.jsx
-  const totalPatients = patients.length;
+  // Just count all patients in the 'patients' collection
+  const totalPatients = Array.isArray(patients) ? patients.length : 0;
   const onlineAppointments = appointments.filter(
     (a) => a.appointment_type === "online"
   ).length;
@@ -807,9 +806,6 @@ const AdminDashboard = () => {
                             })()}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
-                        </div>
-                        <div className="ml-auto text-xs text-gray-400 dark:text-gray-200 text-right">
-                          <span className="block">{log.ip_address}</span>
                         </div>
                       </div>
                     );

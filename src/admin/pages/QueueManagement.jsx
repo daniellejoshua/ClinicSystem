@@ -69,16 +69,54 @@ const QueueManagement = () => {
     return service ? service.service_name : serviceRef;
   };
 
+  // Manual queue reset function for button
+  const manualQueueReset = async () => {
+    // Mark all 'waiting' patients as 'cut off' and 'in-progress' as 'completed'
+    const db = getDatabase();
+    for (const entry of queueData) {
+      // Update queue status in DB
+      const queueRef = ref(db, `queue/${entry.id}`);
+      if (entry.status === "waiting") {
+        await update(queueRef, { status: "cut off" });
+        if (entry.appointment_id) {
+          const appointmentRef = ref(
+            db,
+            `appointments/${entry.appointment_id}`
+          );
+          await update(appointmentRef, { status: "cut off" });
+        }
+      } else if (entry.status === "in-progress") {
+        await update(queueRef, { status: "completed" });
+        if (entry.appointment_id) {
+          const appointmentRef = ref(
+            db,
+            `appointments/${entry.appointment_id}`
+          );
+          await update(appointmentRef, { status: "completed" });
+        }
+      }
+    }
+    setQueueData([]);
+    setQueueStats({
+      total: 0,
+      waiting: 0,
+      inProgress: 0,
+      completed: 0,
+      online: 0,
+      walkin: 0,
+    });
+  };
+
   useEffect(() => {
     // Load all services for reference resolution
     customDataService.getAllData("services").then(setServices);
 
     // Helper to check if we need to reset queue
-    const checkAndResetQueue = () => {
+    const checkAndResetQueue = async () => {
       const now = new Date();
       const last =
         lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
-      // 3:00AM today
+      // 3:00AM today (reverted)
       const resetTime = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -90,28 +128,7 @@ const QueueManagement = () => {
       );
       // If now is after 3:00AM and lastUpdated is before 3:00AM today, reset
       if (now >= resetTime && last < resetTime) {
-        // Mark all non-completed appointments as missed
-        queueData.forEach(async (entry) => {
-          if (entry.appointment_id && entry.status !== "completed") {
-            const db = require("firebase/database").getDatabase();
-            const appointmentRef = require("firebase/database").ref(
-              db,
-              `appointments/${entry.appointment_id}`
-            );
-            await require("firebase/database").update(appointmentRef, {
-              status: "missed",
-            });
-          }
-        });
-        setQueueData([]);
-        setQueueStats({
-          total: 0,
-          waiting: 0,
-          inProgress: 0,
-          completed: 0,
-          online: 0,
-          walkin: 0,
-        });
+        await manualQueueReset();
       }
     };
 
@@ -181,20 +198,16 @@ const QueueManagement = () => {
       const queueEntry = queueData.find((entry) => entry.id === queueId);
       if (queueEntry) {
         const db = getDatabase();
-        // Try appointment_id first (for online), fallback to patient_id (for walk-in)
-        const patientId = queueEntry.appointment_id || queueEntry.patient_id;
-        if (patientId) {
-          // Update patient status in 'patients' collection
-          const patientRef = ref(db, `patients/${patientId}`);
+        // Only update patient status if there is NO appointment_id (walk-in only)
+        if (!queueEntry.appointment_id && queueEntry.patient_id) {
+          const patientRef = ref(db, `patients/${queueEntry.patient_id}`);
           await update(patientRef, {
             status: newStatus,
           });
         }
 
-        // Robust appointment status sync
-        let appointmentUpdated = false;
+        // Always update appointment status if appointment_id exists
         if (queueEntry.appointment_id) {
-          // Direct update for online appointments
           const appointmentRef = ref(
             db,
             `appointments/${queueEntry.appointment_id}`
@@ -202,7 +215,6 @@ const QueueManagement = () => {
           await update(appointmentRef, {
             status: newStatus,
           });
-          appointmentUpdated = true;
           console.log(
             "Updated appointment status by appointment_id:",
             queueEntry.appointment_id,
