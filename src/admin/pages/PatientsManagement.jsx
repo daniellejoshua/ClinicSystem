@@ -324,17 +324,6 @@ const PatientsManagement = () => {
                   </div>
                   <div className="space-y-3 text-base text-gray-700">
                     <div className="flex items-center gap-2">
-                      <FaFlag
-                        className={getPriorityColor(
-                          selectedPatient.priority_flag
-                        )}
-                      />
-                      <span>
-                        <strong>Priority:</strong>{" "}
-                        {selectedPatient.priority_flag || "normal"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <FaEnvelope className="text-primary" />
                       <span>
                         <strong>Email:</strong>{" "}
@@ -442,13 +431,13 @@ const PatientsManagement = () => {
                           </div>
                         </div>
                         {/* Divider */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 flex justify-center relative right-2">
                           <div className="w-0.5 h-12 bg-gray-200" />
                         </div>
                         {/* Right: Priority */}
-                        <div className="col-span-1 flex flex-col items-center justify-center">
+                        <div className="col-span-1 flex flex-col items-center justify-center relative right-2">
                           <span
-                            className={`inline-flex items-center px-3 py-0.5 rounded text-xs font-semibold ${getPriorityColor(
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getPriorityColor(
                               appointment.priority_flag
                             )}`}
                           >

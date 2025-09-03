@@ -20,6 +20,7 @@ function AppointmentPage() {
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Reschedule logic
   const openRescheduleModal = (appointment) => {
@@ -57,14 +58,26 @@ function AppointmentPage() {
 
     setRescheduleLoading(true);
     try {
-      // Correct path for update: appointments/{id}
       await dataService.updateData(`appointments/${selectedAppointment.id}`, {
         preferred_date: rescheduleDate,
         status: "scheduled",
       });
+
+      // Log reschedule action to audit_logs
+      const staffId = window.localStorage.getItem("staffId") || "";
+      const staffName = window.localStorage.getItem("staffName") || "Staff";
+      await dataService.addDataWithAutoId("audit_logs", {
+        user_ref: staffId ? `staff/${staffId}` : "staff/unknown",
+        staff_full_name: staffName,
+        action: `Rescheduled appointment for ${selectedAppointment.patient_full_name} to ${rescheduleDate}`,
+        ip_address: "N/A",
+        timestamp: new Date().toISOString(),
+      });
+
       setShowRescheduleModal(false);
       setRescheduleLoading(false);
       setRescheduleError("");
+      setShowSuccessModal(true); // Show success modal
       // Refresh appointments
       const updatedAppointments = await dataService.getAllData("appointments");
       setAppointments(updatedAppointments);
@@ -144,11 +157,16 @@ function AppointmentPage() {
         : true;
       return matchesSearch && matchesStatus && matchesService && matchesType;
     })
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.appointment_date - b.appointment_date
-        : b.appointment_date - a.appointment_date
-    );
+    .sort((a, b) => {
+      // Convert appointment_date to timestamp for reliable sorting
+      const aDate = a.appointment_date
+        ? new Date(a.appointment_date).getTime()
+        : 0;
+      const bDate = b.appointment_date
+        ? new Date(b.appointment_date).getTime()
+        : 0;
+      return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
+    });
 
   // Generate a random 6-digit PIN
   function generatePin() {
@@ -200,11 +218,9 @@ function AppointmentPage() {
           >
             <option value="">All Status</option>
             <option value="scheduled">Scheduled</option>
-            <option value="confirmed">Confirmed</option>
             <option value="checked-in">Checked-in</option>
             <option value="completed">Completed</option>
             <option value="missed">Missed</option>
-            <option value="cancelled">Cancelled</option>
           </select>
           <select
             className="border rounded px-3 py-2"
@@ -286,7 +302,7 @@ function AppointmentPage() {
                   >
                     {searchTerm
                       ? "No appointments found matching your search."
-                      : "No appointments found. Create some sample data first."}
+                      : "No appointments found. "}
                   </td>
                 </tr>
               ) : (
@@ -384,22 +400,40 @@ function AppointmentPage() {
             onClick={() => setShowDialog(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-10 border-2 border-primary z-10 flex flex-col">
+          <div className="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-12 border-2 border-primary z-10 flex flex-col">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-primary text-2xl"
+              className="absolute top-6 right-8 text-gray-400 hover:text-primary text-3xl"
               onClick={() => setShowDialog(false)}
               title="Close"
             >
               &times;
             </button>
-            <h2 className="text-3xl font-bold text-primary mb-8 text-center">
-              Appointment Details
-            </h2>
-            <div className="grid grid-cols-2 gap-8 bg-primary/5 rounded-xl p-8 mb-8">
+            <div className="flex items-center gap-4 mb-10">
+              <div className="bg-primary/10 text-primary rounded-full p-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-primary text-center">
+                Appointment Details
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-10 bg-primary/5 rounded-2xl p-10 mb-10">
               <div>
                 <div className="text-xs text-gray-500 mb-1">Patient Name</div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[260px]"
+                  className="font-semibold text-base text-gray-800 truncate max-w-[300px]"
                   title={selectedAppointment.patient_full_name}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -409,7 +443,7 @@ function AppointmentPage() {
               <div>
                 <div className="text-xs text-gray-500 mb-1">Email</div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[260px]"
+                  className="font-semibold text-base text-gray-800 truncate max-w-[300px]"
                   title={selectedAppointment.email_address}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -445,7 +479,9 @@ function AppointmentPage() {
                 </span>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Booking Date</div>
+                <div className="text-xs text-gray-500 mb-1">
+                  Booking Timestamp
+                </div>
                 <div className="font-semibold text-base text-gray-800">
                   {selectedAppointment.appointment_date
                     ? new Date(
@@ -465,9 +501,9 @@ function AppointmentPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end mt-2">
               <button
-                className="py-2 px-10 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition"
+                className="py-2 px-12 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition text-lg"
                 onClick={() => setShowDialog(false)}
               >
                 Close
@@ -476,7 +512,6 @@ function AppointmentPage() {
           </div>
         </div>
       )}
-
       {/* Reschedule Modal */}
       {showRescheduleModal && selectedAppointment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -619,6 +654,53 @@ function AppointmentPage() {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowSuccessModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-primary z-10 flex flex-col items-center">
+            <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-8 w-8"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4M7 20h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v11a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-primary mb-2 text-center">
+              Appointment Rescheduled!
+            </h2>
+            <p className="text-gray-700 mb-6 text-center">
+              The appointment for{" "}
+              <span className="font-semibold">
+                {selectedAppointment?.patient_full_name}
+              </span>{" "}
+              has been successfully rescheduled to{" "}
+              <span className="font-semibold text-primary">
+                {rescheduleDate}
+              </span>
+              .
+            </p>
+            <button
+              className="py-2 px-8 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition"
+              onClick={() => setShowSuccessModal(false)}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

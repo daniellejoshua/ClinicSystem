@@ -198,20 +198,16 @@ const QueueManagement = () => {
       const queueEntry = queueData.find((entry) => entry.id === queueId);
       if (queueEntry) {
         const db = getDatabase();
-        // Try appointment_id first (for online), fallback to patient_id (for walk-in)
-        const patientId = queueEntry.appointment_id || queueEntry.patient_id;
-        if (patientId) {
-          // Update patient status in 'patients' collection
-          const patientRef = ref(db, `patients/${patientId}`);
+        // Only update patient status if there is NO appointment_id (walk-in only)
+        if (!queueEntry.appointment_id && queueEntry.patient_id) {
+          const patientRef = ref(db, `patients/${queueEntry.patient_id}`);
           await update(patientRef, {
             status: newStatus,
           });
         }
 
-        // Robust appointment status sync
-        let appointmentUpdated = false;
+        // Always update appointment status if appointment_id exists
         if (queueEntry.appointment_id) {
-          // Direct update for online appointments
           const appointmentRef = ref(
             db,
             `appointments/${queueEntry.appointment_id}`
@@ -219,7 +215,6 @@ const QueueManagement = () => {
           await update(appointmentRef, {
             status: newStatus,
           });
-          appointmentUpdated = true;
           console.log(
             "Updated appointment status by appointment_id:",
             queueEntry.appointment_id,
