@@ -27,6 +27,7 @@ import ProfileSettings from "./admin/pages/ProfileSettings.jsx";
 // --- SHARED COMPONENTS ---
 import ProtectedRoute from "./shared/components/ProtectedRoute.jsx"; // Restricts access to admin routes
 import AddStaff from "./admin/pages/AddStaff.jsx"; // Admin tool for adding new staff
+import NotFound from "./shared/components/NotFound.jsx";
 /**
  * Main App component for the Online Clinic System.
  * Handles all routing logic for both client and admin sides.
@@ -88,6 +89,8 @@ function App() {
           <Route path="settings/profile" element={<ProfileSettings />} />
           {/* Profile settings page */}
         </Route>
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );
