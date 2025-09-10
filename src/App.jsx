@@ -22,6 +22,8 @@ import PatientCheckIn from "./admin/pages/PatientCheckIn.jsx"; // Check-in syste
 import AppointmentBooking from "./client/pages/AppointmentBooking.jsx"; // Patient appointment booking form
 import AppointmentPage from "./admin/pages/AppointmentPage.jsx"; // Admin view of appointments
 
+import ProfileSettings from "./admin/pages/ProfileSettings.jsx";
+
 // --- SHARED COMPONENTS ---
 import ProtectedRoute from "./shared/components/ProtectedRoute.jsx"; // Restricts access to admin routes
 import AddStaff from "./admin/pages/AddStaff.jsx"; // Admin tool for adding new staff
@@ -83,6 +85,8 @@ function App() {
           {/* Appointment details */}
           <Route path="add-staff" element={<AddStaff />} />{" "}
           {/* Add new staff */}
+          <Route path="settings/profile" element={<ProfileSettings />} />
+          {/* Profile settings page */}
         </Route>
       </Routes>
     </Router>

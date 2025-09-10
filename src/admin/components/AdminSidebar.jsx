@@ -12,6 +12,7 @@ import {
   FaUserMd,
   FaChartBar,
   FaUserCheck,
+  FaUser,
 } from "react-icons/fa";
 
 const AdminSidebar = () => {
@@ -45,7 +46,11 @@ const AdminSidebar = () => {
     },
     { path: "/admin/appointment", icon: FaCalendarAlt, label: "Appointments" },
     { path: "/admin/add-staff", icon: FaUserMd, label: "Add Staff" },
-    { path: "/admin/settings", icon: FaCog, label: "Settings" },
+    {
+      path: "/admin/settings/profile",
+      icon: FaUser,
+      label: "Profile Settings",
+    },
   ];
 
   return (

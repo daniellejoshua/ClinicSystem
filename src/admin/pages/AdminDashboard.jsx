@@ -65,9 +65,8 @@ const chartColors = {
 };
 
 const AdminDashboard = () => {
-  // UI state for showing/hiding forms and dark mode
+  // UI state for showing/hiding forms
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("3months");
 
   // Data state for dashboard info
@@ -98,6 +97,7 @@ const AdminDashboard = () => {
   });
 
   // Get current theme colors
+  const isDarkMode = document.documentElement.classList.contains("dark");
   const currentColors = isDarkMode ? chartColors.dark : chartColors.light;
 
   // Get current chart data from real analytics (fallback to empty array)
@@ -188,17 +188,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadDashboardData();
     setCurrentStaff(authService.getCurrentStaff());
-
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem("theme");
-    const isDark = savedTheme === "dark";
-    setIsDarkMode(isDark);
-
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
 
     // Real-time patients listener
     const unsubscribePatients = customDataService.subscribeToRealtimeData(
@@ -492,11 +481,10 @@ const AdminDashboard = () => {
 
   return (
     <div
-      className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 ${
-        isDarkMode ? "dark bg-gray-900" : "bg-gray-50"
-      }`}
+      className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-gray-900`}
     >
       {/* Header */}
+      {/* Use your AdminHeader here if needed, without dark mode props */}
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -506,18 +494,6 @@ const AdminDashboard = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleDarkMode}
-            className="mr-2"
-          >
-            {isDarkMode ? (
-              <FaSun className="h-4 w-4" />
-            ) : (
-              <FaMoon className="h-4 w-4" />
-            )}
-          </Button>
           <Button onClick={() => setShowPatientForm(true)}>
             <FaPlus className="mr-2 h-4 w-4" />
             Register New Patient
@@ -527,60 +503,66 @@ const AdminDashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Total Patients
             </CardTitle>
-            <FaUsers className="h-4 w-4 text-muted-foreground" />
+            <FaUsers className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPatients}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalPatients}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
               +20.1% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Online Appointments
             </CardTitle>
-            <FaGlobe className="h-4 w-4 text-muted-foreground" />
+            <FaGlobe className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{onlineAppointments}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {onlineAppointments}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
               +180.1% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Walk-in Patients
             </CardTitle>
-            <FaWalking className="h-4 w-4 text-muted-foreground" />
+            <FaWalking className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{walkinAppointments}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {walkinAppointments}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
               +19% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Today's In Queue
             </CardTitle>
-            <FaCalendarAlt className="h-4 w-4 text-muted-foreground" />
+            <FaCalendarAlt className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-xs text-muted-foreground mb-2">
+            <div className="text-xs text-muted-foreground dark:text-gray-400 mb-2">
               {new Date().toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",
@@ -595,12 +577,14 @@ const AdminDashboard = () => {
       {/* Chart Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         {/* Appointment Overview AreaChart card */}
-        <Card className="w-full">
+        <Card className="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Appointment Overview</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">
+                  Appointment Overview
+                </CardTitle>
+                <CardDescription className="text-muted-foreground dark:text-gray-400">
                   Online vs Walk-in appointments -{" "}
                   {getPeriodLabel(selectedPeriod)}
                 </CardDescription>
@@ -632,7 +616,10 @@ const AdminDashboard = () => {
             </div>
           </CardHeader>
           <CardContent className="pl-2">
-            <ChartContainer config={chartConfig}>
+            <ChartContainer
+              config={chartConfig}
+              className="bg-white dark:bg-neutral-900 rounded-lg p-2"
+            >
               <AreaChart
                 accessibilityLayer
                 data={chartData}
@@ -722,10 +709,12 @@ const AdminDashboard = () => {
         </Card>
 
         {/* Recent Activity Card */}
-        <Card className="w-full">
+        <Card className="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-900 dark:text-white">
+              Recent Activity
+            </CardTitle>
+            <CardDescription className="text-muted-foreground dark:text-gray-400">
               Latest staff actions and patient updates
             </CardDescription>
           </CardHeader>
@@ -733,7 +722,9 @@ const AdminDashboard = () => {
             <div className="space-y-6">
               {auditLogs.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  No recent activity yet.
+                  <span className="dark:text-gray-400">
+                    No recent activity yet.
+                  </span>
                 </div>
               ) : (
                 auditLogs
@@ -817,12 +808,14 @@ const AdminDashboard = () => {
       </div>
 
       {/* Service Utilization Stats Card - full width below */}
-      <Card className="w-full mt-4">
+      <Card className="w-full mt-4 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Service Utilization Stats</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-gray-900 dark:text-white">
+                Service Utilization Stats
+              </CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-gray-400">
                 Number of appointments per service -{" "}
                 {getServicePeriodLabel(servicePeriod)}
               </CardDescription>
@@ -853,7 +846,7 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           {serviceUtilization.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
               No service utilization data yet.
             </div>
           ) : (

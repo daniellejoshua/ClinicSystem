@@ -9,27 +9,39 @@ import {
   FaSun,
 } from "react-icons/fa";
 
-const AdminHeader = ({
-  onToggleSidebar,
-  title,
-  subtitle,
-  currentStaff,
-  isDarkMode,
-  toggleDarkMode,
-}) => {
+const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
   const [showProfile, setShowProfile] = useState(false);
   const [notifications] = useState(1); // Mock notification count
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    return savedTheme === "dark";
+  });
+
+  // Sync dark mode with document and localStorage
+  const handleToggleDarkMode = () => {
+    const newDarkMode = !isDarkMode;
+    setIsDarkMode(newDarkMode);
+    localStorage.setItem("theme", newDarkMode ? "dark" : "light");
+    if (newDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  };
+
+  // Ensure theme is applied on mount
+  React.useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={onToggleSidebar}
-            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            <FaBars className="w-5 h-5" />
-          </button>
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {title}
@@ -43,6 +55,19 @@ const AdminHeader = ({
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={handleToggleDarkMode}
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {isDarkMode ? (
+              <FaSun className="w-5 h-5 text-yellow-400" />
+            ) : (
+              <FaMoon className="w-5 h-5" />
+            )}
+          </button>
+
           {/* Notifications */}
           <div className="relative">
             <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors relative">
