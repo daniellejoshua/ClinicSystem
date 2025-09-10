@@ -116,25 +116,27 @@ function AppointmentPage() {
     return service ? service.service_name : serviceRef;
   };
 
-  // Helper for status color
+  // Improved status color helper
   const getStatusColor = (status) => {
     switch (status) {
       case "waiting":
-        return "text-blue-600 bg-blue-100";
+        return "text-blue-700 bg-blue-100 dark:bg-blue-900 dark:text-blue-300 border border-blue-300 dark:border-blue-700";
       case "in-progress":
-        return "text-orange-600 bg-orange-100";
+        return "text-orange-700 bg-orange-100 dark:bg-orange-900 dark:text-orange-300 border border-orange-300 dark:border-orange-700";
       case "completed":
-        return "text-green-600 bg-green-100";
+        return "text-green-700 bg-green-100 dark:bg-green-900 dark:text-green-300 border border-green-300 dark:border-green-700";
       case "cancelled":
-        return "text-red-600 bg-red-100";
+        return "text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700";
       case "missed":
-        return "text-gray-600 bg-gray-200";
+        return "text-gray-700 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-700";
       case "cutoff":
-        return "text-red-700 bg-red-200";
+        return "text-red-800 bg-red-200 dark:bg-red-950 dark:text-red-400 border border-red-400 dark:border-red-800";
       case "scheduled":
-        return "text-purple-600 bg-purple-100";
+        return "text-purple-700 bg-purple-100 dark:bg-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-700";
+      case "checked-in":
+        return "text-cyan-700 bg-cyan-100 dark:bg-cyan-900 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "text-gray-700 bg-gray-100 dark:bg-gray-900 dark:text-gray-300 border border-gray-300 dark:border-gray-700";
     }
   };
 
@@ -200,19 +202,21 @@ function AppointmentPage() {
 
   // Render appointment list
   return (
-    <div className="p-6 w-full max-w-screen-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-primary">Appointments</h1>
+    <div className="p-6 w-full max-w-screen-2xl mx-auto bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
+      <h1 className="text-3xl font-bold mb-6 text-primary dark:text-blue-300">
+        Appointments
+      </h1>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <input
             type="text"
-            className="border rounded px-3 py-2 w-64 focus:outline-primary"
+            className="border rounded px-3 py-2 w-64 focus:outline-primary dark:focus:outline-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             placeholder="Search by patient name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <select
-            className="border rounded px-3 py-2"
+            className="border rounded px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
@@ -223,7 +227,7 @@ function AppointmentPage() {
             <option value="missed">Missed</option>
           </select>
           <select
-            className="border rounded px-3 py-2"
+            className="border rounded px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             value={filterService}
             onChange={(e) => setFilterService(e.target.value)}
           >
@@ -235,7 +239,7 @@ function AppointmentPage() {
             ))}
           </select>
           <select
-            className="border rounded px-3 py-2"
+            className="border rounded px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
@@ -245,12 +249,14 @@ function AppointmentPage() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Sort by date:</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300">
+            Sort by date:
+          </span>
           <button
             className={`px-3 py-1 rounded border ${
               sortOrder === "asc"
                 ? "bg-primary text-white"
-                : "bg-white text-primary"
+                : "bg-white dark:bg-gray-900 text-primary dark:text-blue-300"
             }`}
             onClick={() => setSortOrder("asc")}
           >
@@ -260,7 +266,7 @@ function AppointmentPage() {
             className={`px-3 py-1 rounded border ${
               sortOrder === "desc"
                 ? "bg-primary text-white"
-                : "bg-white text-primary"
+                : "bg-white dark:bg-gray-900 text-primary dark:text-blue-300"
             }`}
             onClick={() => setSortOrder("desc")}
           >
@@ -268,37 +274,37 @@ function AppointmentPage() {
           </button>
         </div>
       </div>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto max-h-[60vh]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full">
-            <thead className="bg-primary text-white sticky top-0 z-10">
+            <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Patient Info
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Service
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredAppointments.length === 0 ? (
                 <tr>
                   <td
                     colSpan="6"
-                    className="px-6 py-8 text-center text-gray-500"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
                     {searchTerm
                       ? "No appointments found matching your search."
@@ -307,17 +313,20 @@ function AppointmentPage() {
                 </tr>
               ) : (
                 filteredAppointments.map((appt, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50">
+                  <tr
+                    key={idx}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 bg-primary dark:bg-blue-700 rounded-full flex items-center justify-center text-white font-bold">
                           {appt.patient_full_name?.charAt(0) || "P"}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {appt.patient_full_name || "Unknown Name"}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center gap-4">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4">
                             <span>{appt.email_address}</span>
                             <span>{appt.contact_number}</span>
                           </div>
@@ -327,42 +336,43 @@ function AppointmentPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         {appt.appointment_type === "online" ? (
-                          <span className="text-sm font-medium text-blue-600">
+                          <span className="text-sm font-medium text-blue-600 dark:text-blue-300">
                             Online
                           </span>
                         ) : (
-                          <span className="text-sm font-medium text-gray-600">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-200">
                             Walk-in
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-gray-900 dark:text-gray-100">
                         {getServiceName(appt.service_ref)}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         Ref: {appt.service_ref || "No reference"}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-900 dark:text-gray-100">
                       {appt.appointment_date
                         ? new Date(appt.appointment_date).toLocaleString()
                         : "-"}
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(
                           appt.status
                         )}`}
+                        style={{ minWidth: 90, justifyContent: "center" }}
                       >
                         {appt.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-4">
                         <button
-                          className="text-primary hover:text-primary/80 p-1 rounded transition"
+                          className="text-primary dark:text-blue-400 hover:text-primary/80 dark:hover:text-blue-300 p-1 rounded transition"
                           onClick={() => {
                             setSelectedAppointment(appt);
                             setShowDialog(true);
@@ -374,7 +384,7 @@ function AppointmentPage() {
                         {appt.appointment_type === "online" &&
                           appt.status === "scheduled" && (
                             <button
-                              className="text-purple-600 hover:text-purple-800 p-1 rounded border border-purple-200 transition"
+                              className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 p-1 rounded border border-purple-200 dark:border-purple-400 transition"
                               onClick={() => openRescheduleModal(appt)}
                               title="Reschedule Appointment"
                             >
@@ -400,16 +410,16 @@ function AppointmentPage() {
             onClick={() => setShowDialog(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-12 border-2 border-primary z-10 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full p-12 border-2 border-primary dark:border-blue-700 z-10 flex flex-col">
             <button
-              className="absolute top-6 right-8 text-gray-400 hover:text-primary text-3xl"
+              className="absolute top-6 right-8 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-300 text-3xl"
               onClick={() => setShowDialog(false)}
               title="Close"
             >
               &times;
             </button>
             <div className="flex items-center gap-4 mb-10">
-              <div className="bg-primary/10 text-primary rounded-full p-4">
+              <div className="bg-primary/10 dark:bg-blue-900 text-primary dark:text-blue-300 rounded-full p-4">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8"
@@ -425,15 +435,17 @@ function AppointmentPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-primary text-center">
+              <h2 className="text-3xl font-bold text-primary dark:text-blue-300 text-center">
                 Appointment Details
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-10 bg-primary/5 rounded-2xl p-10 mb-10">
+            <div className="grid grid-cols-2 gap-10 bg-primary/5 dark:bg-blue-950 rounded-2xl p-10 mb-10">
               <div>
-                <div className="text-xs text-gray-500 mb-1">Patient Name</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Patient Name
+                </div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[300px]"
+                  className="font-semibold text-base text-gray-800 dark:text-gray-100 truncate max-w-[300px]"
                   title={selectedAppointment.patient_full_name}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -441,9 +453,11 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Email</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Email
+                </div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[300px]"
+                  className="font-semibold text-base text-gray-800 dark:text-gray-100 truncate max-w-[300px]"
                   title={selectedAppointment.email_address}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -451,25 +465,33 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Contact</div>
-                <div className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Contact
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
                   {selectedAppointment.contact_number}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Type</div>
-                <div className="font-semibold text-base text-primary">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Type
+                </div>
+                <div className="font-semibold text-base text-primary dark:text-blue-300">
                   {selectedAppointment.appointment_type}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Service</div>
-                <div className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Service
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
                   {getServiceName(selectedAppointment.service_ref)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Status</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Status
+                </div>
                 <span
                   className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(
                     selectedAppointment.status
@@ -479,10 +501,10 @@ function AppointmentPage() {
                 </span>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   Booking Timestamp
                 </div>
-                <div className="font-semibold text-base text-gray-800">
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
                   {selectedAppointment.appointment_date
                     ? new Date(
                         selectedAppointment.appointment_date
@@ -491,8 +513,10 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Preferred Date</div>
-                <div className="font-semibold text-base text-primary">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Preferred Date
+                </div>
+                <div className="font-semibold text-base text-primary dark:text-blue-300">
                   {selectedAppointment.preferred_date
                     ? new Date(
                         selectedAppointment.preferred_date
@@ -521,9 +545,9 @@ function AppointmentPage() {
             onClick={() => setShowRescheduleModal(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary z-10 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary dark:border-blue-700 z-10 flex flex-col">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-primary text-2xl"
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-300 text-2xl"
               onClick={() => setShowRescheduleModal(false)}
               title="Close"
             >
@@ -664,7 +688,7 @@ function AppointmentPage() {
             className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
             onClick={() => setShowSuccessModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-primary z-10 flex flex-col items-center">
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-primary dark:border-blue-700 z-10 flex flex-col items-center">
             <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
               <svg
                 xmlns="http://www.w3.org/2000/svg"

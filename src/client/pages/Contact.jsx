@@ -263,7 +263,7 @@ export default function Contact() {
                     WORKING HOURS
                   </h3>
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base mb-1">
-                    Mon-Sat 09:00-20:00
+                    Mon-Sat 08:00-20:00
                   </p>
                 </div>
               </div>

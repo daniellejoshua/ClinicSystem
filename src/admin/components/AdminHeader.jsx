@@ -5,11 +5,20 @@ import {
   FaChevronDown,
   FaSearch,
   FaBars,
+  FaMoon,
+  FaSun,
 } from "react-icons/fa";
 
-const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
+const AdminHeader = ({
+  onToggleSidebar,
+  title,
+  subtitle,
+  currentStaff,
+  isDarkMode,
+  toggleDarkMode,
+}) => {
   const [showProfile, setShowProfile] = useState(false);
-  const [notifications] = useState(3); // Mock notification count
+  const [notifications] = useState(1); // Mock notification count
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
@@ -56,7 +65,7 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
                 <FaUser className="text-white text-sm" />
               </div>
               <span className="font-worksans text-gray-700 dark:text-gray-300">
-                Admin
+                {currentStaff?.full_name || "Admin"}
               </span>
               <FaChevronDown className="text-gray-400 dark:text-gray-500 text-sm" />
             </button>

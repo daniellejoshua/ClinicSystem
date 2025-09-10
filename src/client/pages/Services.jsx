@@ -130,17 +130,6 @@ const servicesData = [
     serviceId: "medical-certificate",
     buttonText: "Learn More",
   },
-  {
-    id: 11,
-    icon: FaEllipsisH,
-    title: "Other Services",
-    description:
-      "Various other healthcare services and medical procedures customized to meet specific patient needs.",
-    image: DoctorWithPatient,
-    featured: false,
-    serviceId: "other",
-    buttonText: "Learn More",
-  },
 ];
 
 // Then use it in your component

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../shared/config/firebase";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -16,10 +16,17 @@ import {
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      // Save theme, clear everything, restore theme
+      const theme = localStorage.getItem("theme");
+      localStorage.clear();
+      if (theme) {
+        localStorage.setItem("theme", theme);
+      }
       navigate("/admin/login");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -72,13 +79,47 @@ const AdminSidebar = () => {
         ))}
 
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutDialog(true)}
           className="w-full flex items-center px-6 py-3 text-white dark:text-gray-300 hover:bg-red-500/20 dark:hover:bg-red-500/20 transition-colors mt-8"
         >
           <FaSignOutAlt className="mr-3 text-lg" />
           <span className="font-worksans">Logout</span>
         </button>
       </nav>
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+            onClick={() => setShowLogoutDialog(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 border-2 border-red-500 z-10 flex flex-col items-center">
+            <FaSignOutAlt className="text-red-500 h-10 w-10 mb-4" />
+            <h2 className="text-xl font-bold text-red-600 mb-2 text-center">
+              Confirm Logout
+            </h2>
+            <p className="text-gray-700 mb-6 text-center">
+              Are you sure you want to log out? You will need to log in again to
+              access the admin panel.
+            </p>
+            <div className="flex gap-4 mt-2">
+              <button
+                className="py-2 px-6 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition"
+                onClick={handleLogout}
+              >
+                Yes, Logout
+              </button>
+              <button
+                className="py-2 px-6 rounded-lg font-semibold text-red-600 bg-white border border-red-600 hover:bg-red-50 transition"
+                onClick={() => setShowLogoutDialog(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
