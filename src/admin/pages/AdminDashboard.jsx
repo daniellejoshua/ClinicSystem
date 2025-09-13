@@ -1,6 +1,6 @@
 // This is the main dashboard for clinic staff and admins
 // It shows stats, charts, and lets staff manage patients, queue, and appointments
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   FaCalendarAlt,
   FaWalking,
@@ -42,6 +42,7 @@ import customDataService from "../../shared/services/customDataService";
 import analyticsService from "../../shared/services/analyticsService";
 import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
+import InactivityModal from "../../components/ui/InactivityModal";
 // Remove ChartBar import, use Recharts BarChart instead
 
 // Chart colors for light and dark mode
@@ -64,6 +65,9 @@ const chartColors = {
   },
 };
 
+const INACTIVITY_LIMIT = 55 * 60 * 1000; // 55 minutes
+const MODAL_COUNTDOWN = 5 * 60; // 5 minutes in seconds
+
 const AdminDashboard = () => {
   // UI state for showing/hiding forms
   const [showPatientForm, setShowPatientForm] = useState(false);
@@ -79,6 +83,74 @@ const AdminDashboard = () => {
   const [auditLogs, setAuditLogs] = useState([]); // System logs
   const [isLoading, setIsLoading] = useState(false); // Loading spinner
   const [currentStaff, setCurrentStaff] = useState(null); // Logged-in staff
+  // Inactivity modal state
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [modalCountdown, setModalCountdown] = useState(MODAL_COUNTDOWN);
+  const inactivityTimer = useRef(null);
+  const countdownTimer = useRef(null);
+
+  // Inactivity detection logic
+  useEffect(() => {
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer.current);
+      setShowInactivityModal(false);
+      setModalCountdown(MODAL_COUNTDOWN);
+      inactivityTimer.current = setTimeout(() => {
+        setShowInactivityModal(true);
+      }, INACTIVITY_LIMIT);
+    };
+
+    // User activity events
+    const activityEvents = ["mousemove", "keydown", "mousedown", "touchstart"];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Start timer on mount
+    resetInactivityTimer();
+
+    return () => {
+      clearTimeout(inactivityTimer.current);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  }, []);
+
+  // Modal countdown logic
+  useEffect(() => {
+    if (showInactivityModal) {
+      countdownTimer.current = setInterval(() => {
+        setModalCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownTimer.current);
+            handleLogout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(countdownTimer.current);
+      setModalCountdown(MODAL_COUNTDOWN);
+    }
+    return () => clearInterval(countdownTimer.current);
+  }, [showInactivityModal]);
+
+  const handleStayLoggedIn = () => {
+    setShowInactivityModal(false);
+    setModalCountdown(MODAL_COUNTDOWN);
+    clearInterval(countdownTimer.current);
+    clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(() => {
+      setShowInactivityModal(true);
+    }, INACTIVITY_LIMIT);
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    window.location.href = "/admin/login";
+  };
 
   // Analytics for charts and stats
   const [analyticsData, setAnalyticsData] = useState({
@@ -850,7 +922,7 @@ const AdminDashboard = () => {
               No service utilization data yet.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart
                 data={serviceUtilization}
                 barCategoryGap="20%"
@@ -950,21 +1022,43 @@ const AdminDashboard = () => {
           }}
         >
           {/* Enhanced Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
           {/* Modal Content */}
-          <Card className="relative w-full max-w-lg mx-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-2xl border-2">
+          <Card
+            className={`relative w-full max-w-lg mx-auto backdrop-blur shadow-2xl border ${
+              isDarkMode
+                ? "bg-neutral-800 text-white border-gray-700 supports-[backdrop-filter]:bg-neutral-800/80"
+                : "bg-white text-gray-900 border-gray-300 supports-[backdrop-filter]:bg-white/90"
+            }`}
+          >
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between ">
                 <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <FaWalking className="h-5 w-5 text-primary" />
+                  <div
+                    className={`p-2 rounded-full ${
+                      isDarkMode ? "bg-primary/20" : "bg-white/70"
+                    }`}
+                  >
+                    <FaWalking
+                      className={`h-5 w-5 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">
+                    <CardTitle
+                      className={`text-xl ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Register Walk-in Patient
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p
+                      className={`text-sm mt-1 ${
+                        isDarkMode ? "text-gray-400" : "text-gray-600"
+                      }`}
+                    >
                       Add a new walk-in patient to the queue
                     </p>
                   </div>
@@ -973,9 +1067,19 @@ const AdminDashboard = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowPatientForm(false)}
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 ${
+                    isDarkMode
+                      ? "text-gray-400 hover:text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
                 >
-                  <FaTimes className="h-4 w-4" />
+                  <FaTimes
+                    className={`h-4 w-4 ${
+                      isDarkMode
+                        ? "text-gray-300 hover:text-white"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  />
                 </Button>
               </div>
             </CardHeader>
@@ -984,9 +1088,21 @@ const AdminDashboard = () => {
               <form onSubmit={handlePatientSubmit} className="space-y-6">
                 {/* Personal Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b">
-                    <FaUsers className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">
+                  <div
+                    className={`flex items-center space-x-2 pb-2 border-b ${
+                      isDarkMode ? "border-gray-600" : "border-gray-300"
+                    }`}
+                  >
+                    <FaUsers
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
+                    <h3
+                      className={`text-sm font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Personal Information
                     </h3>
                   </div>
@@ -995,7 +1111,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="full_name"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Full Name *
                       </Label>
@@ -1006,13 +1124,22 @@ const AdminDashboard = () => {
                         onChange={handleInputChange}
                         required
                         placeholder="Enter patient's full name"
-                        className="h-11"
+                        className={`h-11 ${
+                          isDarkMode
+                            ? "bg-neutral-700 text-white border-gray-600"
+                            : "bg-white text-gray-900 border-gray-300"
+                        }`}
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
+                        <Label
+                          htmlFor="email"
+                          className={`text-sm font-medium ${
+                            isDarkMode ? "text-gray-300" : "text-gray-700"
+                          }`}
+                        >
                           Email Address *
                         </Label>
                         <Input
@@ -1023,14 +1150,20 @@ const AdminDashboard = () => {
                           onChange={handleInputChange}
                           required
                           placeholder="patient@example.com"
-                          className="h-11"
+                          className={`h-11 ${
+                            isDarkMode
+                              ? "bg-neutral-700 text-white border-gray-600"
+                              : "bg-white text-gray-900 border-gray-300"
+                          }`}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label
                           htmlFor="phone_number"
-                          className="text-sm font-medium"
+                          className={`text-sm font-medium ${
+                            isDarkMode ? "text-gray-300" : "text-gray-700"
+                          }`}
                         >
                           Phone Number *
                         </Label>
@@ -1042,7 +1175,11 @@ const AdminDashboard = () => {
                           onChange={handleInputChange}
                           required
                           placeholder="+63 9XX XXX XXXX"
-                          className="h-11"
+                          className={`h-11 ${
+                            isDarkMode
+                              ? "bg-neutral-700 text-white border-gray-600"
+                              : "bg-white text-gray-900 border-gray-300"
+                          }`}
                         />
                       </div>
                     </div>
@@ -1050,7 +1187,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="date_of_birth"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Date of Birth *
                       </Label>
@@ -1061,12 +1200,21 @@ const AdminDashboard = () => {
                         value={patientForm.date_of_birth}
                         onChange={handleInputChange}
                         required
-                        className="h-11"
+                        className={`h-11 ${
+                          isDarkMode
+                            ? "bg-neutral-700 text-white border-gray-600"
+                            : "bg-white text-gray-900 border-gray-300"
+                        }`}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="gender" className="text-sm font-medium">
+                      <Label
+                        htmlFor="gender"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
+                      >
                         Gender *
                       </Label>
                       <select
@@ -1075,7 +1223,11 @@ const AdminDashboard = () => {
                         value={patientForm.gender}
                         onChange={handleInputChange}
                         required
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="">Select gender...</option>
                         <option value="Male">Male</option>
@@ -1087,21 +1239,51 @@ const AdminDashboard = () => {
 
                 {/* Appointment Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b">
-                    <FaClipboardList className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">
+                  <div
+                    className={`flex items-center space-x-2 pb-2 border-b ${
+                      isDarkMode ? "border-gray-600" : "border-gray-300"
+                    }`}
+                  >
+                    <FaClipboardList
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
+                    <h3
+                      className={`text-sm font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Appointment Information
                     </h3>
                   </div>
 
                   {/* Walk-in Only Badge */}
-                  <div className="flex items-center space-x-2 p-3 bg-secondary/10 border border-secondary/20 rounded-lg">
-                    <FaWalking className="h-4 w-4 text-secondary" />
+                  <div
+                    className={`flex items-center space-x-2 p-3 border rounded-lg ${
+                      isDarkMode
+                        ? "bg-blue-500/20 border-blue-400/30"
+                        : "bg-blue-50 border-blue-200"
+                    }`}
+                  >
+                    <FaWalking
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-blue-300" : "text-blue-500"
+                      }`}
+                    />
                     <div>
-                      <p className="text-sm font-medium text-secondary">
+                      <p
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-blue-200" : "text-blue-600"
+                        }`}
+                      >
                         Walk-in Appointment
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p
+                        className={`text-xs ${
+                          isDarkMode ? "text-blue-300/70" : "text-gray-600"
+                        }`}
+                      >
                         Patient will be added to the walk-in queue
                       </p>
                     </div>
@@ -1111,7 +1293,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="service_ref"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Select Service *
                       </Label>
@@ -1121,7 +1305,11 @@ const AdminDashboard = () => {
                         value={patientForm.service_ref}
                         onChange={handleInputChange}
                         required
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="">Choose a service...</option>
                         {services.map((service) => (
@@ -1139,7 +1327,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="priority_flag"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Priority Level
                       </Label>
@@ -1148,7 +1338,11 @@ const AdminDashboard = () => {
                         name="priority_flag"
                         value={patientForm.priority_flag}
                         onChange={handleInputChange}
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="normal">Normal Priority</option>
                         <option value="high">High Priority</option>
@@ -1158,11 +1352,15 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-6 border-t">
+                <div
+                  className={`flex gap-3 pt-6 border-t ${
+                    isDarkMode ? "border-gray-600" : "border-gray-300"
+                  }`}
+                >
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 h-11"
+                    className="flex-1 h-11 bg-primary text-white hover:bg-primary/90"
                     size="lg"
                   >
                     {isLoading ? (
@@ -1172,7 +1370,11 @@ const AdminDashboard = () => {
                       </>
                     ) : (
                       <>
-                        <FaSave className="mr-2 h-4 w-4" />
+                        <FaSave
+                          className={`mr-2 h-4 w-4 ${
+                            isDarkMode ? "text-white" : "text-white"
+                          }`}
+                        />
                         Register Patient
                       </>
                     )}
@@ -1182,7 +1384,11 @@ const AdminDashboard = () => {
                     type="button"
                     variant="outline"
                     onClick={() => setShowPatientForm(false)}
-                    className="px-6 h-11"
+                    className={`px-6 h-11 ${
+                      isDarkMode
+                        ? "border-gray-600 text-gray-300 hover:text-gray-600 hover:border-white"
+                        : "border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                    }`}
                     size="lg"
                   >
                     Cancel
