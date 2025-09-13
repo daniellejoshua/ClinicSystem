@@ -88,13 +88,18 @@ const AdminLogin = () => {
   };
 
   // Log audit trail
-  const logAudit = (action, email) => {
-    const logRef = ref(database, "auditLogs");
-    push(logRef, {
-      action,
-      email,
-      timestamp: Date.now(),
-    });
+  const logAudit = async (action, email, staffName = null) => {
+    try {
+      const auditRef = ref(database, "audit_logs");
+      await push(auditRef, {
+        action: action,
+        email: email,
+        staff_full_name: staffName || email,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error logging audit:", error);
+    }
   };
 
   // Manual login and Firebase Auth fallback
@@ -142,7 +147,7 @@ const AdminLogin = () => {
         localStorage.setItem("isStaffLoggedIn", "true");
         localStorage.setItem("adminToken", "staff-" + matchedStaff.id);
 
-        logAudit("firebase_login_success", user.email);
+        logAudit("Staff Login - Success", user.email, matchedStaff.full_name);
         showWelcomeModal(
           matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
             ? "/admin/dashboard"
@@ -154,6 +159,7 @@ const AdminLogin = () => {
       }
     } catch (error) {
       setError("Login failed. Please check your credentials and try again.");
+      logAudit("Staff Login - Failed", formData.email || "Unknown Email");
     } finally {
       setIsLoading(false);
     }
@@ -174,6 +180,7 @@ const AdminLogin = () => {
       if (!staffSnapshot.exists()) {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
+        logAudit("Staff Login - Google Failed (No Staff Data)", user.email);
         setIsLoading(false);
         return;
       }
@@ -200,6 +207,11 @@ const AdminLogin = () => {
         localStorage.setItem("isStaffLoggedIn", "true");
         localStorage.setItem("adminToken", "staff-" + matchedStaff.id);
 
+        logAudit(
+          "Staff Login - Google Success",
+          user.email,
+          matchedStaff.full_name
+        );
         showWelcomeModal(
           matchedStaff.role && matchedStaff.role.toLowerCase() === "admin"
             ? "/admin/dashboard"
@@ -208,9 +220,11 @@ const AdminLogin = () => {
       } else {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
+        logAudit("Staff Login - Google Failed (Not Staff)", user.email);
       }
     } catch (error) {
       setError(error.message || "Google login failed");
+      logAudit("Staff Login - Google Failed", "Unknown Email");
     } finally {
       setIsLoading(false);
     }
