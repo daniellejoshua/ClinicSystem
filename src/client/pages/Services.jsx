@@ -156,13 +156,13 @@ export default function Services() {
           }}
         ></div>
 
-        {/* White Rectangle Overlay - 50% Opacity */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        {/* Primary Overlay */}
+        <div className="absolute inset-0 bg-primary/60"></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-primary mb-4">
+          <div className="flex items-center gap-2 text-white mb-4">
             <button
               onClick={() => navigate("/")}
               className="font-worksans hover:text-accent transition-colors"
@@ -174,7 +174,7 @@ export default function Services() {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-white mb-6">
             Our Services
           </h1>
         </div>

@@ -18,23 +18,20 @@ export default function AboutUs() {
           }}
         ></div>
 
-        {/* Custom Rectangle Overlay - #BEBEBE */}
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: "#BEBEBE", opacity: 0.5 }}
-        ></div>
+        {/* Primary Overlay */}
+        <div className="absolute inset-0 bg-primary/70"></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-primary mb-4">
+          <div className="flex items-center gap-2 text-white mb-4">
             <span className="font-worksans">Home</span>
             <span>/</span>
             <span className="font-worksans">About</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-white mb-6">
             About us
           </h1>
         </div>

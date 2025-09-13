@@ -47,12 +47,12 @@ export default function Contact() {
         ></div>
 
         {/* White Rectangle Overlay - 50% Opacity */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        <div className="absolute inset-0 bg-primary/60"></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-primary mb-4">
+          <div className="flex items-center gap-2 text-primary mb-4  text-white">
             <button
               onClick={() => navigate("/")}
               className="font-worksans hover:text-accent transition-colors"
@@ -60,11 +60,11 @@ export default function Contact() {
               Home
             </button>
             <span>/</span>
-            <span className="font-worksans">Contact</span>
+            <span className="font-worksans ">Contact</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6 text-white">
             Our Contacts
           </h1>
         </div>

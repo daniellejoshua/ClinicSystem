@@ -48,27 +48,28 @@ export default function OurServices() {
   };
 
   return (
-    <section className="w-screen py-16 bg-white relative overflow-hidden">
-      {/* Decorative circles - made more visible */}
-      <div className="absolute -left-32 top-20 w-64 h-64 bg-primary rounded-full opacity-20 -z-10"></div>
-      <div className="absolute -right-32 -bottom-32 w-96 h-96 bg-secondary rounded-full opacity-25 -z-10"></div>
-      <div className="absolute left-1/2 -top-16 w-32 h-32 bg-accent rounded-full opacity-30 -z-10"></div>
-      <div className="absolute right-1/4 top-10 w-20 h-20 bg-primary rounded-full opacity-15 -z-10"></div>
+    <section className="w-full py-10 md:py-16 bg-white dark:bg-gray-900 relative overflow-hidden">
+      {/* Decorative circles - improved for responsiveness */}
+      <div className="absolute -left-32 top-20 w-40 h-40 md:w-64 md:h-64 bg-primary rounded-full opacity-20 -z-10"></div>
+      <div className="absolute -right-32 -bottom-32 w-56 h-56 md:w-96 md:h-96 bg-secondary rounded-full opacity-25 -z-10"></div>
+      <div className="absolute left-1/2 -top-16 w-20 h-20 md:w-32 md:h-32 bg-accent rounded-full opacity-30 -z-10"></div>
+      <div className="absolute right-1/4 top-10 w-12 h-12 md:w-20 md:h-20 bg-primary rounded-full opacity-15 -z-10"></div>
 
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4">
         {/* Header */}
-        <div className="text-center mb-12">
-          <p className="text-lg md:text-xl text-secondary font-worksans font-medium uppercase tracking-wider mb-4">
+        <div className="text-center mb-8 md:mb-12">
+          <p className="text-base sm:text-lg md:text-xl text-secondary font-worksans font-medium uppercase tracking-wider mb-2 md:mb-4">
             CARE YOU CAN BELIEVE IN
           </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl text-primary font-yeseva mb-8">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-primary font-yeseva mb-4 md:mb-8">
             Our Services
           </h2>
         </div>
 
         {/* Mobile Version - Service Cards Only */}
-        <div className="block lg:hidden mb-16">
-          <div className="space-y-4">
+        {/* Mobile & Tablet Version - Service Cards Only */}
+        <div className="block lg:hidden mb-10 md:mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Medical Checkup Card */}
             <div
               onClick={() => handleServiceClick("Medical Checkup")}
@@ -142,7 +143,7 @@ export default function OurServices() {
         </div>
 
         {/* Desktop Version - Full 3-Column Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-8 mb-16">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6 xl:gap-8 mb-16">
           {/* Left Column - Service Cards */}
           <div className="space-y-4">
             {/* Medical Checkup Card */}
@@ -262,16 +263,17 @@ export default function OurServices() {
             {/* Description Paragraphs */}
             <div className="space-y-4">
               <p className="text-gray-600 font-worksans leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque
-                placerat scelerisque tortor ornare ornare. Quisque placerat
-                scelerisque tortor ornare ornare Convallis felis vitae tortor
-                augue. Velit nascetur proin massa in. Consequat faucibus
-                porttitor enim et.
+                At Tonsuya Super Health Center, we are dedicated to providing
+                comprehensive healthcare services for every member of your
+                family. Our team of experienced professionals is committed to
+                your well-being, offering personalized care and modern medical
+                solutions in a welcoming environment.
               </p>
               <p className="text-gray-600 font-worksans leading-relaxed">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque
-                placerat scelerisque. Convallis felis vitae tortor augue. Velit
-                nascetur proin massa in.
+                From routine checkups and immunizations to specialized maternal,
+                child, and senior care, we strive to deliver excellence and
+                compassion in every interaction. Your health and comfort are our
+                top priorities.
               </p>
             </div>
           </div>
@@ -313,18 +315,18 @@ export default function OurServices() {
         </div>
 
         {/* Clinic Services Header */}
-        <div className="text-center mb-12">
-          <p className="text-lg md:text-xl text-secondary font-worksans font-medium uppercase tracking-wider mb-4">
+        <div className="text-center mb-8 md:mb-12">
+          <p className="text-base sm:text-lg md:text-xl text-secondary font-worksans font-medium uppercase tracking-wider mb-2 md:mb-4">
             ALWAYS CARING
           </p>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl text-primary font-yeseva mb-8">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-primary font-yeseva mb-4 md:mb-8">
             Clinic Services
           </h2>
         </div>
 
         {/* Mobile Clinic Services - 2 Column Grid with Cards */}
         <div className="block lg:hidden">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             {/* Medical Checkup */}
             <div
               onClick={() => handleServiceClick("Medical Checkup")}
@@ -416,7 +418,7 @@ export default function OurServices() {
         </div>
 
         {/* Desktop Services Grid - 4 Column Layout */}
-        <div className="hidden lg:grid lg:grid-cols-4 gap-6">
+        <div className="hidden lg:grid lg:grid-cols-4 gap-4 xl:gap-6">
           {/* Medical Checkup - Featured */}
           <div
             onClick={() => handleServiceClick("Medical Checkup")}

@@ -14,10 +14,12 @@ export default function HeroSection2() {
             A Great Place to Receive Care
           </h2>
           <p className="text-gray-600 font-worksans text-base md:text-lg max-w-2xl leading-relaxed mb-8">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque
-            placerat scelerisque tortor ornare ornare. Convallis felis vitae
-            tortor augue. Velit neque proin massa in. Consequat mauris rhoncus
-            feugiat porttitor eniet.
+            Experience compassionate, high-quality healthcare at Tonsuya Super
+            Health Center. Our dedicated medical team provides comprehensive
+            services for families and individuals, ensuring your well-being and
+            comfort every step of the way. Discover modern facilities, expert
+            staff, and a welcoming environment designed for your health and
+            peace of mind.
           </p>
           <Link to="/about">
             <button className="text-secondary font-worksans font-medium text-lg hover:text-accent/80 transition-colors flex items-center gap-2">
