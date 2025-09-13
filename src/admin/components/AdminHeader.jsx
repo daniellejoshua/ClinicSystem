@@ -8,6 +8,7 @@ import {
   FaMoon,
   FaSun,
 } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
   const [showProfile, setShowProfile] = useState(false);
@@ -97,25 +98,19 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
 
             {showProfile && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 z-10 transition-colors duration-200">
-                <a
-                  href="#"
+                <Link
+                  to="/admin/settings/profile"
                   className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Profile Settings
-                </a>
-                <a
-                  href="#"
-                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Change Password
-                </a>
+                </Link>
                 <hr className="my-2 border-gray-200 dark:border-gray-600" />
-                <a
-                  href="#"
+                <Link
+                  to="#"
                   className="block px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   Logout
-                </a>
+                </Link>
               </div>
             )}
           </div>

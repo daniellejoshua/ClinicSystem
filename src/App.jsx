@@ -21,11 +21,13 @@ import QueueManagement from "./admin/pages/QueueManagement.jsx"; // Real-time qu
 import PatientCheckIn from "./admin/pages/PatientCheckIn.jsx"; // Check-in system for walk-ins and appointments
 import AppointmentBooking from "./client/pages/AppointmentBooking.jsx"; // Patient appointment booking form
 import AppointmentPage from "./admin/pages/AppointmentPage.jsx"; // Admin view of appointments
+import AuditLog from "./admin/pages/AuditLog.jsx"; // Audit log page for admin
 
 import ProfileSettings from "./admin/pages/ProfileSettings.jsx";
 
 // --- SHARED COMPONENTS ---
 import ProtectedRoute from "./shared/components/ProtectedRoute.jsx"; // Restricts access to admin routes
+import AdminOnlyRoute from "./shared/components/AdminOnlyRoute.jsx"; // Restricts access to admin-only routes
 import AddStaff from "./admin/pages/AddStaff.jsx"; // Admin tool for adding new staff
 import NotFound from "./shared/components/NotFound.jsx";
 /**
@@ -84,10 +86,24 @@ function App() {
           {/* Patient check-in */}
           <Route path="appointment" element={<AppointmentPage />} />{" "}
           {/* Appointment details */}
-          <Route path="add-staff" element={<AddStaff />} />{" "}
-          {/* Add new staff */}
+          <Route
+            path="add-staff"
+            element={
+              <AdminOnlyRoute>
+                <AddStaff />
+              </AdminOnlyRoute>
+            }
+          />
           <Route path="settings/profile" element={<ProfileSettings />} />
-          {/* Profile settings page */}
+          <Route
+            path="audit-log"
+            element={
+              <AdminOnlyRoute>
+                <AuditLog />
+              </AdminOnlyRoute>
+            }
+          />
+          {/* Audit log page */}
         </Route>
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFound />} />

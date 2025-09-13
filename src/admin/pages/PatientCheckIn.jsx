@@ -55,6 +55,7 @@ const PatientCheckIn = () => {
     missed: [],
   });
   const [filterStatus, setFilterStatus] = useState("today"); // 'today' or 'missed'
+  const [showAll, setShowAll] = useState(false); // new state for show all appointments
   const getLocalDateString = () => {
     return new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
   };
@@ -93,12 +94,22 @@ const PatientCheckIn = () => {
       if (searchTerm.trim()) {
         filterAppointments();
       } else {
-        setFoundAppointments(allAppointments[filterStatus] || []);
+        if (showAll) {
+          // Show all appointments from all dates and statuses
+          const allAppts = [
+            ...(allAppointments.today || []),
+            ...(allAppointments.missed || []),
+            ...(allAppointments.expected || []),
+          ];
+          setFoundAppointments(allAppts);
+        } else {
+          setFoundAppointments(allAppointments[filterStatus] || []);
+        }
         setCheckInResult(null);
       }
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, allAppointments, filterStatus]);
+  }, [searchTerm, allAppointments, filterStatus, showAll]);
 
   // Get the current staff member when the page loads
   useEffect(() => {
@@ -220,18 +231,26 @@ const PatientCheckIn = () => {
   const filterAppointments = () => {
     setIsSearching(true);
     try {
-      const filtered = (allAppointments[filterStatus] || []).filter(
-        (appointment) => {
-          const searchLower = searchTerm.toLowerCase();
-          return (
-            appointment.patient_full_name
-              ?.toLowerCase()
-              .includes(searchLower) ||
-            appointment.email_address?.toLowerCase().includes(searchLower) ||
-            appointment.contact_number?.includes(searchTerm)
-          );
-        }
-      );
+      let appointmentsToSearch = [];
+      if (showAll) {
+        // Search through all appointments regardless of status or date
+        appointmentsToSearch = [
+          ...(allAppointments.today || []),
+          ...(allAppointments.missed || []),
+          ...(allAppointments.expected || []),
+        ];
+      } else {
+        appointmentsToSearch = allAppointments[filterStatus] || [];
+      }
+
+      const filtered = appointmentsToSearch.filter((appointment) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          appointment.patient_full_name?.toLowerCase().includes(searchLower) ||
+          appointment.email_address?.toLowerCase().includes(searchLower) ||
+          appointment.contact_number?.includes(searchTerm)
+        );
+      });
       setFoundAppointments(filtered);
       if (filtered.length === 0 && searchTerm.trim()) {
         setCheckInResult({
@@ -361,7 +380,16 @@ const PatientCheckIn = () => {
       if (!date) return "";
       return new Date(date).toISOString().split("T")[0];
     };
-    if (filterStatus === "today") {
+
+    if (showAll) {
+      // Show all appointments from all dates and statuses
+      const allAppts = [
+        ...(allAppointments.today || []),
+        ...(allAppointments.missed || []),
+        ...(allAppointments.expected || []),
+      ];
+      setFoundAppointments(allAppts);
+    } else if (filterStatus === "today") {
       setFoundAppointments(
         (allAppointments.today || []).filter(
           (apt) =>
@@ -378,10 +406,10 @@ const PatientCheckIn = () => {
         )
       );
     }
-  }, [calendarDate, allAppointments, filterStatus]);
+  }, [calendarDate, allAppointments, filterStatus, showAll]);
 
   return (
-    <div className="p-4 space-y-6 bg-gradient-to-br from-blue-50 via-gray-100 to-blue-100 dark:from-gray-900 dark:via-blue-900 dark:to-gray-900 min-h-screen">
+    <div className="p-6 w-full max-w-screen-2xl mx-auto bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
       {/* Filter buttons and calendar date picker row - improved responsiveness */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
         <div className="flex gap-2 flex-wrap w-full md:w-auto">
@@ -389,8 +417,8 @@ const PatientCheckIn = () => {
             variant={filterStatus === "today" ? "default" : "outline"}
             className={`rounded-full px-6 py-2 font-semibold ${
               filterStatus === "today"
-                ? "bg-blue-600 text-white"
-                : "bg-white text-blue-600 border-blue-600"
+                ? "bg-primary text-white"
+                : "bg-white dark:bg-gray-900 text-primary dark:text-blue-300 border"
             }`}
             onClick={() => {
               setFilterStatus("today");
@@ -398,7 +426,7 @@ const PatientCheckIn = () => {
             }}
           >
             Today's Appointments
-            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">
+            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
               {
                 (allAppointments.today || []).filter((apt) => {
                   const todayDate = new Date().toISOString().split("T")[0];
@@ -414,12 +442,12 @@ const PatientCheckIn = () => {
             className={`rounded-full px-6 py-2 font-semibold ${
               filterStatus === "missed"
                 ? "bg-red-600 text-white"
-                : "bg-white text-red-600 border-red-600"
+                : "bg-white dark:bg-gray-900 text-red-600 dark:text-red-400 border"
             }`}
             onClick={() => setFilterStatus("missed")}
           >
             Missed Appointments
-            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-red-200 text-red-800">
+            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200">
               {
                 (allAppointments.missed || []).filter(
                   (apt) =>
@@ -454,12 +482,12 @@ const PatientCheckIn = () => {
           placeholder="Search by name, email, or phone..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
+          className="max-w-md border rounded px-3 py-2 focus:outline-primary dark:focus:outline-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
         />
         <Button
           variant="outline"
           onClick={filterAppointments}
-          className="px-4 py-2"
+          className="px-4 py-2 border rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
         >
           <Search className="h-4 w-4 mr-2" /> Search
         </Button>
@@ -467,9 +495,9 @@ const PatientCheckIn = () => {
 
       {/* Found Appointments */}
       {foundAppointments.length > 0 && (
-        <Card className="border border-gray-200 dark:border-gray-700 shadow-xl bg-gradient-to-r from-white via-blue-50 to-white dark:from-gray-800 dark:via-blue-900 dark:to-gray-800">
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-xl bg-white dark:bg-gray-900">
           <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">
+            <CardTitle className="text-gray-900 dark:text-gray-100">
               Appointments for {calendarDate} ({foundAppointments.length})
             </CardTitle>
           </CardHeader>
@@ -481,12 +509,12 @@ const PatientCheckIn = () => {
                 return (
                   <div
                     key={appointment.id}
-                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 w-full"
+                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 hover:shadow-lg transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4 w-full"
                   >
                     <div className="space-y-2 flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="font-semibold text-lg text-gray-900 dark:text-white truncate">
+                        <span className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
                           {appointment.patient_full_name}
                         </span>
                       </div>
@@ -536,17 +564,17 @@ const PatientCheckIn = () => {
                         </>
                       )}
                       {appointment.status === "checked-in" && (
-                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 font-semibold">
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 font-semibold">
                           Checked In
                           {appointment.queue_number && (
-                            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 text-blue-800">
+                            <span className="ml-2 px-2 py-1 text-xs rounded-full bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                               Queue #: {appointment.queue_number}
                             </span>
                           )}
                         </span>
                       )}
                       {appointment.status === "missed" && (
-                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
+                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 font-semibold">
                           Missed
                         </span>
                       )}
@@ -561,10 +589,10 @@ const PatientCheckIn = () => {
 
       {/* No Results */}
       {foundAppointments.length === 0 && !isLoading && (
-        <Card className="border border-gray-200 dark:border-gray-700">
+        <Card className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <CardContent className="py-8 text-center">
             <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
               No appointments found for {calendarDate}
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
@@ -577,7 +605,7 @@ const PatientCheckIn = () => {
       {/* Instructions */}
       <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
         <CardContent className="py-4">
-          <h3 className="font-medium text-blue-900 dark:text-blue-200 mb-2">
+          <h3 className="font-medium text-blue-900 dark:text-blue-300 mb-2">
             Check-in Instructions:
           </h3>
           <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">

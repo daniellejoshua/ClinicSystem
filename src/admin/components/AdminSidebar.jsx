@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../shared/config/firebase";
 import { NavLink, useNavigate } from "react-router-dom";
+import authService from "../../shared/services/authService";
 import {
   FaTachometerAlt,
   FaUsers,
@@ -18,16 +19,18 @@ import {
 const AdminSidebar = () => {
   const navigate = useNavigate();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [currentStaff, setCurrentStaff] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const staff = authService.getCurrentStaff();
+    setCurrentStaff(staff);
+    setIsAdmin(authService.isAdmin());
+  }, []);
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      // Save theme, clear everything, restore theme
-      const theme = localStorage.getItem("theme");
-      localStorage.clear();
-      if (theme) {
-        localStorage.setItem("theme", theme);
-      }
+      await authService.logout();
       navigate("/admin/login");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -35,37 +38,84 @@ const AdminSidebar = () => {
   };
 
   const menuItems = [
-    { path: "/admin", icon: FaTachometerAlt, label: "Dashboard", exact: true },
-    { path: "/admin/queue", icon: FaClipboardList, label: "Queue Management" },
-    { path: "/admin/check-in", icon: FaUserCheck, label: "Patient Check-in" },
-    { path: "/admin/patients", icon: FaUsers, label: "Patients" },
+    {
+      path: "/admin",
+      icon: FaTachometerAlt,
+      label: "Dashboard",
+      exact: true,
+      adminOnly: false,
+    },
+    {
+      path: "/admin/queue",
+      icon: FaClipboardList,
+      label: "Queue Management",
+      adminOnly: false,
+    },
+    {
+      path: "/admin/check-in",
+      icon: FaUserCheck,
+      label: "Patient Check-in",
+      adminOnly: false,
+    },
+    {
+      path: "/admin/patients",
+      icon: FaUsers,
+      label: "Patients",
+      adminOnly: false,
+    },
     {
       path: "/admin/data-management",
       icon: FaChartBar,
       label: "Data Management",
+      adminOnly: false,
     },
-    { path: "/admin/appointment", icon: FaCalendarAlt, label: "Appointments" },
-    { path: "/admin/add-staff", icon: FaUserMd, label: "Add Staff" },
+    {
+      path: "/admin/appointment",
+      icon: FaCalendarAlt,
+      label: "Appointments",
+      adminOnly: false,
+    },
+    {
+      path: "/admin/add-staff",
+      icon: FaUserMd,
+      label: "Add Staff",
+      adminOnly: true,
+    },
     {
       path: "/admin/settings/profile",
       icon: FaUser,
       label: "Profile Settings",
+      adminOnly: false,
+    },
+    {
+      path: "/admin/audit-log",
+      icon: FaClipboardList,
+      label: "Audit Log",
+      adminOnly: true,
     },
   ];
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
 
   return (
     <div className="w-64 bg-primary dark:bg-gray-800 shadow-lg transition-colors duration-300">
       <div className="p-6">
         <h2 className="text-2xl font-yeseva text-white dark:text-gray-100">
-          Clinic Admin
+          Clinic {isAdmin ? "Admin" : "Staff"}
         </h2>
         <p className="text-accent/80 dark:text-gray-400 text-sm font-worksans">
-          Management Panel
+          {currentStaff?.full_name || "Management Panel"}
+        </p>
+        <p className="text-accent/60 dark:text-gray-500 text-xs font-worksans">
+          Role: {currentStaff?.role || "staff"}
         </p>
       </div>
 
       <nav className="mt-8">
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -80,6 +130,11 @@ const AdminSidebar = () => {
           >
             <item.icon className="mr-3 text-lg" />
             <span className="font-worksans">{item.label}</span>
+            {item.adminOnly && (
+              <span className="ml-auto text-xs bg-yellow-500 text-yellow-900 px-2 py-1 rounded-full">
+                Admin
+              </span>
+            )}
           </NavLink>
         ))}
 
