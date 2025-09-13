@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { appointmentReminderService } from "./shared/services/appointmentReminderService";
 
 // --- CLIENT SIDE ROUTES & LAYOUT ---
 // These imports represent the main public-facing pages and layout for patients and visitors.
@@ -39,6 +40,19 @@ import NotFound from "./shared/components/NotFound.jsx";
  * - Each route points to a specific page/component for the relevant user role.
  */
 function App() {
+  // Initialize automatic appointment reminder system
+  useEffect(() => {
+    const schedulerInterval =
+      appointmentReminderService.startAutomaticReminders();
+
+    // Cleanup on unmount
+    return () => {
+      if (schedulerInterval) {
+        clearInterval(schedulerInterval);
+      }
+    };
+  }, []);
+
   return (
     <Router>
       <Routes>

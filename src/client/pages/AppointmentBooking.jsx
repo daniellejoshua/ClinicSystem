@@ -20,6 +20,7 @@ import {
 import customDataService from "../../shared/services/customDataService";
 import dataService from "../../shared/services/dataService";
 import queueService from "../../shared/services/queueService";
+import { appointmentReminderService } from "../../shared/services/appointmentReminderService";
 import AppointmentHeader from "../../assets/images/AppointmentHeader.png";
 import {
   ChartContainer,
@@ -329,7 +330,7 @@ const AppointmentBooking = () => {
       // Send PIN via EmailJS
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        "template_ivtnhod",
         {
           to_name: fullName,
           appointment_date: appointmentForm.preferred_date,
@@ -415,42 +416,45 @@ const AppointmentBooking = () => {
           created_at: new Date().toISOString(),
         };
 
-        queueService.createOnlineAppointment(appointmentData).then((result) => {
-          if (result.success) {
-            // Update patient record with appointment and PIN
-            dataService.updateData(`patients/${patientId}`, {
-              appointment_id: result.appointmentId,
-              pin_code: pin,
-              preferred_date: form.preferred_date,
-              current_medications: form.current_medications,
-              service_ref: serviceRef,
-              status: "pending",
-              booking_source: "online",
-              updated_at: new Date().toISOString(),
-            });
-            // Also create fill-up form record for admin reference
-            const formData = {
-              appointment_id: result.appointmentId,
-              patient_ref: `patients/${patientId}`,
-              patient_full_name: fullName,
-              patient_birthdate: form.patient_birthdate,
-              patient_sex: form.patient_sex,
-              appointment_date: new Date().toISOString(),
-              booked_by_name: form.booked_by_name,
-              relationship_to_patient: form.relationship_to_patient,
-              contact_number: form.contact_number,
-              email_address: form.email_address,
-              present_checkbox: form.present_checkbox,
-              current_medications: form.current_medications,
-              booking_source: "online",
-              created_at: new Date().toISOString(),
-              pin_code: pin,
-            };
-            customDataService.addDataWithAutoId("fill_up_forms", formData);
-          }
-          // Clean up pending data
-          window._pendingAppointment = null;
-        });
+        queueService
+          .createOnlineAppointment(appointmentData)
+          .then(async (result) => {
+            if (result.success) {
+              // Update patient record with appointment and PIN
+              dataService.updateData(`patients/${patientId}`, {
+                appointment_id: result.appointmentId,
+                pin_code: pin,
+                preferred_date: form.preferred_date,
+                current_medications: form.current_medications,
+                service_ref: serviceRef,
+                status: "pending",
+                booking_source: "online",
+                updated_at: new Date().toISOString(),
+              });
+
+              // Also create fill-up form record for admin reference
+              const formData = {
+                appointment_id: result.appointmentId,
+                patient_ref: `patients/${patientId}`,
+                patient_full_name: fullName,
+                patient_birthdate: form.patient_birthdate,
+                patient_sex: form.patient_sex,
+                appointment_date: new Date().toISOString(),
+                booked_by_name: form.booked_by_name,
+                relationship_to_patient: form.relationship_to_patient,
+                contact_number: form.contact_number,
+                email_address: form.email_address,
+                present_checkbox: form.present_checkbox,
+                current_medications: form.current_medications,
+                booking_source: "online",
+                created_at: new Date().toISOString(),
+                pin_code: pin,
+              };
+              customDataService.addDataWithAutoId("fill_up_forms", formData);
+            }
+            // Clean up pending data
+            window._pendingAppointment = null;
+          });
       });
 
       // Reset form after successful submission and re-enable button
