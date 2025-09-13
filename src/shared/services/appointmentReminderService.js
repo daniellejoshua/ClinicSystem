@@ -34,10 +34,10 @@ class AppointmentReminderService {
           appointmentData.preferred_time ||
           "To be confirmed",
         service_name: appointmentData.serviceName || "General Consultation",
-        clinic_name: "Tonsuya Clinic",
-        clinic_phone: "+1 (555) 123-4567",
-        clinic_email: "info@tonsuyaclinic.com",
-        clinic_address: "123 Healthcare Ave, Medical District",
+        clinic_name: "Tonsuya Super Health Center",
+        clinic_phone: "(237) 681-812-255",
+        clinic_email: "tonsuyasuperhealthcenter499@gmail.com",
+        clinic_address: "Ortega St, Malabon, 1470 Metro Manila",
         message:
           "We look forward to seeing you! If you need to reschedule, please call us at the number above.",
       };

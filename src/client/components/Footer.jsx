@@ -68,7 +68,7 @@ export default function Footer() {
             </h4>
             <div className="space-y-2 text-gray-300 font-worksans">
               <p> (237) 681-812-255</p>
-              <p>Email: justinnabunturan@gmail.com</p>
+              <p>Email: tonsuyasuperhealthcenter499@gmail.com</p>
               <p>Address: Ortega St. Tonsuya, Malabon City</p>
               <p>Philippines</p>
             </div>

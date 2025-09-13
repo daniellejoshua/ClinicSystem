@@ -250,7 +250,7 @@ export default function Contact() {
                   </h3>
 
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base">
-                    myebstudios@gmail.com
+                    tonsuyasuperhealthcenter499@gmail.com
                   </p>
                 </div>
 

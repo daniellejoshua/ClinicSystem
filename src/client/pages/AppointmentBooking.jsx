@@ -1126,7 +1126,9 @@ const AppointmentBooking = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-800">Email</h4>
-                    <p className="text-gray-600">JustinNabunturan@gmail.com</p>
+                    <p className="text-gray-600">
+                      tonsuyasuperhealthcenter499@gmail.com
+                    </p>
                     <p className="text-gray-600"></p>
                   </div>
                 </div>
@@ -1147,8 +1149,10 @@ const AppointmentBooking = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-800">Hours</h4>
-                    <p className="text-gray-600">Mon - Sat: :00 AM - 8:00 PM</p>
-                    8<p className="text-gray-600">Sunday: Closed</p>
+                    <p className="text-gray-600">
+                      Mon - Sat: 8:00 AM - 8:00 PM
+                    </p>
+                    <p className="text-gray-600">Sunday: Closed</p>
                   </div>
                 </div>
               </div>
