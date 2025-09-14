@@ -154,24 +154,24 @@ const AdminSidebar = () => {
             className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
             onClick={() => setShowLogoutDialog(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 border-2 border-red-500 z-10 flex flex-col items-center">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border-2 border-red-500 z-10 flex flex-col items-center">
             <FaSignOutAlt className="text-red-500 h-10 w-10 mb-4" />
-            <h2 className="text-xl font-bold text-red-600 mb-2 text-center">
+            <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
               Confirm Logout
             </h2>
-            <p className="text-gray-700 mb-6 text-center">
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-center">
               Are you sure you want to log out? You will need to log in again to
               access the admin panel.
             </p>
             <div className="flex gap-4 mt-2">
               <button
-                className="py-2 px-6 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition"
+                className="py-2 px-6 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition"
                 onClick={handleLogout}
               >
                 Yes, Logout
               </button>
               <button
-                className="py-2 px-6 rounded-lg font-semibold text-red-600 bg-white border border-red-600 hover:bg-red-50 transition"
+                className="py-2 px-6 rounded-lg font-semibold text-red-600 bg-white dark:bg-gray-700 border border-red-600 hover:bg-red-50 dark:hover:bg-gray-600 transition"
                 onClick={() => setShowLogoutDialog(false)}
               >
                 Cancel

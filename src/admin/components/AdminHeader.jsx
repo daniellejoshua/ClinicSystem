@@ -7,6 +7,7 @@ import {
   FaBars,
   FaMoon,
   FaSun,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { logout } from "../../shared/utils/authUtils";
@@ -18,6 +19,7 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
     const savedTheme = localStorage.getItem("theme");
     return savedTheme === "dark";
   });
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Sync dark mode with document and localStorage
   const handleToggleDarkMode = () => {
@@ -32,9 +34,7 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
   };
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to logout?")) {
-      logout();
-    }
+    setShowLogoutDialog(true);
   };
 
   // Ensure theme is applied on mount
@@ -123,6 +123,42 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
           </div>
         </div>
       </div>
+
+      {showLogoutDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+            onClick={() => setShowLogoutDialog(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border-2 border-red-500 z-10 flex flex-col items-center">
+            <FaSignOutAlt className="text-red-500 h-10 w-10 mb-4" />
+            <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
+              Confirm Logout
+            </h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-center">
+              Are you sure you want to log out? You will need to log in again to
+              access the admin panel.
+            </p>
+            <div className="flex gap-4 mt-2">
+              <button
+                className="py-2 px-6 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition"
+                onClick={() => {
+                  logout();
+                  setShowLogoutDialog(false);
+                }}
+              >
+                Yes, Logout
+              </button>
+              <button
+                className="py-2 px-6 rounded-lg font-semibold text-red-600 bg-white dark:bg-gray-700 border border-red-600 hover:bg-red-50 dark:hover:bg-gray-600 transition"
+                onClick={() => setShowLogoutDialog(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

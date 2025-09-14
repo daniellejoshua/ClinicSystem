@@ -780,6 +780,15 @@ const AdminDashboard = () => {
                           </span>
                           <span className="text-xs text-gray-600 dark:text-gray-300">
                             {(() => {
+                              // Check if there's a staff_full_name field first
+                              if (
+                                log.staff_full_name &&
+                                log.staff_full_name.trim() !== ""
+                              ) {
+                                return `${log.staff_full_name} • `;
+                              }
+
+                              // Fallback to looking up staff by user_ref
                               if (
                                 log.user_ref &&
                                 log.user_ref.startsWith("staff/")
@@ -789,11 +798,14 @@ const AdminDashboard = () => {
                                   (s) => s.id === staffId
                                 );
                                 return staffMember &&
+                                  staffMember.full_name &&
                                   staffMember.full_name.trim() !== ""
                                   ? `${staffMember.full_name} • `
                                   : "Unknown Staff • ";
                               }
-                              return `${log.user_ref} • `;
+
+                              // If no user_ref or doesn't match pattern, show generic
+                              return "System • ";
                             })()}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
