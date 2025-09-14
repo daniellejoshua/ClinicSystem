@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import Reactimport React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -7,9 +7,34 @@ import {
 } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Search, Filter, Shield, Download } from "lucide-react";
+import { Search, Filter, Shield, FileText, Download } from "lucide-react";
 import dataService from "../../shared/services/dataService";
-import reportService from "../../shared/services/reportService";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'; useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Search, Filter, Shield, FileText, Download } from "lucide-react";
+import dataService from "../../shared/services/dataService";
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable'; { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Search, Filter, Shield, FileText, Download } from "lucide-react";
+import dataService from "../../shared/services/dataService";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const AuditLog = () => {
   const [auditLogs, setAuditLogs] = useState([]);
@@ -118,90 +143,383 @@ const AuditLog = () => {
     return uniqueActions.sort();
   };
 
-  // Generate PDF Report using the reusable service
-  const generatePDFReport = async () => {
-    // Prepare filters object
-    const filters = {};
-    if (searchTerm) filters["Staff Name"] = searchTerm;
-    if (actionFilter) filters["Action Type"] = actionFilter;
-    if (dateFilter) filters["Date"] = new Date(dateFilter).toLocaleDateString();
+  // Generate PDF Report
+  const generatePDFReport = () => {
+    const doc = new jsPDF();
 
-    // Prepare summary statistics
-    const actionCounts = {};
-    filteredLogs.forEach((log) => {
-      const category = categorizeAction(log.action);
-      actionCounts[category] = (actionCounts[category] || 0) + 1;
+    // Set up the document
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 116, 166);
+    doc.text("Tonsuya Super Health Center", pageWidth / 2, 20, {
+      align: "center",
     });
 
-    const summary = {
-      "Total Records": filteredLogs.length,
-      "Date Range":
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Audit Log Report", pageWidth / 2, 35, { align: "center" });
+
+    // Report metadata
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    const reportDate = new Date().toLocaleString();
+    doc.text(`Generated on: ${reportDate}`, pageWidth / 2, 45, {
+      align: "center",
+    });
+
+    // Filters applied section
+    let yPosition = 60;
+    if (searchTerm || actionFilter || dateFilter) {
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Filters Applied:", 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      if (searchTerm) {
+        doc.text(`• Staff Name: ${searchTerm}`, 25, yPosition);
+        yPosition += 8;
+      }
+      if (actionFilter) {
+        doc.text(`• Action Type: ${actionFilter}`, 25, yPosition);
+        yPosition += 8;
+      }
+      if (dateFilter) {
+        doc.text(
+          `• Date: ${new Date(dateFilter).toLocaleDateString()}`,
+          25,
+          yPosition
+        );
+        yPosition += 8;
+      }
+      yPosition += 10;
+    }
+
+    // Summary statistics
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Summary Statistics:", 20, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`• Total Records: ${filteredLogs.length}`, 25, yPosition);
+    yPosition += 8;
+    doc.text(
+      `• Date Range: ${
         filteredLogs.length > 0
           ? `${new Date(
               Math.min(...filteredLogs.map((log) => new Date(log.timestamp)))
             ).toLocaleDateString()} - ${new Date(
               Math.max(...filteredLogs.map((log) => new Date(log.timestamp)))
             ).toLocaleDateString()}`
-          : "No data",
-      ...actionCounts,
-    };
+          : "No data"
+      }`,
+      25,
+      yPosition
+    );
+    yPosition += 8;
 
-    // Define columns for the report
-    const columns = [
-      { key: "staff_full_name", header: "Staff Name", width: 2 },
-      { key: "category", header: "Category", width: 2 },
-      { key: "action", header: "Action", width: 3 },
-      { key: "timestamp", header: "Date & Time", width: 3, type: "datetime" },
-    ];
-
-    // Prepare data with category
-    const reportData = filteredLogs.map((log) => ({
-      ...log,
-      staff_full_name: log.staff_full_name || "Unknown User",
-      category: categorizeAction(log.action),
-    }));
-
-    await reportService.generatePDF({
-      title: "Audit Log Report",
-      data: reportData,
-      columns,
-      filters,
-      summary,
-      fileName: `audit-log-report-${
-        new Date().toISOString().split("T")[0]
-      }.pdf`,
+    // Count by action type
+    const actionCounts = {};
+    filteredLogs.forEach((log) => {
+      const category = categorizeAction(log.action);
+      actionCounts[category] = (actionCounts[category] || 0) + 1;
     });
+
+    Object.entries(actionCounts).forEach(([action, count]) => {
+      doc.text(`• ${action}: ${count} records`, 25, yPosition);
+      yPosition += 8;
+    });
+
+    yPosition += 10;
+
+    // Prepare table data
+    const tableData = filteredLogs.map((log) => [
+      log.staff_full_name || "Unknown User",
+      categorizeAction(log.action),
+      log.action,
+      new Date(log.timestamp).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    ]);
+
+    // Create table
+    doc.autoTable({
+      head: [["Staff Name", "Category", "Action", "Date & Time"]],
+      body: tableData,
+      startY: yPosition,
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [40, 116, 166],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245],
+      },
+      columnStyles: {
+        0: { cellWidth: 35 }, // Staff Name
+        1: { cellWidth: 35 }, // Category
+        2: { cellWidth: 80 }, // Action
+        3: { cellWidth: 35 }, // Date & Time
+      },
+      margin: { left: 20, right: 20 },
+      didDrawPage: function (data) {
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+          `Page ${data.pageNumber} | Tonsuya Super Health Center - Confidential`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: "center" }
+        );
+      },
+    });
+
+    // Save the PDF
+    const fileName = `audit-log-report-${
+      new Date().toISOString().split("T")[0]
+    }.pdf`;
+    doc.save(fileName);
+  };
+
+  // Print Report
+  const printReport = () => {
+    const printWindow = window.open("", "_blank");
+    const reportDate = new Date().toLocaleString();
+
+    // Generate HTML content for printing
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Audit Log Report</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            color: #333;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #2874a6;
+            padding-bottom: 20px;
+          }
+          .clinic-name { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #2874a6; 
+            margin-bottom: 10px;
+          }
+          .report-title { 
+            font-size: 18px; 
+            margin-bottom: 10px;
+          }
+          .meta-info { 
+            font-size: 12px; 
+            color: #666; 
+          }
+          .summary { 
+            background-color: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin-bottom: 20px;
+          }
+          .filters { 
+            background-color: #e3f2fd; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin-bottom: 20px;
+          }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px;
+          }
+          th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left;
+            font-size: 12px;
+          }
+          th { 
+            background-color: #2874a6; 
+            color: white; 
+            font-weight: bold;
+          }
+          tr:nth-child(even) { 
+            background-color: #f9f9f9; 
+          }
+          .footer { 
+            margin-top: 30px; 
+            text-align: center; 
+            font-size: 10px; 
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+          }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="clinic-name">Tonsuya Super Health Center</div>
+          <div class="report-title">Audit Log Report</div>
+          <div class="meta-info">Generated on: ${reportDate}</div>
+        </div>
+        
+        ${
+          searchTerm || actionFilter || dateFilter
+            ? `
+        <div class="filters">
+          <h3>Applied Filters:</h3>
+          ${
+            searchTerm
+              ? `<p><strong>Staff Name:</strong> ${searchTerm}</p>`
+              : ""
+          }
+          ${
+            actionFilter
+              ? `<p><strong>Action Type:</strong> ${actionFilter}</p>`
+              : ""
+          }
+          ${
+            dateFilter
+              ? `<p><strong>Date:</strong> ${new Date(
+                  dateFilter
+                ).toLocaleDateString()}</p>`
+              : ""
+          }
+        </div>
+        `
+            : ""
+        }
+        
+        <div class="summary">
+          <h3>Summary Statistics:</h3>
+          <p><strong>Total Records:</strong> ${filteredLogs.length}</p>
+          <p><strong>Date Range:</strong> ${
+            filteredLogs.length > 0
+              ? `${new Date(
+                  Math.min(
+                    ...filteredLogs.map((log) => new Date(log.timestamp))
+                  )
+                ).toLocaleDateString()} - ${new Date(
+                  Math.max(
+                    ...filteredLogs.map((log) => new Date(log.timestamp))
+                  )
+                ).toLocaleDateString()}`
+              : "No data"
+          }</p>
+          
+          <h4>Records by Action Type:</h4>
+          ${Object.entries(
+            filteredLogs.reduce((acc, log) => {
+              const category = categorizeAction(log.action);
+              acc[category] = (acc[category] || 0) + 1;
+              return acc;
+            }, {})
+          )
+            .map(([action, count]) => `<p>• ${action}: ${count} records</p>`)
+            .join("")}
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Staff Name</th>
+              <th>Category</th>
+              <th>Action</th>
+              <th>Date & Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredLogs
+              .map(
+                (log) => `
+              <tr>
+                <td>${log.staff_full_name || "Unknown User"}</td>
+                <td>${categorizeAction(log.action)}</td>
+                <td>${log.action}</td>
+                <td>${new Date(log.timestamp).toLocaleString()}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+        
+        <div class="footer">
+          <p>Tonsuya Super Health Center - Confidential Document</p>
+          <p>This report contains sensitive information and should be handled according to privacy policies.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   return (
     <div className="p-6 w-full max-w-screen-2xl mx-auto bg-white dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
       <div className="mb-6 relative">
+        {/* Admin Only Badge */}
+        <div className="absolute top-0 right-0">
+          <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
+            <Shield className="h-4 w-4" />
+            Admin Only
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Audit Logs
             </h1>
-            {/* Admin Only Badge - moved beside title */}
-            <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-              <Shield className="h-4 w-4" />
-              Admin Only
-            </div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Track system activities and user actions
+            </p>
           </div>
+
           {/* Report Actions */}
           <div className="flex items-center gap-3">
+            <Button
+              onClick={printReport}
+              variant="outline"
+              className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            >
+              <FileText className="h-4 w-4" />
+              Print Report
+            </Button>
             <Button
               onClick={generatePDFReport}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Download className="h-4 w-4" />
-              Download PDF Report
+              Download PDF
             </Button>
           </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Track system activities and user actions
-        </p>
       </div>
 
       {/* Filters */}
