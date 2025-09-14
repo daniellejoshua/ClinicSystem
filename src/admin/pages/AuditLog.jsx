@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Search, Filter, Shield, Download } from "lucide-react";
 import dataService from "../../shared/services/dataService";
+import authService from "../../shared/services/authService";
 import reportService from "../../shared/services/reportService";
 
 const AuditLog = () => {
@@ -19,6 +20,14 @@ const AuditLog = () => {
   const [actionFilter, setActionFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [sortOrder, setSortOrder] = useState("newest"); // "newest" or "oldest"
+
+  // Check if current user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status on component mount
+  useEffect(() => {
+    setIsAdmin(authService.isAdmin());
+  }, []);
 
   useEffect(() => {
     const fetchAuditLogs = async () => {
@@ -191,13 +200,15 @@ const AuditLog = () => {
 
           {/* Report Actions - Only Download PDF button */}
           <div className="flex items-center gap-3">
-            <Button
-              onClick={generatePDFReport}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Download className="h-4 w-4" />
-              Download PDF
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={generatePDFReport}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            )}
           </div>
         </div>
         <p className="text-gray-600 dark:text-gray-400 mt-2">

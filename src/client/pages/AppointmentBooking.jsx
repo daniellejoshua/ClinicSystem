@@ -166,6 +166,18 @@ const AppointmentBooking = () => {
     if (!appointmentForm.preferred_date)
       newErrors.preferred_date = "Date is required";
 
+    // Date of birth validation (not today or in the future)
+    if (appointmentForm.patient_birthdate) {
+      const birthDate = new Date(appointmentForm.patient_birthdate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (birthDate >= today) {
+        newErrors.patient_birthdate =
+          "Date of birth cannot be today or in the future";
+      }
+    }
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (
@@ -184,14 +196,14 @@ const AppointmentBooking = () => {
       newErrors.contact_number = "Please enter a valid phone number";
     }
 
-    // Date validation (not in the past)
+    // Date validation (not today or in the past)
     if (appointmentForm.preferred_date) {
       const selectedDate = new Date(appointmentForm.preferred_date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      if (selectedDate < today) {
-        newErrors.preferred_date = "Please select a future date";
+      if (selectedDate <= today) {
+        newErrors.preferred_date = "Please select a future date (not today)";
       }
       // No Sundays allowed
       if (selectedDate.getDay() === 0) {
@@ -216,6 +228,18 @@ const AppointmentBooking = () => {
           newErrors.patient_birthdate = "Date of birth is required";
         if (!appointmentForm.patient_sex)
           newErrors.patient_sex = "Gender is required";
+
+        // Date of birth validation (not today or in the future)
+        if (appointmentForm.patient_birthdate) {
+          const birthDate = new Date(appointmentForm.patient_birthdate);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          if (birthDate >= today) {
+            newErrors.patient_birthdate =
+              "Date of birth cannot be today or in the future";
+          }
+        }
         break;
 
       case 2: // Contact Information
@@ -256,14 +280,15 @@ const AppointmentBooking = () => {
         if (!appointmentForm.preferred_date)
           newErrors.preferred_date = "Date is required";
 
-        // Date validation (not in the past)
+        // Date validation (not today or in the past)
         if (appointmentForm.preferred_date) {
           const selectedDate = new Date(appointmentForm.preferred_date);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          if (selectedDate < today) {
-            newErrors.preferred_date = "Please select a future date";
+          if (selectedDate <= today) {
+            newErrors.preferred_date =
+              "Please select a future date (not today)";
           }
           // No Sundays allowed
           if (selectedDate.getDay() === 0) {
@@ -488,11 +513,18 @@ const AppointmentBooking = () => {
     }
   };
 
-  // Get minimum date (tomorrow)
+  // Get minimum date (tomorrow) for appointment booking
   const getMinDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split("T")[0];
+  };
+
+  // Get maximum date for date of birth (yesterday)
+  const getMaxBirthDate = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split("T")[0];
   };
 
   return (
@@ -722,6 +754,7 @@ const AppointmentBooking = () => {
                           name="patient_birthdate"
                           value={appointmentForm.patient_birthdate}
                           onChange={handleInputChange}
+                          max={getMaxBirthDate()}
                           className={`w-full bg-primary text-white border-0 rounded px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent font-worksans ${
                             errors.patient_birthdate
                               ? "ring-2 ring-red-500"

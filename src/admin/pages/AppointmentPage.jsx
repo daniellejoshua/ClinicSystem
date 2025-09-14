@@ -25,6 +25,14 @@ function AppointmentPage() {
   const [rescheduleError, setRescheduleError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Check if current user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status on component mount
+  useEffect(() => {
+    setIsAdmin(authService.isAdmin());
+  }, []);
+
   // Reschedule logic
   const openRescheduleModal = (appointment) => {
     setSelectedAppointment(appointment);
@@ -362,14 +370,16 @@ function AppointmentPage() {
           >
             Newest
           </button>
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
-            onClick={generatePDFReport}
-            title="Generate PDF Report"
-          >
-            <Download className="h-4 w-4" />
-            PDF Report
-          </button>
+          {isAdmin && (
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+              onClick={generatePDFReport}
+              title="Generate PDF Report"
+            >
+              <Download className="h-4 w-4" />
+              PDF Report
+            </button>
+          )}
         </div>
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -643,26 +653,26 @@ function AppointmentPage() {
             onClick={() => setShowRescheduleModal(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary dark:border-blue-700 z-10 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary dark:border-blue-600 z-10 flex flex-col">
             <button
-              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-300 text-2xl"
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 text-2xl transition-colors"
               onClick={() => setShowRescheduleModal(false)}
               title="Close"
             >
               &times;
             </button>
             <div className="mb-4">
-              <h2 className="text-2xl font-bold text-primary mb-1">
+              <h2 className="text-2xl font-bold text-primary dark:text-blue-400 mb-1">
                 Reschedule Appointment
               </h2>
             </div>
             {/* Step Indicator */}
             <div className="flex items-center justify-center mb-6">
               <div className="flex flex-col items-center">
-                <span className="font-semibold text-base text-primary">
+                <span className="font-semibold text-base text-primary dark:text-blue-400">
                   Preferred Date
                 </span>
-                <span className="mt-1 text-lg font-bold text-primary">
+                <span className="mt-1 text-lg font-bold text-primary dark:text-blue-300">
                   {selectedAppointment.preferred_date
                     ? new Date(
                         selectedAppointment.preferred_date
@@ -680,18 +690,21 @@ function AppointmentPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   viewBox="0 0 24 24"
+                  className="text-primary dark:text-blue-400"
                 >
                   <path d="M5 12h14M15 8l4 4-4 4" />
                 </svg>
-                <span className="text-xs text-gray-500 mt-1">Timeline</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Timeline
+                </span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="font-semibold text-base text-primary">
+                <span className="font-semibold text-base text-primary dark:text-blue-400">
                   New Date
                 </span>
                 <input
                   type="date"
-                  className="mt-1 w-34 border-2 border-primary rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary bg-primary/5 text-primary font-bold"
+                  className="mt-1 w-34 border-2 border-primary dark:border-blue-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 bg-primary/5 dark:bg-blue-900/20 text-primary dark:text-blue-300 font-bold"
                   value={rescheduleDate}
                   min={(() => {
                     const today = new Date();
@@ -703,11 +716,13 @@ function AppointmentPage() {
               </div>
             </div>
             {/* Appointment Details */}
-            <div className="mb-6 grid grid-cols-2 gap-4 bg-primary/5 rounded-lg p-4">
+            <div className="mb-6 grid grid-cols-2 gap-4 bg-primary/5 dark:bg-blue-900/20 rounded-lg p-4">
               <div>
-                <div className="text-xs text-gray-500 mb-1">Patient Name</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Patient Name
+                </div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[180px]"
+                  className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate max-w-[180px]"
                   title={selectedAppointment.patient_full_name}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -715,9 +730,11 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Email</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Email
+                </div>
                 <div
-                  className="font-semibold text-base text-gray-800 truncate max-w-[180px]"
+                  className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate max-w-[180px]"
                   title={selectedAppointment.email_address}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -725,25 +742,33 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Contact</div>
-                <div className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Contact
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
                   {selectedAppointment.contact_number}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Type</div>
-                <div className="font-semibold text-base text-primary">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Type
+                </div>
+                <div className="font-semibold text-base text-primary dark:text-blue-400">
                   {selectedAppointment.appointment_type}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Service</div>
-                <div className="font-semibold text-base text-gray-800">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Service
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
                   {getServiceName(selectedAppointment.service_ref)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-1">Status</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Status
+                </div>
                 <span
                   className={`inline-block px-2 py-1 rounded text-xs font-bold ${getStatusColor(
                     selectedAppointment.status
@@ -756,11 +781,13 @@ function AppointmentPage() {
             {/* Summary of Changes */}
 
             {rescheduleError && (
-              <div className="text-red-600 text-sm mb-2">{rescheduleError}</div>
+              <div className="text-red-600 dark:text-red-400 text-sm mb-2">
+                {rescheduleError}
+              </div>
             )}
             <div className="flex gap-2 mt-2">
               <button
-                className={`flex-1 py-2 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition ${
+                className={`flex-1 py-2 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition ${
                   rescheduleLoading ? "opacity-60 cursor-not-allowed" : ""
                 }`}
                 onClick={handleReschedule}
@@ -769,7 +796,7 @@ function AppointmentPage() {
                 {rescheduleLoading ? "Rescheduling..." : "Confirm Reschedule"}
               </button>
               <button
-                className="flex-1 py-2 rounded-lg font-semibold text-primary bg-white border border-primary hover:bg-primary/10 transition"
+                className="flex-1 py-2 rounded-lg font-semibold text-primary dark:text-blue-400 bg-white dark:bg-gray-700 border border-primary dark:border-blue-600 hover:bg-primary/10 dark:hover:bg-blue-900/30 transition"
                 onClick={() => setShowRescheduleModal(false)}
                 disabled={rescheduleLoading}
               >

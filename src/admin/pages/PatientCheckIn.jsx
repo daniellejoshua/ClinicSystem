@@ -246,27 +246,31 @@ const PatientCheckIn = () => {
   // Mark appointment as missed
   const handleMarkMissed = async (appointment) => {
     try {
-      // Update queue item status
-      await queueService.updateQueueStatus(appointment.id, "missed");
-      // Also update appointment status in appointments collection
-      if (appointment.id) {
-        // The appointment id may be different from the queue id, so check for appointment_ref or appointment_id
-        // If appointment.id is the appointment id, use it directly
-        // If not, try to extract from appointment.appointment_id or appointment.appointment_ref
-        let appointmentId = appointment.id;
-        if (appointment.appointment_id)
-          appointmentId = appointment.appointment_id;
-        if (appointment.appointment_ref)
-          appointmentId = appointment.appointment_ref.split("/")[1];
-        // Update appointment status
-        const { ref, update } = await import("firebase/database");
-        const { database } = await import("../../shared/config/firebase");
-        const appointmentRef = ref(database, `appointments/${appointmentId}`);
-        await update(appointmentRef, {
-          status: "missed",
-          updated_at: new Date().toISOString(),
-        });
-      }
+      // Only update appointment status, don't create or update queue items
+      let appointmentId = appointment.id;
+      if (appointment.appointment_id)
+        appointmentId = appointment.appointment_id;
+      if (appointment.appointment_ref)
+        appointmentId = appointment.appointment_ref.split("/")[1];
+
+      // Update appointment status directly
+      const { ref, update } = await import("firebase/database");
+      const { database } = await import("../../shared/config/firebase");
+      const appointmentRef = ref(database, `appointments/${appointmentId}`);
+      await update(appointmentRef, {
+        status: "missed",
+        updated_at: new Date().toISOString(),
+      });
+
+      // Log the action
+      await customDataService.addDataWithAutoId("audit_logs", {
+        user_ref: `staff/${currentStaff.id}`,
+        staff_full_name: currentStaff.full_name,
+        action: `Marked appointment as missed: ${appointment.patient_full_name}`,
+        ip_address: "192.168.1.100",
+        timestamp: new Date().toISOString(),
+      });
+
       setCheckInResult({ success: true, message: "Marked as missed." });
       setAllAppointments((prev) => ({
         ...prev,

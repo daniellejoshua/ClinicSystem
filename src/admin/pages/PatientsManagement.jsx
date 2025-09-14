@@ -33,7 +33,14 @@ const PatientsManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [patientFilter, setPatientFilter] = useState("all");
 
-  // Inactivity modal state
+  // Check if current user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status on component mount
+  useEffect(() => {
+    setIsAdmin(authService.isAdmin());
+  }, []);
+
   // Load all data with references
   useEffect(() => {
     loadAllData();
@@ -273,14 +280,16 @@ const PatientsManagement = () => {
             />
           </div>
           <div className="flex items-center gap-2">
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
-              onClick={generatePDFReport}
-              title="Generate PDF Report"
-            >
-              <Download className="h-4 w-4" />
-              PDF Report
-            </button>
+            {isAdmin && (
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                onClick={generatePDFReport}
+                title="Generate PDF Report"
+              >
+                <Download className="h-4 w-4" />
+                PDF Report
+              </button>
+            )}
           </div>
         </div>
       </div>

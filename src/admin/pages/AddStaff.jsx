@@ -31,7 +31,6 @@ const AddStaff = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [generatedPin, setGeneratedPin] = useState("");
 
-  // Inactivity modal state
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -58,30 +57,6 @@ const AddStaff = () => {
       return () => clearTimeout(timer);
     }
   }, [step]);
-
-  const registerStaff = async (staffData) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        staffData.email,
-        staffData.password
-      );
-      const user = userCredential.user;
-
-      const staffRef = ref(database, "staff");
-      await push(staffRef, {
-        email: staffData.email,
-        full_name: staffData.full_name,
-        role: staffData.role,
-        created_at: new Date().toISOString(),
-        uid: user.uid,
-      });
-
-      alert("Staff registered successfully!");
-    } catch (error) {
-      alert("Error registering staff: " + error.message);
-    }
-  };
 
   // Send PIN to admin's email for verification
   const sendPinToEmail = async (e) => {
@@ -166,9 +141,26 @@ const AddStaff = () => {
     }
 
     try {
-      // Add staff to database only after PIN verification
+      // Add staff to both Firebase Auth and database after PIN verification
       const { confirmPassword, pin, ...staffData } = form;
-      const result = await dataService.addDataWithAutoId("staff", staffData);
+
+      // Create Firebase Auth account and database record
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        staffData.email,
+        staffData.password
+      );
+      const user = userCredential.user;
+
+      // Add staff to database with Firebase UID
+      const staffRef = ref(database, "staff");
+      const newStaffRef = await push(staffRef, {
+        email: staffData.email,
+        full_name: staffData.full_name,
+        role: staffData.role,
+        created_at: new Date().toISOString(),
+        uid: user.uid,
+      });
 
       // Log the action
       const currentAdmin = authService.getCurrentStaff();
@@ -180,7 +172,7 @@ const AddStaff = () => {
         timestamp: new Date().toISOString(),
       });
 
-      setMessage(`✅ Staff added successfully! ID: ${result.id}`);
+      setMessage(`✅ Staff added successfully! ID: ${newStaffRef.key}`);
       setStep(3);
       setShowPinModal(false);
 
