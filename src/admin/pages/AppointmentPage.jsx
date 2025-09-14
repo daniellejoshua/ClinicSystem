@@ -129,7 +129,7 @@ function AppointmentPage() {
       case "cancelled":
         return "text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700";
       case "missed":
-        return "text-gray-700 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-700";
+        return "text-red-700 bg-red-200 dark:bg-red-900 dark:text-red-300 border border-gray-300 dark:border-red-700";
       case "cutoff":
         return "text-red-800 bg-red-200 dark:bg-red-950 dark:text-red-400 border border-red-400 dark:border-red-800";
       case "scheduled":
