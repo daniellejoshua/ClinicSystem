@@ -15,6 +15,7 @@ import ServiceDetail from "./client/pages/ServiceDetail.jsx"; // Detailed info f
 // --- ADMIN SIDE ROUTES & LAYOUT ---
 // These imports are for staff/admin users, protected by authentication.
 import AdminLogin from "./admin/pages/AdminLogin.jsx"; // Login page for clinic staff
+import ForgotPassword from "./admin/pages/ForgotPassword.jsx"; // Forgot password page for staff
 import AdminLayout from "./admin/layouts/AdminLayout.jsx"; // Admin dashboard layout
 import AdminDashboard from "./admin/pages/AdminDashboard.jsx"; // Main dashboard for staff
 import DataManagement from "./admin/pages/DataManagement.jsx"; // Tools for managing clinic data
@@ -85,6 +86,11 @@ function App() {
         */}
         <Route path="/admin/login" element={<AdminLogin />} />{" "}
         {/* Staff login */}
+        <Route
+          path="/admin/forgot-password"
+          element={<ForgotPassword />}
+        />{" "}
+        {/* Forgot password */}
         <Route
           path="/admin"
           element={

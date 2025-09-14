@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -159,7 +159,6 @@ const AdminLogin = () => {
       }
     } catch (error) {
       setError("Login failed. Please check your credentials and try again.");
-      logAudit("Staff Login - Failed", formData.email || "Unknown Email");
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +179,6 @@ const AdminLogin = () => {
       if (!staffSnapshot.exists()) {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
-        logAudit("Staff Login - Google Failed (No Staff Data)", user.email);
         setIsLoading(false);
         return;
       }
@@ -220,11 +218,9 @@ const AdminLogin = () => {
       } else {
         await auth.signOut();
         setError("Access denied: Not a staff member.");
-        logAudit("Staff Login - Google Failed (Not Staff)", user.email);
       }
     } catch (error) {
       setError(error.message || "Google login failed");
-      logAudit("Staff Login - Google Failed", "Unknown Email");
     } finally {
       setIsLoading(false);
     }
@@ -331,12 +327,12 @@ const AdminLogin = () => {
                   <div className="grid gap-3">
                     <div className="flex items-center">
                       <Label htmlFor="password">Password</Label>
-                      <a
-                        href="#"
+                      <Link
+                        to="/admin/forgot-password"
                         className="ml-auto text-sm underline-offset-2 hover:underline"
                       >
                         Forgot your password?
-                      </a>
+                      </Link>
                     </div>
                     <div className="relative">
                       <Input
