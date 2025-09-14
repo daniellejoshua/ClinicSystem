@@ -17,7 +17,6 @@ function ProtectedRoute({ children }) {
       // Setup idle logout after 30 minutes of inactivity
       const cleanupIdleLogout = setupIdleLogout(30);
 
-      // Cleanup on unmount
       return () => {
         cleanupAutoLogout();
         cleanupIdleLogout();
