@@ -17,8 +17,10 @@ import {
   FaGlobe,
   FaWalking,
 } from "react-icons/fa";
+import { Download } from "lucide-react";
 import customDataService from "../../shared/services/customDataService";
 import authService from "../../shared/services/authService";
+import reportService from "../../shared/services/reportService";
 
 const PatientsManagement = () => {
   const [patients, setPatients] = useState([]);
@@ -121,6 +123,93 @@ const PatientsManagement = () => {
     return matchesSearch;
   });
 
+  // Generate PDF Report for Patients
+  const generatePDFReport = async () => {
+    // Prepare filters object
+    const filters = {};
+    if (searchTerm) filters["Search Term"] = searchTerm;
+    if (patientFilter && patientFilter !== "all")
+      filters["Status"] = patientFilter;
+
+    // Prepare summary statistics
+    const statusCounts = {};
+    const ageCounts = {
+      "Under 18": 0,
+      "18-30": 0,
+      "31-50": 0,
+      "51-65": 0,
+      "Over 65": 0,
+    };
+
+    filteredPatients.forEach((patient) => {
+      // Count by status
+      const status = patient.status || "Unknown";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // Count by age groups (if date_of_birth exists)
+      if (patient.date_of_birth) {
+        const age =
+          new Date().getFullYear() -
+          new Date(patient.date_of_birth).getFullYear();
+        if (age < 18) ageCounts["Under 18"]++;
+        else if (age <= 30) ageCounts["18-30"]++;
+        else if (age <= 50) ageCounts["31-50"]++;
+        else if (age <= 65) ageCounts["51-65"]++;
+        else ageCounts["Over 65"]++;
+      }
+    });
+
+    const summary = {
+      "Total Patients": filteredPatients.length,
+      "Registration Period":
+        filteredPatients.length > 0
+          ? `${new Date(
+              Math.min(
+                ...filteredPatients.map(
+                  (patient) => new Date(patient.created_at || Date.now())
+                )
+              )
+            ).toLocaleDateString()} - ${new Date(
+              Math.max(
+                ...filteredPatients.map(
+                  (patient) => new Date(patient.created_at || Date.now())
+                )
+              )
+            ).toLocaleDateString()}`
+          : "No data",
+      ...statusCounts,
+      ...ageCounts,
+    };
+
+    // Define columns for the report
+    const columns = [
+      { key: "full_name", header: "Patient Name", width: 3 },
+      { key: "email", header: "Email", width: 4 },
+      { key: "phone_number", header: "Phone", width: 3 },
+      { key: "date_of_birth", header: "Date of Birth", width: 3, type: "date" },
+      { key: "sex", header: "Sex", width: 2 },
+    ];
+
+    // Prepare data for report
+    const reportData = filteredPatients.map((patient) => ({
+      ...patient,
+      full_name: patient.full_name || "Unknown Patient",
+      email: patient.email || "N/A",
+      phone_number: patient.phone_number || "N/A",
+      date_of_birth: patient.date_of_birth || "N/A",
+      sex: patient.sex || "N/A",
+    }));
+
+    await reportService.generatePDF({
+      title: "Patients Report",
+      data: reportData,
+      columns,
+      filters,
+      summary,
+      fileName: `patients-report-${new Date().toISOString().split("T")[0]}.pdf`,
+    });
+  };
+
   const viewPatientDetails = (patient) => {
     setSelectedPatient(patient);
     setShowModal(true);
@@ -170,17 +259,29 @@ const PatientsManagement = () => {
         Total Patients: {filteredPatients.length}
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-        <div className="relative">
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search patients by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-primary dark:focus:border-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-          />
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="relative flex-1">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search patients by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-primary dark:focus:border-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+              onClick={generatePDFReport}
+              title="Generate PDF Report"
+            >
+              <Download className="h-4 w-4" />
+              PDF Report
+            </button>
+          </div>
         </div>
       </div>
 

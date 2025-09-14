@@ -7,7 +7,7 @@ import {
 } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Search, Filter, Shield, Download } from "lucide-react";
+import { Search, Filter, Shield, FileText, Download } from "lucide-react";
 import dataService from "../../shared/services/dataService";
 import reportService from "../../shared/services/reportService";
 
@@ -174,23 +174,36 @@ const AuditLog = () => {
   };
 
   return (
-    <div className="p-6 w-full max-w-screen-2xl mx-auto bg-white dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
       <div className="mb-6 relative">
+        {/* Admin Only Badge */}
+        <div className="absolute top-0 right-0">
+          <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
+            <Shield className="h-4 w-4" />
+            Admin Only
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Audit Logs
             </h1>
-            {/* Admin Only Badge - moved beside title */}
-            <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-              <Shield className="h-4 w-4" />
-              Admin Only
-            </div>
+            <p className="text-gray-600 dark:text-gray-400">
+              Track system activities and user actions
+            </p>
           </div>
 
-          {/* Report Actions - Only Download PDF button */}
+          {/* Report Actions */}
           <div className="flex items-center gap-3">
+            <Button
+              onClick={printReport}
+              variant="outline"
+              className="flex items-center gap-2 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            >
+              <FileText className="h-4 w-4" />
+              Print Report
+            </Button>
             <Button
               onClick={generatePDFReport}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
@@ -200,9 +213,6 @@ const AuditLog = () => {
             </Button>
           </div>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Track system activities and user actions
-        </p>
       </div>
 
       {/* Filters */}
