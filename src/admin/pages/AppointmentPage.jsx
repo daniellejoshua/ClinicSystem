@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Badge from "../../components/ui/badge";
 import dataService from "../../shared/services/dataService";
 import authService from "../../shared/services/authService";
+import reportService from "../../shared/services/reportService";
+import { Download } from "lucide-react";
 import emailjs from "emailjs-com";
 
 function AppointmentPage() {
@@ -179,6 +181,90 @@ function AppointmentPage() {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
+  // Generate PDF Report for Appointments
+  const generatePDFReport = async () => {
+    // Prepare filters object
+    const filters = {};
+    if (searchTerm) filters["Search Term"] = searchTerm;
+    if (filterStatus) filters["Status"] = filterStatus;
+    if (filterService) filters["Service"] = filterService;
+    if (filterType) filters["Type"] = filterType;
+
+    // Prepare summary statistics
+    const statusCounts = {};
+    const serviceCounts = {};
+    const typeCounts = {};
+
+    filteredAppointments.forEach((appt) => {
+      // Count by status
+      const status = appt.status || "Unknown";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // Count by service
+      const serviceName = getServiceName(appt.service_ref) || "Unknown Service";
+      serviceCounts[serviceName] = (serviceCounts[serviceName] || 0) + 1;
+
+      // Count by type
+      const type = appt.appointment_type || "Unknown Type";
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+
+    const summary = {
+      "Total Appointments": filteredAppointments.length,
+      "Date Range":
+        filteredAppointments.length > 0
+          ? `${new Date(
+              Math.min(
+                ...filteredAppointments.map(
+                  (appt) => new Date(appt.appointment_date || Date.now())
+                )
+              )
+            ).toLocaleDateString()} - ${new Date(
+              Math.max(
+                ...filteredAppointments.map(
+                  (appt) => new Date(appt.appointment_date || Date.now())
+                )
+              )
+            ).toLocaleDateString()}`
+          : "No data",
+      ...statusCounts,
+    };
+
+    // Define columns for the report
+    const columns = [
+      { key: "patient_full_name", header: "Patient Name", width: 3 },
+      { key: "service_name", header: "Service", width: 3 },
+      {
+        key: "appointment_date",
+        header: "Date & Time",
+        width: 3,
+        type: "datetime",
+      },
+      { key: "status", header: "Status", width: 2 },
+      { key: "appointment_type", header: "Type", width: 2 },
+    ];
+
+    // Prepare data for report
+    const reportData = filteredAppointments.map((appt) => ({
+      ...appt,
+      patient_full_name: appt.patient_full_name || "Unknown Patient",
+      service_name: getServiceName(appt.service_ref) || "Unknown Service",
+      status: appt.status || "Unknown",
+      appointment_type: appt.appointment_type || "Unknown",
+    }));
+
+    await reportService.generatePDF({
+      title: "Appointments Report",
+      data: reportData,
+      columns,
+      filters,
+      summary,
+      fileName: `appointments-report-${
+        new Date().toISOString().split("T")[0]
+      }.pdf`,
+    });
+  };
+
   // Call this when booking an appointment
   async function sendConfirmationEmail(appointment) {
     const pin = generatePin();
@@ -275,6 +361,14 @@ function AppointmentPage() {
             onClick={() => setSortOrder("desc")}
           >
             Newest
+          </button>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+            onClick={generatePDFReport}
+            title="Generate PDF Report"
+          >
+            <Download className="h-4 w-4" />
+            PDF Report
           </button>
         </div>
       </div>
