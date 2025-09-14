@@ -144,11 +144,14 @@ function AppointmentPage() {
   // Filter and sort appointments
   const filteredAppointments = appointments
     .filter((appt) => {
-      const matchesSearch = appt.patient_full_name
-        ? appt.patient_full_name
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-        : false;
+      // Improved search logic - search in multiple fields and handle empty/null values
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch =
+        searchTerm === "" ||
+        (appt.patient_full_name || "").toLowerCase().includes(searchLower) ||
+        (appt.email_address || "").toLowerCase().includes(searchLower) ||
+        (appt.contact_number || "").toLowerCase().includes(searchLower);
+
       const matchesStatus = filterStatus
         ? appt.status === filterStatus
         : appt.status !== "checkedin";
@@ -212,7 +215,7 @@ function AppointmentPage() {
           <input
             type="text"
             className="border rounded px-3 py-2 w-64 focus:outline-primary dark:focus:outline-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-            placeholder="Search by patient name..."
+            placeholder="Search by name, email, or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
