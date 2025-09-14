@@ -1,12 +1,13 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import authService from "../services/authService";
+import { isStaffLoggedIn, getStaffData } from "../utils/authUtils";
 import { Card, CardContent } from "../../components/ui/card";
 import { AlertCircle } from "lucide-react";
 
 const AdminOnlyRoute = ({ children }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  const isAdmin = authService.isAdmin();
+  const isAuthenticated = isStaffLoggedIn();
+  const staffData = getStaffData();
+  const isAdmin = staffData?.role?.toLowerCase() === "admin";
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />;

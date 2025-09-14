@@ -9,6 +9,7 @@ import {
   FaSun,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import { logout } from "../../shared/utils/authUtils";
 
 const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
   const [showProfile, setShowProfile] = useState(false);
@@ -27,6 +28,12 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to logout?")) {
+      logout();
     }
   };
 
@@ -105,12 +112,12 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
                   Profile Settings
                 </Link>
                 <hr className="my-2 border-gray-200 dark:border-gray-600" />
-                <Link
-                  to="#"
-                  className="block px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   Logout
-                </Link>
+                </button>
               </div>
             )}
           </div>

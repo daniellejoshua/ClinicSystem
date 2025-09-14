@@ -24,10 +24,6 @@ import {
   Phone,
   Clock,
 } from "lucide-react";
-import InactivityModal from "../../components/ui/InactivityModal";
-
-const INACTIVITY_LIMIT = 55 * 60 * 1000; // 55 minutes
-const MODAL_COUNTDOWN = 5 * 60; // 5 minutes in seconds
 
 const PatientCheckIn = () => {
   const [servicesMap, setServicesMap] = useState({});
@@ -64,12 +60,6 @@ const PatientCheckIn = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [checkInResult, setCheckInResult] = useState(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
-
-  // Inactivity modal state
-  const [showInactivityModal, setShowInactivityModal] = useState(false);
-  const [modalCountdown, setModalCountdown] = useState(MODAL_COUNTDOWN);
-  const inactivityTimer = useRef(null);
-  const countdownTimer = useRef(null);
   const [currentStaff, setCurrentStaff] = useState(null);
 
   // When a check-in happens, show the result for 5 seconds
@@ -115,69 +105,6 @@ const PatientCheckIn = () => {
   useEffect(() => {
     setCurrentStaff(authService.getCurrentStaff());
   }, []);
-
-  // Inactivity detection logic
-  useEffect(() => {
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer.current);
-      setShowInactivityModal(false);
-      setModalCountdown(MODAL_COUNTDOWN);
-      inactivityTimer.current = setTimeout(() => {
-        setShowInactivityModal(true);
-      }, INACTIVITY_LIMIT);
-    };
-
-    // User activity events
-    const activityEvents = ["mousemove", "keydown", "mousedown", "touchstart"];
-    activityEvents.forEach((event) => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    // Start timer on mount
-    resetInactivityTimer();
-
-    return () => {
-      clearTimeout(inactivityTimer.current);
-      activityEvents.forEach((event) => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-    };
-  }, []);
-
-  // Modal countdown logic
-  useEffect(() => {
-    if (showInactivityModal) {
-      countdownTimer.current = setInterval(() => {
-        setModalCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownTimer.current);
-            handleLogout();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(countdownTimer.current);
-      setModalCountdown(MODAL_COUNTDOWN);
-    }
-    return () => clearInterval(countdownTimer.current);
-  }, [showInactivityModal]);
-
-  const handleStayLoggedIn = () => {
-    setShowInactivityModal(false);
-    setModalCountdown(MODAL_COUNTDOWN);
-    clearInterval(countdownTimer.current);
-    clearTimeout(inactivityTimer.current);
-    inactivityTimer.current = setTimeout(() => {
-      setShowInactivityModal(true);
-    }, INACTIVITY_LIMIT);
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    window.location.href = "/admin/login";
-  };
 
   // Load all online appointments for the selected date from the database
   const loadAllOnlineAppointments = async (date) => {
@@ -627,13 +554,6 @@ const PatientCheckIn = () => {
           </ul>
         </CardContent>
       </Card>
-      {/* Inactivity Modal */}
-      <InactivityModal
-        show={showInactivityModal}
-        onStayLoggedIn={handleStayLoggedIn}
-        onLogout={handleLogout}
-        timeLeft={modalCountdown}
-      />
     </div>
   );
 };

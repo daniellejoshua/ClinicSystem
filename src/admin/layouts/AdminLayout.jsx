@@ -2,6 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
+import {
+  isStaffLoggedIn,
+  getStaffData,
+  setupAutoLogout,
+  setupIdleLogout,
+} from "../../shared/utils/authUtils";
 
 const AdminLayout = () => {
   const [currentStaff, setCurrentStaff] = useState(null);
@@ -13,10 +19,36 @@ const AdminLayout = () => {
     if (favicon) favicon.href = "/Tonsuya.png";
 
     // Get staff data from localStorage
-    const staffData = localStorage.getItem("staffData");
+    const staffData = getStaffData();
     if (staffData) {
-      setCurrentStaff(JSON.parse(staffData));
+      setCurrentStaff(staffData);
     }
+
+    // Setup automatic logout at 12 AM
+    const cleanupAutoLogout = setupAutoLogout();
+
+    // Setup idle logout after 30 minutes of inactivity
+    const cleanupIdleLogout = setupIdleLogout(30);
+
+    // Cleanup on unmount
+    return () => {
+      cleanupAutoLogout();
+      cleanupIdleLogout();
+    };
+  }, []);
+
+  // Check authentication periodically
+  useEffect(() => {
+    const checkAuth = () => {
+      if (!isStaffLoggedIn()) {
+        window.location.href = "/admin/login";
+      }
+    };
+
+    // Check every 5 seconds
+    const authCheckInterval = setInterval(checkAuth, 5000);
+
+    return () => clearInterval(authCheckInterval);
   }, []);
 
   return (

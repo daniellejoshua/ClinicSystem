@@ -38,10 +38,6 @@ import queueService from "../../shared/services/queueService";
 import customDataService from "../../shared/services/customDataService";
 import authService from "../../shared/services/authService";
 import { Badge } from "../../components/ui/badge";
-import InactivityModal from "../../components/ui/InactivityModal";
-
-const INACTIVITY_LIMIT = 55 * 60 * 1000; // 55 minutes
-const MODAL_COUNTDOWN = 5 * 60; // 5 minutes in seconds
 
 const QueueManagement = () => {
   const [queueData, setQueueData] = useState([]);
@@ -66,11 +62,6 @@ const QueueManagement = () => {
   });
 
   // Inactivity modal state
-  const [showInactivityModal, setShowInactivityModal] = useState(false);
-  const [modalCountdown, setModalCountdown] = useState(MODAL_COUNTDOWN);
-  const inactivityTimer = useRef(null);
-  const countdownTimer = useRef(null);
-
   // Removed walk-in modal state for cleaner UI
   // Helper to resolve service name from reference
   const getServiceName = (serviceRef) => {
@@ -173,69 +164,6 @@ const QueueManagement = () => {
       if (unsubscribe) unsubscribe();
     };
   }, []);
-
-  // Inactivity detection logic
-  useEffect(() => {
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer.current);
-      setShowInactivityModal(false);
-      setModalCountdown(MODAL_COUNTDOWN);
-      inactivityTimer.current = setTimeout(() => {
-        setShowInactivityModal(true);
-      }, INACTIVITY_LIMIT);
-    };
-
-    // User activity events
-    const activityEvents = ["mousemove", "keydown", "mousedown", "touchstart"];
-    activityEvents.forEach((event) => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    // Start timer on mount
-    resetInactivityTimer();
-
-    return () => {
-      clearTimeout(inactivityTimer.current);
-      activityEvents.forEach((event) => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-    };
-  }, []);
-
-  // Modal countdown logic
-  useEffect(() => {
-    if (showInactivityModal) {
-      countdownTimer.current = setInterval(() => {
-        setModalCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownTimer.current);
-            handleLogout();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(countdownTimer.current);
-      setModalCountdown(MODAL_COUNTDOWN);
-    }
-    return () => clearInterval(countdownTimer.current);
-  }, [showInactivityModal]);
-
-  const handleStayLoggedIn = () => {
-    setShowInactivityModal(false);
-    setModalCountdown(MODAL_COUNTDOWN);
-    clearInterval(countdownTimer.current);
-    clearTimeout(inactivityTimer.current);
-    inactivityTimer.current = setTimeout(() => {
-      setShowInactivityModal(true);
-    }, INACTIVITY_LIMIT);
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    window.location.href = "/admin/login";
-  };
 
   const loadQueueData = async () => {
     try {
@@ -911,13 +839,6 @@ const QueueManagement = () => {
             </Card>
           </div>
         )}
-        {/* Inactivity Modal */}
-        <InactivityModal
-          show={showInactivityModal}
-          onStayLoggedIn={handleStayLoggedIn}
-          onLogout={handleLogout}
-          timeLeft={modalCountdown}
-        />
       </div>
     </div>
   );

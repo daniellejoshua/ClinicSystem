@@ -42,7 +42,6 @@ import customDataService from "../../shared/services/customDataService";
 import analyticsService from "../../shared/services/analyticsService";
 import queueService from "../../shared/services/queueService";
 import authService from "../../shared/services/authService";
-import InactivityModal from "../../components/ui/InactivityModal";
 // Remove ChartBar import, use Recharts BarChart instead
 
 // Chart colors for light and dark mode
@@ -65,9 +64,6 @@ const chartColors = {
   },
 };
 
-const INACTIVITY_LIMIT = 55 * 60 * 1000; // 55 minutes
-const MODAL_COUNTDOWN = 5 * 60; // 5 minutes in seconds
-
 const AdminDashboard = () => {
   // UI state for showing/hiding forms
   const [showPatientForm, setShowPatientForm] = useState(false);
@@ -83,74 +79,6 @@ const AdminDashboard = () => {
   const [auditLogs, setAuditLogs] = useState([]); // System logs
   const [isLoading, setIsLoading] = useState(false); // Loading spinner
   const [currentStaff, setCurrentStaff] = useState(null); // Logged-in staff
-  // Inactivity modal state
-  const [showInactivityModal, setShowInactivityModal] = useState(false);
-  const [modalCountdown, setModalCountdown] = useState(MODAL_COUNTDOWN);
-  const inactivityTimer = useRef(null);
-  const countdownTimer = useRef(null);
-
-  // Inactivity detection logic
-  useEffect(() => {
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer.current);
-      setShowInactivityModal(false);
-      setModalCountdown(MODAL_COUNTDOWN);
-      inactivityTimer.current = setTimeout(() => {
-        setShowInactivityModal(true);
-      }, INACTIVITY_LIMIT);
-    };
-
-    // User activity events
-    const activityEvents = ["mousemove", "keydown", "mousedown", "touchstart"];
-    activityEvents.forEach((event) => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    // Start timer on mount
-    resetInactivityTimer();
-
-    return () => {
-      clearTimeout(inactivityTimer.current);
-      activityEvents.forEach((event) => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-    };
-  }, []);
-
-  // Modal countdown logic
-  useEffect(() => {
-    if (showInactivityModal) {
-      countdownTimer.current = setInterval(() => {
-        setModalCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownTimer.current);
-            handleLogout();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(countdownTimer.current);
-      setModalCountdown(MODAL_COUNTDOWN);
-    }
-    return () => clearInterval(countdownTimer.current);
-  }, [showInactivityModal]);
-
-  const handleStayLoggedIn = () => {
-    setShowInactivityModal(false);
-    setModalCountdown(MODAL_COUNTDOWN);
-    clearInterval(countdownTimer.current);
-    clearTimeout(inactivityTimer.current);
-    inactivityTimer.current = setTimeout(() => {
-      setShowInactivityModal(true);
-    }, INACTIVITY_LIMIT);
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    window.location.href = "/admin/login";
-  };
 
   // Analytics for charts and stats
   const [analyticsData, setAnalyticsData] = useState({

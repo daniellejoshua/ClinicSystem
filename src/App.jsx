@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { appointmentReminderService } from "./shared/services/appointmentReminderService";
+import { setupAutoLogout, setupIdleLogout } from "./shared/utils/authUtils";
 
 // --- CLIENT SIDE ROUTES & LAYOUT ---
 // These imports represent the main public-facing pages and layout for patients and visitors.
@@ -45,11 +46,17 @@ function App() {
     const schedulerInterval =
       appointmentReminderService.startAutomaticReminders();
 
+    // Setup global authentication watchers
+    const cleanupAutoLogout = setupAutoLogout();
+    const cleanupIdleLogout = setupIdleLogout(30); // 30 minutes idle timeout
+
     // Cleanup on unmount
     return () => {
       if (schedulerInterval) {
         clearInterval(schedulerInterval);
       }
+      cleanupAutoLogout();
+      cleanupIdleLogout();
     };
   }, []);
 
