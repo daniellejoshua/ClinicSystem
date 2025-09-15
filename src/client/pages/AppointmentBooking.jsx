@@ -530,7 +530,7 @@ const AppointmentBooking = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section with Background Image and Overlay */}
-      <section className="relative bg-primary h-[250px] flex items-center justify-center">
+      <section className="relative bg-primary h-[200px] md:h-[250px] flex items-center justify-center">
         {/* Background image with overlay */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -542,31 +542,31 @@ const AppointmentBooking = () => {
 
         {/* Content */}
         <div className="relative z-10 text-left px-4 max-w-6xl mx-auto w-full text-primary">
-          <nav className="text-sm mb-4 font-worksans">
+          <nav className="text-xs md:text-sm mb-2 md:mb-4 font-worksans">
             <span className="opacity-75">Home</span>
             <span className="mx-2">/</span>
             <span>Appointment</span>
           </nav>
-          <h1 className="text-3xl md:text-4xl font-bold font-yeseva mb-4 text-primary">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold font-yeseva mb-2 md:mb-4 text-primary leading-tight">
             Book an Appointment
           </h1>
         </div>
       </section>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-16">
+      <div className="max-w-6xl mx-auto px-4 py-8 md:py-16">
         {/* Form Progress Indicators */}
         <div className="mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-primary mb-4 font-yeseva text-center">
+          <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-primary mb-4 font-yeseva text-center">
               Appointment Form - Step {currentStep} of {totalSteps}
             </h2>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-2 md:gap-4">
               {[1, 2, 3, 4].map((step) => (
                 <div
                   key={step}
                   onClick={() => goToStep(step)}
-                  className={`text-center p-3 rounded-lg cursor-pointer transition-all ${
+                  className={`text-center p-2 md:p-3 rounded-lg cursor-pointer transition-all ${
                     step === currentStep
                       ? "bg-primary text-white"
                       : step < currentStep
@@ -575,7 +575,7 @@ const AppointmentBooking = () => {
                   }`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 text-sm font-bold ${
+                    className={`w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center mx-auto mb-1 md:mb-2 text-xs md:text-sm font-bold ${
                       step === currentStep
                         ? "bg-white text-primary"
                         : step < currentStep
@@ -585,11 +585,28 @@ const AppointmentBooking = () => {
                   >
                     {step < currentStep ? "✓" : step}
                   </div>
-                  <p className="text-xs font-semibold font-worksans">
-                    {step === 1 && "Patient Info"}
-                    {step === 2 && "Contact Info"}
-                    {step === 3 && "Booking Info"}
-                    {step === 4 && "Appointment"}
+                  <p className="text-xs font-semibold font-worksans leading-tight">
+                    {step === 1 && (
+                      <span className="block">
+                        <span className="hidden sm:inline">Patient </span>Info
+                      </span>
+                    )}
+                    {step === 2 && (
+                      <span className="block">
+                        <span className="hidden sm:inline">Contact </span>Info
+                      </span>
+                    )}
+                    {step === 3 && (
+                      <span className="block">
+                        <span className="hidden sm:inline">Booking </span>Info
+                      </span>
+                    )}
+                    {step === 4 && (
+                      <span className="block">
+                        <span className="hidden sm:inline">Appointment</span>
+                        <span className="sm:hidden">Done</span>
+                      </span>
+                    )}
                   </p>
                 </div>
               ))}
@@ -597,16 +614,16 @@ const AppointmentBooking = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
           {/* Main Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-xl p-8">
+            <div className="bg-white rounded-lg shadow-xl p-4 md:p-8">
               {/* Header */}
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-primary mb-2 font-yeseva">
+              <div className="mb-6 md:mb-8">
+                <h2 className="text-xl md:text-2xl font-bold text-primary mb-2 font-yeseva">
                   Book an Appointment
                 </h2>
-                <p className="text-gray-600 font-worksans">
+                <p className="text-sm md:text-base text-gray-600 font-worksans">
                   Please fill out the form below to schedule your appointment
                   with our medical team.
                 </p>

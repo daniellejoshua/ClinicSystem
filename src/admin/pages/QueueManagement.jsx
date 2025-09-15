@@ -1,6 +1,7 @@
 // This page lets staff manage the patient queue for today
 // Staff can see who's waiting, in progress, completed, online, or walk-in
-// The queue resets every day at 3:00AM so staff always start fresh
+// The queue resets daily at 12:00 AM (midnight) for a fresh start each day
+// All queue items are marked as completed during reset (no cut-off logic)
 // Staff can select patients, update their status, and add walk-ins
 // The UI updates in real time as patients move through the queue
 
@@ -73,29 +74,17 @@ const QueueManagement = () => {
 
   // Manual queue reset function for button
   const manualQueueReset = async () => {
-    // Mark all 'waiting' patients as 'cut off' and 'in-progress' as 'completed'
+    // Mark all patients as 'completed' instead of using cut-off logic
     const db = getDatabase();
     for (const entry of queueData) {
-      // Update queue status in DB
+      // Update queue status in DB - all become completed
       const queueRef = ref(db, `queue/${entry.id}`);
-      if (entry.status === "waiting") {
-        await update(queueRef, { status: "cut off" });
-        if (entry.appointment_id) {
-          const appointmentRef = ref(
-            db,
-            `appointments/${entry.appointment_id}`
-          );
-          await update(appointmentRef, { status: "cut off" });
-        }
-      } else if (entry.status === "in-progress") {
-        await update(queueRef, { status: "completed" });
-        if (entry.appointment_id) {
-          const appointmentRef = ref(
-            db,
-            `appointments/${entry.appointment_id}`
-          );
-          await update(appointmentRef, { status: "completed" });
-        }
+      await update(queueRef, { status: "completed" });
+
+      // Update appointment status if exists
+      if (entry.appointment_id) {
+        const appointmentRef = ref(db, `appointments/${entry.appointment_id}`);
+        await update(appointmentRef, { status: "completed" });
       }
     }
     setQueueData([]);
@@ -118,18 +107,22 @@ const QueueManagement = () => {
       const now = new Date();
       const last =
         lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
-      // 3:00AM today (reverted)
+
+      // Calculate midnight (12:00 AM) reset time for today
       const resetTime = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
-        3,
+        0, // 12:00 AM (midnight)
         0,
         0,
         0
       );
-      // If now is after 3:00AM and lastUpdated is before 3:00AM today, reset
-      if (now >= resetTime && last < resetTime) {
+
+      // Check if we've crossed midnight since last update
+      const shouldReset = now >= resetTime && last < resetTime;
+
+      if (shouldReset) {
         await manualQueueReset();
       }
     };
@@ -354,16 +347,6 @@ const QueueManagement = () => {
                     Real-time patient queue with priority system
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={loadQueueData}
-                  variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50"
-                >
-                  <FaSync className="w-4 h-4 mr-2" />
-                  Refresh
-                </Button>
               </div>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">

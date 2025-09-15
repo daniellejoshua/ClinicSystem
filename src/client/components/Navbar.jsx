@@ -4,11 +4,6 @@ import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
   const location = useLocation();
-  // Removed dark mode state
-
-  // Removed dark mode effect
-
-  // Removed dark mode toggle
 
   const isActive = (path) => {
     return location.pathname === path;
@@ -48,7 +43,6 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             >
               Services
             </Link>
-
             <Link
               to="/contact"
               className={`font-worksans font-medium hover:text-accent transition-colors ${
@@ -58,12 +52,8 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
               Contact
             </Link>
           </div>
-
-          {/* Right Side - Search, Dark Mode Toggle and Appointment */}
+          {/* Right Side - Appointment Button */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Removed dark mode toggle button */}
-
-            {/* Appointment Button */}
             <Link
               to="/appointment"
               className="bg-accent text-primary px-6 py-2 rounded-full font-worksans font-semibold hover:bg-accent/90 transition-colors"
@@ -71,14 +61,12 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
               Appointment
             </Link>
           </div>
-
           {/* Mobile: Logo and Hamburger */}
           <div className="md:hidden flex items-center justify-between w-full">
             <Link to="/" className="text-xl font-yeseva text-white">
               TONSUYA SUPER HEALTH CENTER
             </Link>
             <div className="flex items-center space-x-2">
-              {/* Removed mobile dark mode toggle button */}
               <button onClick={toggleMenu} className="text-2xl text-white">
                 {isMenuOpen ? "✕" : "☰"}
               </button>
@@ -86,14 +74,21 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - improved, only one block */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 bg-[#BFD2F8] bg-opacity-95 z-50 transition-colors duration-300">
-          <div className="flex flex-col items-center justify-center h-full gap-8 text-primary text-2xl pt-20">
+        <div className="md:hidden fixed inset-0 bg-[#BFD2F8] bg-opacity-95 z-50 flex items-center justify-center transition-colors duration-300">
+          <div className="relative w-[90vw] max-w-sm mx-auto bg-white rounded-2xl shadow-2xl p-8 flex flex-col gap-6 items-center">
+            {/* Close button */}
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              className="absolute top-4 right-4 text-3xl text-primary hover:text-accent focus:outline-none"
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
             <Link
               to="/"
-              className={`font-worksans font-bold ${
+              className={`font-worksans font-bold text-xl ${
                 isActive("/") ? "text-accent" : "text-primary"
               }`}
               onClick={() => setIsMenuOpen(false)}
@@ -102,7 +97,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             </Link>
             <Link
               to="/about"
-              className={`font-worksans font-normal ${
+              className={`font-worksans font-normal text-lg ${
                 isActive("/about") ? "text-accent" : "text-primary"
               }`}
               onClick={() => setIsMenuOpen(false)}
@@ -111,7 +106,7 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             </Link>
             <Link
               to="/services"
-              className={`font-worksans font-normal ${
+              className={`font-worksans font-normal text-lg ${
                 isActive("/services") ? "text-accent" : "text-primary"
               }`}
               onClick={() => setIsMenuOpen(false)}
@@ -119,19 +114,8 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
               Services
             </Link>
             <Link
-              to="/appointment"
-              className={`font-worksans font-bold bg-accent text-white px-6 py-3 rounded-lg ${
-                isActive("/appointment")
-                  ? "bg-primary text-accent"
-                  : "bg-accent text-white"
-              }`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Book Appointment
-            </Link>
-            <Link
               to="/contact"
-              className={`font-worksans font-normal ${
+              className={`font-worksans font-normal text-lg ${
                 isActive("/contact") ? "text-accent" : "text-primary"
               }`}
               onClick={() => setIsMenuOpen(false)}
@@ -140,10 +124,10 @@ export default function Navbar({ isMenuOpen, setIsMenuOpen }) {
             </Link>
             <Link
               to="/appointment"
-              className="text-accent font-worksans font-medium py-4 px-12 rounded-[50px] bg-primary border border-accent mt-8 transition-colors duration-300"
+              className="w-full text-center font-worksans font-bold py-3 rounded-lg bg-accent text-white mt-4 text-lg shadow hover:bg-accent/90 transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
-              Appointment
+              Book Appointment
             </Link>
           </div>
         </div>

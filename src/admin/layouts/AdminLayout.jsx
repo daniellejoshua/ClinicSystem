@@ -24,10 +24,10 @@ const AdminLayout = () => {
       setCurrentStaff(staffData);
     }
 
-    // Setup automatic logout at 12 AM
+    // automatic logout at 12 AM
     const cleanupAutoLogout = setupAutoLogout();
 
-    // Setup idle logout after 30 minutes of inactivity
+    // idle logout after 30 minutes of inactivity
     const cleanupIdleLogout = setupIdleLogout(30);
 
     // Cleanup on unmount

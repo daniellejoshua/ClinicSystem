@@ -63,12 +63,12 @@ const AdminSidebar = () => {
       label: "Patients",
       adminOnly: false,
     },
-    {
-      path: "/admin/data-management",
-      icon: FaChartBar,
-      label: "Data Management",
-      adminOnly: false,
-    },
+    // {
+    //   path: "/admin/data-management",
+    //   icon: FaChartBar,
+    //   label: "Data Management",
+    //   adminOnly: false,
+    // },
     {
       path: "/admin/appointment",
       icon: FaCalendarAlt,
@@ -104,8 +104,12 @@ const AdminSidebar = () => {
     <div className="w-64 bg-gradient-to-b from-primary to-primary/90 dark:from-gray-800 dark:to-gray-900 shadow-2xl transition-all duration-300 border-r border-primary/20 dark:border-gray-700">
       <div className="p-6 border-b border-primary/20 dark:border-gray-700 bg-gradient-to-r from-primary/10 to-transparent dark:from-gray-700/50 dark:to-transparent">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-white/20 dark:bg-gray-600 rounded-full flex items-center justify-center backdrop-blur-sm">
-            <FaUserMd className="text-white dark:text-gray-200 text-lg" />
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+            <img
+              src="/Tonsuya.png"
+              alt="Tonsuya Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <h2 className="text-xl font-bold text-white dark:text-gray-100 font-yeseva">

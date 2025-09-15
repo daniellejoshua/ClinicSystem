@@ -564,7 +564,7 @@ const PatientsManagement = () => {
                             <FaFlag className="mr-1" />
                             {appointment.priority_flag || "normal"}
                           </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                          <span className="text-xs text-gray-400 dark:text-gray-200">
                             Priority
                           </span>
                         </div>

@@ -514,20 +514,20 @@ function AppointmentPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
             onClick={() => setShowDialog(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-4xl w-full p-12 border-2 border-primary dark:border-blue-700 z-10 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl dark:shadow-blue-500/20 max-w-4xl w-full p-12 border-2 border-primary/20 dark:border-blue-500/50 z-10 flex flex-col">
             <button
-              className="absolute top-6 right-8 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-300 text-3xl"
+              className="absolute top-6 right-8 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center text-2xl transition-all duration-200"
               onClick={() => setShowDialog(false)}
               title="Close"
             >
               &times;
             </button>
             <div className="flex items-center gap-4 mb-10">
-              <div className="bg-primary/10 dark:bg-blue-900 text-primary dark:text-blue-300 rounded-full p-4">
+              <div className="bg-primary/10 dark:bg-blue-600/20 text-primary dark:text-blue-400 rounded-full p-4 ring-2 ring-primary/20 dark:ring-blue-500/30">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-8 w-8"
@@ -543,13 +543,13 @@ function AppointmentPage() {
                   />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold text-primary dark:text-blue-300 text-center">
+              <h2 className="text-3xl font-bold text-primary dark:text-blue-400 text-center">
                 Appointment Details
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-10 bg-primary/5 dark:bg-blue-950 rounded-2xl p-10 mb-10">
+            <div className="grid grid-cols-2 gap-10 bg-primary/5 dark:bg-gray-700/50 rounded-2xl p-10 mb-10 border border-primary/10 dark:border-gray-600/50">
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Patient Name
                 </div>
                 <div
@@ -561,7 +561,7 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Email
                 </div>
                 <div
@@ -573,7 +573,7 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Contact
                 </div>
                 <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
@@ -581,15 +581,37 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
+                  Booked By
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                  {selectedAppointment.booked_by_name ||
+                    selectedAppointment.patient_full_name ||
+                    "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Type
                 </div>
-                <div className="font-semibold text-base text-primary dark:text-blue-300">
+                <div className="font-semibold text-base text-primary dark:text-blue-400">
                   {selectedAppointment.appointment_type}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
+                  Relationship to Patient
+                </div>
+                <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                  {selectedAppointment.relationship_to_patient ||
+                    (selectedAppointment.booked_by_name ===
+                    selectedAppointment.patient_full_name
+                      ? "Self"
+                      : "-")}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Service
                 </div>
                 <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
@@ -597,7 +619,7 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Status
                 </div>
                 <span
@@ -609,7 +631,7 @@ function AppointmentPage() {
                 </span>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Booking Timestamp
                 </div>
                 <div className="font-semibold text-base text-gray-800 dark:text-gray-100">
@@ -621,10 +643,10 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide font-medium">
                   Preferred Date
                 </div>
-                <div className="font-semibold text-base text-primary dark:text-blue-300">
+                <div className="font-semibold text-base text-primary dark:text-blue-400">
                   {selectedAppointment.preferred_date
                     ? new Date(
                         selectedAppointment.preferred_date
@@ -633,9 +655,31 @@ function AppointmentPage() {
                 </div>
               </div>
             </div>
+            {/* Additional Notes Section */}
+            {selectedAppointment.additional_notes && (
+              <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-6 border border-amber-200 dark:border-amber-800/50">
+                <div className="text-xs text-amber-700 dark:text-amber-400 mb-3 uppercase tracking-wide font-medium flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Additional Notes
+                </div>
+                <div className="font-medium text-gray-800 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+                  {selectedAppointment.additional_notes}
+                </div>
+              </div>
+            )}
             <div className="flex justify-end mt-2">
               <button
-                className="py-2 px-12 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition text-lg"
+                className="py-3 px-12 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all duration-200 text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
                 onClick={() => setShowDialog(false)}
               >
                 Close
@@ -649,30 +693,33 @@ function AppointmentPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
             onClick={() => setShowRescheduleModal(false)}
           />
           {/* Modal */}
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full p-8 border-2 border-primary dark:border-blue-600 z-10 flex flex-col">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-blue-500/20 max-w-lg w-full p-8 border-2 border-primary/20 dark:border-blue-500/50 z-10 flex flex-col">
             <button
-              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 text-2xl transition-colors"
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-primary dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center text-xl transition-all duration-200"
               onClick={() => setShowRescheduleModal(false)}
               title="Close"
             >
               &times;
             </button>
-            <div className="mb-4">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold text-primary dark:text-blue-400 mb-1">
                 Reschedule Appointment
               </h2>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
+                Select a new date for this appointment
+              </p>
             </div>
             {/* Step Indicator */}
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center justify-center mb-6 bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
               <div className="flex flex-col items-center">
-                <span className="font-semibold text-base text-primary dark:text-blue-400">
-                  Preferred Date
+                <span className="font-semibold text-sm text-gray-600 dark:text-gray-300 mb-1">
+                  Current Date
                 </span>
-                <span className="mt-1 text-lg font-bold text-primary dark:text-blue-300">
+                <span className="text-base font-bold text-gray-800 dark:text-gray-100">
                   {selectedAppointment.preferred_date
                     ? new Date(
                         selectedAppointment.preferred_date
@@ -682,29 +729,29 @@ function AppointmentPage() {
               </div>
               <div className="mx-6 flex flex-col items-center">
                 <svg
-                  width="40"
-                  height="40"
+                  width="32"
+                  height="32"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   viewBox="0 0 24 24"
-                  className="text-primary dark:text-blue-400"
+                  className="text-primary dark:text-blue-400 mb-1"
                 >
                   <path d="M5 12h14M15 8l4 4-4 4" />
                 </svg>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Timeline
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Change to
                 </span>
               </div>
               <div className="flex flex-col items-center">
-                <span className="font-semibold text-base text-primary dark:text-blue-400">
+                <span className="font-semibold text-sm text-primary dark:text-blue-400 mb-1">
                   New Date
                 </span>
                 <input
                   type="date"
-                  className="mt-1 w-34 border-2 border-primary dark:border-blue-600 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-blue-500 bg-primary/5 dark:bg-blue-900/20 text-primary dark:text-blue-300 font-bold"
+                  className="w-36 border-2 border-primary/30 dark:border-blue-500/50 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50 dark:focus:ring-blue-400/50 focus:border-primary dark:focus:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium transition-all duration-200"
                   value={rescheduleDate}
                   min={(() => {
                     const today = new Date();
@@ -716,13 +763,13 @@ function AppointmentPage() {
               </div>
             </div>
             {/* Appointment Details */}
-            <div className="mb-6 grid grid-cols-2 gap-4 bg-primary/5 dark:bg-blue-900/20 rounded-lg p-4">
+            <div className="mb-6 grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600/50">
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Patient Name
                 </div>
                 <div
-                  className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate max-w-[180px]"
+                  className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate max-w-[180px]"
                   title={selectedAppointment.patient_full_name}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -730,11 +777,11 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Email
                 </div>
                 <div
-                  className="font-semibold text-base text-gray-800 dark:text-gray-200 truncate max-w-[180px]"
+                  className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate max-w-[180px]"
                   title={selectedAppointment.email_address}
                   style={{ wordBreak: "break-all" }}
                 >
@@ -742,31 +789,31 @@ function AppointmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Contact
                 </div>
-                <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
+                <div className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                   {selectedAppointment.contact_number}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Type
                 </div>
-                <div className="font-semibold text-base text-primary dark:text-blue-400">
+                <div className="font-semibold text-sm text-primary dark:text-blue-400">
                   {selectedAppointment.appointment_type}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Service
                 </div>
-                <div className="font-semibold text-base text-gray-800 dark:text-gray-200">
+                <div className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                   {getServiceName(selectedAppointment.service_ref)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide font-medium">
                   Status
                 </div>
                 <span
@@ -781,22 +828,60 @@ function AppointmentPage() {
             {/* Summary of Changes */}
 
             {rescheduleError && (
-              <div className="text-red-600 dark:text-red-400 text-sm mb-2">
-                {rescheduleError}
+              <div className="text-red-600 dark:text-red-400 text-sm mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span>{rescheduleError}</span>
+                </div>
               </div>
             )}
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-3 mt-2">
               <button
-                className={`flex-1 py-2 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition ${
+                className={`flex-1 py-3 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 dark:bg-blue-600 dark:hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${
                   rescheduleLoading ? "opacity-60 cursor-not-allowed" : ""
                 }`}
                 onClick={handleReschedule}
                 disabled={rescheduleLoading}
               >
-                {rescheduleLoading ? "Rescheduling..." : "Confirm Reschedule"}
+                {rescheduleLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Rescheduling...
+                  </div>
+                ) : (
+                  "Confirm Reschedule"
+                )}
               </button>
               <button
-                className="flex-1 py-2 rounded-lg font-semibold text-primary dark:text-blue-400 bg-white dark:bg-gray-700 border border-primary dark:border-blue-600 hover:bg-primary/10 dark:hover:bg-blue-900/30 transition"
+                className="flex-1 py-3 rounded-lg font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
                 onClick={() => setShowRescheduleModal(false)}
                 disabled={rescheduleLoading}
               >
@@ -810,11 +895,11 @@ function AppointmentPage() {
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
             onClick={() => setShowSuccessModal(false)}
           />
-          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-primary dark:border-blue-700 z-10 flex flex-col items-center">
-            <div className="bg-primary/10 text-primary rounded-full p-4 mb-4">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-green-500/20 max-w-md w-full p-8 border-2 border-green-200 dark:border-green-500/50 z-10 flex flex-col items-center">
+            <div className="bg-green-100 dark:bg-green-600/20 text-green-600 dark:text-green-400 rounded-full p-4 mb-4 ring-4 ring-green-200 dark:ring-green-500/30">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-8 w-8"
@@ -830,25 +915,25 @@ function AppointmentPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-primary mb-2 text-center">
+            <h2 className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2 text-center">
               Appointment Rescheduled!
             </h2>
-            <p className="text-gray-700 mb-6 text-center">
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-center leading-relaxed">
               The appointment for{" "}
-              <span className="font-semibold">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
                 {selectedAppointment?.patient_full_name}
               </span>{" "}
               has been successfully rescheduled to{" "}
-              <span className="font-semibold text-primary">
+              <span className="font-semibold text-green-600 dark:text-green-400">
                 {rescheduleDate}
               </span>
               .
             </p>
             <button
-              className="py-2 px-8 rounded-lg font-semibold text-white bg-primary hover:bg-primary/90 transition"
+              className="py-3 px-8 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               onClick={() => setShowSuccessModal(false)}
             >
-              Close
+              Perfect!
             </button>
           </div>
         </div>

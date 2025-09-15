@@ -22,16 +22,34 @@ export default function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log("Form submitted:", formData);
 
-    alert("Message sent successfully!");
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    });
+    // Create mailto link with form data
+    const subject = encodeURIComponent(
+      formData.subject || "Contact from Website"
+    );
+    const body = encodeURIComponent(
+      `Hello Tonsuya Super Health Center,\n\n` +
+        `Name: ${formData.name}\n` +
+        `Email: ${formData.email}\n` +
+        `Subject: ${formData.subject}\n\n` +
+        `Message:\n${formData.message}\n\n` +
+        `Best regards,\n${formData.name}`
+    );
+
+    const mailtoLink = `mailto:tonsuyasuperhealthcenter499@gmail.com?subject=${subject}&body=${body}`;
+
+    // Open default email client
+    window.location.href = mailtoLink;
+
+    // Optional: Reset form after opening email client
+    setTimeout(() => {
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    }, 1000);
   };
 
   return (

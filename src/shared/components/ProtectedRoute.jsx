@@ -7,6 +7,7 @@ import {
 } from "../utils/authUtils";
 
 function ProtectedRoute({ children }) {
+  // Strict authentication check - no automatic login or bypasses
   const isAuthenticated = isStaffLoggedIn();
 
   useEffect(() => {
@@ -24,7 +25,11 @@ function ProtectedRoute({ children }) {
     }
   }, [isAuthenticated]);
 
+  // Strict authentication - redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log(
+      "🔒 Access denied: User not authenticated. Redirecting to login."
+    );
     return <Navigate to="/admin/login" replace />;
   }
 

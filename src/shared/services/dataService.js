@@ -157,6 +157,12 @@ class DataService {
   }
 
   async createSampleStaff() {
+    // WARNING: This creates sample staff accounts. Only use for development/testing.
+    // For production, staff accounts should be created manually through the admin interface.
+    console.warn(
+      "⚠️ Creating sample staff accounts. This should only be used for development/testing!"
+    );
+
     const staff = [
       {
         full_name: "Dr. Maria Santos",
@@ -342,15 +348,21 @@ class DataService {
   }
 
   // Create all sample data matching your exact database design
+  // WARNING: This function creates sample data including staff accounts.
+  // This should ONLY be called manually from the Data Management page for development/testing.
+  // NEVER call this automatically on app startup in production.
   async createAllSampleData() {
     try {
+      console.warn(
+        "⚠️ CREATING SAMPLE DATA - This should only be used for development/testing!"
+      );
       console.log("🏥 Creating clinic sample data...");
 
       // Create services first (needed for references)
       const serviceIds = await this.createSampleServices();
       console.log("✅ Services created:", serviceIds.length);
 
-      // Create staff (including admin)
+      // Create staff (including admin) - WARNING: Creates test accounts
       const staffIds = await this.createSampleStaff();
       console.log("✅ Staff created:", staffIds.length);
 

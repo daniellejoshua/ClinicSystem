@@ -44,6 +44,38 @@ import NotFound from "./shared/components/NotFound.jsx";
 function App() {
   // Initialize automatic appointment reminder system
   useEffect(() => {
+    // Security: Clear any invalid authentication data on app startup
+    const validateAuthOnStartup = () => {
+      try {
+        const isLoggedIn = localStorage.getItem("isStaffLoggedIn");
+        const staffData = localStorage.getItem("staffData");
+        const adminToken = localStorage.getItem("adminToken");
+
+        if (isLoggedIn === "true" && staffData && adminToken) {
+          // Validate staff data structure
+          const parsedStaff = JSON.parse(staffData);
+          if (!parsedStaff.id || !parsedStaff.email || !parsedStaff.role) {
+            console.warn(
+              "🔒 Invalid authentication data detected on startup. Clearing..."
+            );
+            localStorage.removeItem("isStaffLoggedIn");
+            localStorage.removeItem("staffData");
+            localStorage.removeItem("adminToken");
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "🔒 Authentication validation error on startup. Clearing..."
+        );
+        localStorage.removeItem("isStaffLoggedIn");
+        localStorage.removeItem("staffData");
+        localStorage.removeItem("adminToken");
+      }
+    };
+
+    // Validate authentication on startup
+    validateAuthOnStartup();
+
     const schedulerInterval =
       appointmentReminderService.startAutomaticReminders();
 

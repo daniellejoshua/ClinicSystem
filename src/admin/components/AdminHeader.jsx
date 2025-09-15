@@ -77,16 +77,6 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
           </button>
 
           {/* Notifications */}
-          <div className="relative">
-            <button className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors relative">
-              <FaBell className="text-xl" />
-              {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {notifications}
-                </span>
-              )}
-            </button>
-          </div>
 
           {/* Profile Dropdown */}
           <div className="relative">
@@ -125,36 +115,40 @@ const AdminHeader = ({ onToggleSidebar, title, subtitle, currentStaff }) => {
       </div>
 
       {showLogoutDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
             onClick={() => setShowLogoutDialog(false)}
           />
-          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-sm w-full p-8 border-2 border-red-500 z-10 flex flex-col items-center">
-            <FaSignOutAlt className="text-red-500 h-10 w-10 mb-4" />
-            <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2 text-center">
-              Confirm Logout
-            </h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-6 text-center">
-              Are you sure you want to log out? You will need to log in again to
-              access the admin panel.
-            </p>
-            <div className="flex gap-4 mt-2">
-              <button
-                className="py-2 px-6 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition"
-                onClick={() => {
-                  logout();
-                  setShowLogoutDialog(false);
-                }}
-              >
-                Yes, Logout
-              </button>
-              <button
-                className="py-2 px-6 rounded-lg font-semibold text-red-600 bg-white dark:bg-gray-700 border border-red-600 hover:bg-red-50 dark:hover:bg-gray-600 transition"
-                onClick={() => setShowLogoutDialog(false)}
-              >
-                Cancel
-              </button>
+          <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200 dark:border-gray-700 z-10 transform transition-all duration-300 scale-100">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 mb-6">
+                <FaSignOutAlt className="text-red-600 dark:text-red-400 h-8 w-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                Confirm Logout
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                Are you sure you want to log out? You will need to log in again
+                to access the admin panel.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  className="flex-1 py-3 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 dark:from-red-500 dark:to-red-600 dark:hover:from-red-600 dark:hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  onClick={() => {
+                    logout();
+                    setShowLogoutDialog(false);
+                  }}
+                >
+                  Yes, Logout
+                </button>
+                <button
+                  className="flex-1 py-3 px-6 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-200 transform hover:scale-105"
+                  onClick={() => setShowLogoutDialog(false)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,15 +1,10 @@
-import {
-  FaLinkedinIn,
-  FaFacebookF,
-  FaInstagram,
-  FaPaperPlane,
-} from "react-icons/fa";
+import { FaLinkedinIn, FaFacebookF, FaInstagram } from "react-icons/fa";
 
 export default function Footer() {
   return (
     <footer className="w-screen bg-primary text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {/* Clinic Info */}
           <div className="lg:col-span-1">
             <h3 className="text-2xl font-yeseva mb-4">
@@ -67,27 +62,10 @@ export default function Footer() {
               Contact Us
             </h4>
             <div className="space-y-2 text-gray-300 font-worksans">
-              <p> (237) 681-812-255</p>
+              <p> Phone: (237) 681-812-255</p>
               <p>Email: tonsuyasuperhealthcenter499@gmail.com</p>
               <p>Address: Ortega St. Tonsuya, Malabon City</p>
               <p>Philippines</p>
-            </div>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 className="text-lg font-worksans font-semibold mb-4">
-              Newsletter
-            </h4>
-            <div className="relative">
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                className="w-full bg-accent/20 border border-accent/30 rounded-lg px-4 py-3 text-white placeholder-gray-300 focus:outline-none focus:border-accent font-worksans"
-              />
-              <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-accent hover:bg-accent/80 text-white p-2 rounded-md transition-colors">
-                <FaPaperPlane className="text-sm" />
-              </button>
             </div>
           </div>
         </div>

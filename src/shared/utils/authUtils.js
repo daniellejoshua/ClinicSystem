@@ -1,13 +1,47 @@
 import { ref, push } from "firebase/database";
 import { database } from "../config/firebase";
 
-// Authentication utilities
+// Authentication utilities - strict security enforcement
 export const isStaffLoggedIn = () => {
-  const isLoggedIn = localStorage.getItem("isStaffLoggedIn");
-  const staffData = localStorage.getItem("staffData");
-  const adminToken = localStorage.getItem("adminToken");
+  try {
+    const isLoggedIn = localStorage.getItem("isStaffLoggedIn");
+    const staffData = localStorage.getItem("staffData");
+    const adminToken = localStorage.getItem("adminToken");
 
-  return isLoggedIn === "true" && staffData && adminToken;
+    // All three must exist for authentication to be valid
+    const isValid = isLoggedIn === "true" && staffData && adminToken;
+
+    if (isValid) {
+      // Additional validation: check if staffData is valid JSON
+      try {
+        const parsedStaff = JSON.parse(staffData);
+        if (!parsedStaff.id || !parsedStaff.email || !parsedStaff.role) {
+          console.warn(
+            "🔒 Invalid staff data structure. Clearing authentication."
+          );
+          clearAuthentication();
+          return false;
+        }
+      } catch (error) {
+        console.warn("🔒 Corrupted staff data. Clearing authentication.");
+        clearAuthentication();
+        return false;
+      }
+    }
+
+    return isValid;
+  } catch (error) {
+    console.error("🔒 Authentication check error:", error);
+    clearAuthentication();
+    return false;
+  }
+};
+
+// Clear all authentication data
+const clearAuthentication = () => {
+  localStorage.removeItem("isStaffLoggedIn");
+  localStorage.removeItem("staffData");
+  localStorage.removeItem("adminToken");
 };
 
 export const getStaffData = () => {

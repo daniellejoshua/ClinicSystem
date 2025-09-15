@@ -59,6 +59,19 @@ const DataManagement = () => {
   };
 
   const handleCreateSampleData = async () => {
+    // Security warning for production use
+    const confirmCreate = window.confirm(
+      "⚠️ WARNING: This will create sample data including test staff accounts.\n\n" +
+        "This should ONLY be used for development/testing purposes.\n\n" +
+        "In production, staff accounts should be created manually through proper channels.\n\n" +
+        "Do you want to continue?"
+    );
+
+    if (!confirmCreate) {
+      setResult("❌ Sample data creation cancelled by user.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const result = await customDataService.createSampleDataWithCustomSchema();

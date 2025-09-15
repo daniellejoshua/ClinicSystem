@@ -479,6 +479,80 @@ const AdminDashboard = () => {
     analyticsData.totals.waitingPatients ||
     patients.filter((p) => p.status === "waiting").length;
 
+  // Calculate real percentage changes based on actual data
+  const calculatePercentageChange = (current, previous) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return (((current - previous) / previous) * 100).toFixed(1);
+  };
+
+  // Get data from last month for comparison
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const thisMonthPatients = patients.filter((p) => {
+    const createdDate = new Date(p.created_at);
+    return createdDate >= thisMonth;
+  }).length;
+
+  const lastMonthPatients = patients.filter((p) => {
+    const createdDate = new Date(p.created_at);
+    return createdDate >= lastMonth && createdDate < thisMonth;
+  }).length;
+
+  const thisMonthOnline = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return appointmentDate >= thisMonth && a.appointment_type === "online";
+  }).length;
+
+  const lastMonthOnline = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= lastMonth &&
+      appointmentDate < thisMonth &&
+      a.appointment_type === "online"
+    );
+  }).length;
+
+  const thisMonthWalkin = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= thisMonth &&
+      (a.appointment_type === "walk-in" || a.appointment_type === "walkin")
+    );
+  }).length;
+
+  const lastMonthWalkin = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= lastMonth &&
+      appointmentDate < thisMonth &&
+      (a.appointment_type === "walk-in" || a.appointment_type === "walkin")
+    );
+  }).length;
+
+  // Calculate percentage changes
+  const patientsChange = calculatePercentageChange(
+    thisMonthPatients,
+    lastMonthPatients
+  );
+  const onlineChange = calculatePercentageChange(
+    thisMonthOnline,
+    lastMonthOnline
+  );
+  const walkinChange = calculatePercentageChange(
+    thisMonthWalkin,
+    lastMonthWalkin
+  );
+
+  // For today's queue, compare with yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayDateString = yesterday.toISOString().split("T")[0];
+
+  // This would need queue history data - for now we'll show current count
+  const queueChange = todayQueue.length > 0 ? "Active" : "No queue";
+
   return (
     <div
       className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-gray-900`}
@@ -514,8 +588,9 @@ const AdminDashboard = () => {
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {totalPatients}
             </div>
-            <p className="text-xs text-muted-foreground dark:text-gray-400">
-              +20.1% from last month
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {patientsChange >= 0 ? "+" : ""}
+              {patientsChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -531,8 +606,9 @@ const AdminDashboard = () => {
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {onlineAppointments}
             </div>
-            <p className="text-xs text-muted-foreground dark:text-gray-400">
-              +180.1% from last month
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {onlineChange >= 0 ? "+" : ""}
+              {onlineChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -548,8 +624,9 @@ const AdminDashboard = () => {
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {walkinAppointments}
             </div>
-            <p className="text-xs text-muted-foreground dark:text-gray-400">
-              +19% from last month
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {walkinChange >= 0 ? "+" : ""}
+              {walkinChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -570,6 +647,9 @@ const AdminDashboard = () => {
               })}
             </div>
             <div className="text-2xl font-bold">{todayQueue.length}</div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
+              {queueChange}
+            </p>
           </CardContent>
         </Card>
       </div>

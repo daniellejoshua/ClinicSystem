@@ -27,7 +27,6 @@ const AdminLogin = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,9 +36,9 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   useEffect(() => {
     document.title = "Tonsuya Super Health Center";
-    // Set favicon to tonuysa image
+    // Set favicon to tonsuya image
     const favicon = document.querySelector("link[rel~='icon']");
-    if (favicon) favicon.href = "/Tonsuya.jpg";
+    if (favicon) favicon.href = "/Tonsuya.png";
   }, []);
   // Check for saved theme preference or default to light mode
   useEffect(() => {
@@ -154,7 +153,9 @@ const AdminLogin = () => {
             : "/admin"
         );
       } else {
-        setError("Access denied: You are not registered as staff.");
+        setError(
+          "Access denied: You are not registered as staff. Please contact the system administrator to create your account."
+        );
         await auth.signOut();
       }
     } catch (error) {
@@ -178,7 +179,9 @@ const AdminLogin = () => {
 
       if (!staffSnapshot.exists()) {
         await auth.signOut();
-        setError("Access denied: Not a staff member.");
+        setError(
+          "Access denied: No staff members found. Please contact the system administrator."
+        );
         setIsLoading(false);
         return;
       }
@@ -217,7 +220,9 @@ const AdminLogin = () => {
         );
       } else {
         await auth.signOut();
-        setError("Access denied: Not a staff member.");
+        setError(
+          "Access denied: You are not registered as staff. Please contact the system administrator to create your account."
+        );
       }
     } catch (error) {
       setError(error.message || "Google login failed");
@@ -242,23 +247,40 @@ const AdminLogin = () => {
     >
       {/* Welcome Modal */}
       {showWelcome && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 animate-fade-in">
-            <h2 className="text-3xl font-bold text-center mb-2 text-primary">
-              Welcome!
-            </h2>
-            <p className="text-center text-muted-foreground">
-              You have successfully logged in.
-            </p>
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 animate-fade-in border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 dark:from-green-500 dark:to-green-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">
+                Welcome!
+              </h2>
+              <p className="text-center text-gray-600 dark:text-gray-300 text-lg">
+                You have successfully logged in.
+              </p>
+            </div>
           </div>
           <style>
             {`
               .animate-fade-in {
-                animation: fadeIn 0.6s;
+                animation: fadeIn 0.6s ease-out;
               }
               @keyframes fadeIn {
-                from { opacity: 0; transform: scale(0.95);}
-                to { opacity: 1; transform: scale(1);}
+                from { opacity: 0; transform: scale(0.9) translateY(-20px);}
+                to { opacity: 1; transform: scale(1) translateY(0);}
               }
             `}
           </style>
@@ -291,10 +313,16 @@ const AdminLogin = () => {
                   {/* Header */}
                   <div className="flex flex-col items-center text-center">
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="p-3 bg-primary text-primary-foreground rounded-full shadow-lg">
-                        <FaStethoscope className="w-7 h-7" />
+                      <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                        <img
+                          src="/Tonsuya.png"
+                          alt="Tonsuya Logo"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <span className="text-2xl font-bold">ClinicSystem</span>
+                      <span className="text-2xl font-bold">
+                        Tonsuya Super Health Center
+                      </span>
                     </div>
                     <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
                     <p className="text-muted-foreground text-lg">
@@ -304,8 +332,21 @@ const AdminLogin = () => {
 
                   {/* Error Message */}
                   {error && (
-                    <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                      {error}
+                    <div className="p-4 text-sm text-red-700 dark:text-red-200 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg shadow-md dark:shadow-red-900/20 backdrop-blur-sm">
+                      <div className="flex items-center space-x-2">
+                        <svg
+                          className="w-4 h-4 text-red-500 dark:text-red-400 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="font-medium">{error}</span>
+                      </div>
                     </div>
                   )}
 
@@ -325,15 +366,7 @@ const AdminLogin = () => {
 
                   {/* Password Field */}
                   <div className="grid gap-3">
-                    <div className="flex items-center">
-                      <Label htmlFor="password">Password</Label>
-                      <Link
-                        to="/admin/forgot-password"
-                        className="ml-auto text-sm underline-offset-2 hover:underline"
-                      >
-                        Forgot your password?
-                      </Link>
-                    </div>
+                    <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Input
                         id="password"
@@ -358,22 +391,14 @@ const AdminLogin = () => {
                     </div>
                   </div>
 
-                  {/* Remember Me */}
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="rememberMe"
-                      name="rememberMe"
-                      checked={formData.rememberMe}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2"
-                    />
-                    <Label
-                      htmlFor="rememberMe"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  {/* Forgot Password */}
+                  <div className="flex justify-end">
+                    <Link
+                      to="/admin/forgot-password"
+                      className="text-sm text-primary dark:text-white hover:text-primary/80 dark:hover:text-gray-300 underline-offset-2 hover:underline font-medium transition-colors"
                     >
-                      Remember me
-                    </Label>
+                      Forgot password?
+                    </Link>
                   </div>
 
                   {/* Login Button */}
@@ -416,7 +441,7 @@ const AdminLogin = () => {
                     <button
                       type="button"
                       onClick={handleBackToWebsite}
-                      className="underline underline-offset-4 hover:text-primary"
+                      className="underline underline-offset-4 hover:text-primary dark:hover:text-blue-400"
                     >
                       ← Back to Website
                     </button>
@@ -438,16 +463,20 @@ const AdminLogin = () => {
                 <div className="absolute inset-0 flex items-end justify-center p-8">
                   <div className="text-center text-white">
                     <div className="mb-6">
-                      <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30">
-                        <FaStethoscope className="w-8 h-8 text-white" />
+                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30 shadow-lg overflow-hidden">
+                        <img
+                          src="/Tonsuya.png"
+                          alt="Tonsuya Logo"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     </div>
                     <h2 className="text-3xl font-bold mb-4">
-                      ClinicSystem Admin
+                      Tonsuya Super Health Center
                     </h2>
                     <p className="text-white/90 text-lg leading-relaxed mb-6 max-w-md">
-                      Manage your clinic operations with our comprehensive
-                      healthcare management system.
+                      Effortlessly oversee Tonsuya Super Health Center's
+                      operations with our tailored healthcare management system.
                     </p>
                   </div>
                 </div>
