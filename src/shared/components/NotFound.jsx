@@ -30,8 +30,8 @@ const NotFound = () => {
       <div className="relative z-10 max-w-2xl mx-auto text-center">
         {/* Medical Icon with Animation */}
         <div className="mb-8 relative">
-          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-700 dark:to-gray-800 p-8 rounded-full mb-6 shadow-2xl mx-auto w-32 h-32 flex items-center justify-center border-4 border-blue-200 dark:border-gray-600 animate-bounce">
-            <FaStethoscope className="h-16 w-16 text-blue-600 dark:text-blue-400 animate-pulse" />
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-700 dark:to-gray-800 p-8 rounded-full mb-6 shadow-2xl mx-auto w-32 h-32 flex items-center justify-center border-4 border-blue-200 dark:border-gray-600 ">
+            <FaStethoscope className="h-16 w-16 text-blue-600 dark:text-blue-400 " />
           </div>
           {/* Floating elements */}
           <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-400 rounded-full animate-ping opacity-75"></div>
@@ -40,7 +40,7 @@ const NotFound = () => {
 
         {/* Error Code */}
         <div className="mb-6">
-          <h1 className="text-8xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-400 dark:to-blue-300 mb-2 animate-pulse">
+          <h1 className="text-8xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-400 dark:to-blue-300 mb-2 ">
             404
           </h1>
           <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-indigo-500 mx-auto rounded-full"></div>
@@ -110,114 +110,6 @@ const NotFound = () => {
       </div>
 
       {/* Decorative Medical Illustration */}
-      <div className="mt-8 opacity-60 dark:opacity-40">
-        <svg
-          width="200"
-          height="150"
-          viewBox="0 0 200 150"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="animate-float"
-        >
-          {/* Shadow */}
-          <ellipse
-            cx="100"
-            cy="135"
-            rx="60"
-            ry="10"
-            fill="currentColor"
-            className="text-gray-300 dark:text-gray-700"
-            opacity="0.3"
-          />
-
-          {/* Medical Bag */}
-          <rect
-            x="60"
-            y="70"
-            width="80"
-            height="50"
-            rx="8"
-            fill="currentColor"
-            className="text-red-500"
-          />
-          <rect
-            x="65"
-            y="75"
-            width="70"
-            height="10"
-            rx="3"
-            fill="currentColor"
-            className="text-red-400"
-          />
-
-          {/* Cross Symbol */}
-          <rect x="95" y="85" width="10" height="20" rx="2" fill="white" />
-          <rect x="90" y="90" width="20" height="10" rx="2" fill="white" />
-
-          {/* Handle */}
-          <rect
-            x="85"
-            y="60"
-            width="30"
-            height="8"
-            rx="4"
-            fill="currentColor"
-            className="text-gray-600 dark:text-gray-400"
-          />
-          <rect
-            x="85"
-            y="50"
-            width="8"
-            height="15"
-            rx="4"
-            fill="currentColor"
-            className="text-gray-600 dark:text-gray-400"
-          />
-          <rect
-            x="107"
-            y="50"
-            width="8"
-            height="15"
-            rx="4"
-            fill="currentColor"
-            className="text-gray-600 dark:text-gray-400"
-          />
-
-          {/* Floating Pills */}
-          <circle
-            cx="40"
-            cy="50"
-            r="8"
-            fill="currentColor"
-            className="text-blue-400 animate-bounce"
-            style={{ animationDelay: "0s" }}
-          />
-          <circle
-            cx="160"
-            cy="40"
-            r="6"
-            fill="currentColor"
-            className="text-green-400 animate-bounce"
-            style={{ animationDelay: "0.5s" }}
-          />
-          <circle
-            cx="170"
-            cy="80"
-            r="5"
-            fill="currentColor"
-            className="text-yellow-400 animate-bounce"
-            style={{ animationDelay: "1s" }}
-          />
-          <circle
-            cx="30"
-            cy="90"
-            r="7"
-            fill="currentColor"
-            className="text-purple-400 animate-bounce"
-            style={{ animationDelay: "1.5s" }}
-          />
-        </svg>
-      </div>
 
       {/* Custom CSS for floating animation */}
       <style jsx>{`
