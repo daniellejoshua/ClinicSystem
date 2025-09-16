@@ -5,7 +5,8 @@ import Badge from "../../components/ui/badge";
 import dataService from "../../shared/services/dataService";
 import authService from "../../shared/services/authService";
 import reportService from "../../shared/services/reportService";
-import { Download } from "lucide-react";
+import queueService from "../../shared/services/queueService";
+import { Download, AlertCircle } from "lucide-react";
 import emailjs from "emailjs-com";
 
 function AppointmentPage() {
@@ -24,6 +25,8 @@ function AppointmentPage() {
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [missedStats, setMissedStats] = useState(null);
+  const [showMissedStatsModal, setShowMissedStatsModal] = useState(false);
 
   // Check if current user is admin
   const [isAdmin, setIsAdmin] = useState(false);
@@ -31,7 +34,47 @@ function AppointmentPage() {
   // Check admin status on component mount
   useEffect(() => {
     setIsAdmin(authService.isAdmin());
+    // Load missed appointment statistics for admins
+    if (authService.isAdmin()) {
+      loadMissedStats();
+    }
   }, []);
+
+  // Load missed appointment statistics
+  const loadMissedStats = async () => {
+    try {
+      const stats = await queueService.getMissedAppointmentStats(30); // Last 30 days
+      setMissedStats(stats);
+    } catch (error) {
+      console.error("Error loading missed appointment stats:", error);
+    }
+  };
+
+  // Manual trigger for missed appointment check (admin only)
+  const handleMissedAppointmentCheck = async () => {
+    try {
+      const result = await queueService.checkForMissedAppointments();
+      if (result.processedCount > 0) {
+        // Refresh appointments
+        const updatedAppointments = await dataService.getAllData(
+          "appointments"
+        );
+        setAppointments(updatedAppointments);
+
+        // Refresh stats
+        loadMissedStats();
+
+        alert(
+          `Successfully marked ${result.processedCount} appointments as missed.`
+        );
+      } else {
+        alert("No appointments needed to be marked as missed.");
+      }
+    } catch (error) {
+      console.error("Error checking missed appointments:", error);
+      alert("Error checking for missed appointments.");
+    }
+  };
 
   // Reschedule logic
   const openRescheduleModal = (appointment) => {
@@ -371,14 +414,16 @@ function AppointmentPage() {
             Newest
           </button>
           {isAdmin && (
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
-              onClick={generatePDFReport}
-              title="Generate PDF Report"
-            >
-              <Download className="h-4 w-4" />
-              PDF Report
-            </button>
+            <>
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                onClick={generatePDFReport}
+                title="Generate PDF Report"
+              >
+                <Download className="h-4 w-4" />
+                PDF Report
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -935,6 +980,81 @@ function AppointmentPage() {
             >
               Perfect!
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Missed Appointment Statistics Modal */}
+      {showMissedStatsModal && missedStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowMissedStatsModal(false)}
+          />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-purple-500/20 max-w-md w-full p-8 border-2 border-purple-200 dark:border-purple-500/50 z-10">
+            <button
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 text-xl"
+              onClick={() => setShowMissedStatsModal(false)}
+            >
+              ×
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="bg-purple-100 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <h2 className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                Missed Appointments
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mt-2">
+                Statistics for the last 30 days
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Total Missed
+                </span>
+                <span className="font-bold text-red-600 dark:text-red-400 text-lg">
+                  {missedStats.totalMissed}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Recent (30 days)
+                </span>
+                <span className="font-bold text-orange-600 dark:text-orange-400 text-lg">
+                  {missedStats.recentMissed}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">
+                  Auto-marked
+                </span>
+                <span className="font-bold text-blue-600 dark:text-blue-400 text-lg">
+                  {missedStats.autoMissed}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">Manual</span>
+                <span className="font-bold text-purple-600 dark:text-purple-400 text-lg">
+                  {missedStats.manualMissed}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <button
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                onClick={() => setShowMissedStatsModal(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -51,9 +51,23 @@ const AuditLog = () => {
 
     const actionLower = action.toLowerCase();
 
-    // Staff actions
-    if (actionLower.includes("staff logout")) return "Staff Logout";
-    if (actionLower.includes("staff login")) return "Staff Login";
+    // Staff logout actions - catch all variations
+    if (
+      actionLower.includes("logout") ||
+      actionLower.includes("log out") ||
+      actionLower.includes("logged out")
+    ) {
+      return "Staff Logout";
+    }
+
+    // Staff login actions
+    if (
+      actionLower.includes("login") ||
+      actionLower.includes("log in") ||
+      actionLower.includes("logged in")
+    ) {
+      return "Staff Login";
+    }
 
     // Patient registration/check-in
     if (actionLower.includes("walk-in patient registered"))

@@ -17,6 +17,7 @@ import {
   off,
 } from "firebase/database";
 import { database } from "../config/firebase";
+import queueResetService from "./queueResetService";
 
 class QueueService {
   // Add walk-in patient directly to queue
@@ -158,6 +159,19 @@ class QueueService {
     this.queueRef = ref(database, "queue");
     this.appointmentsRef = ref(database, "appointments");
     this.listeners = new Map();
+
+    // Initialize queue reset service for automatic missed appointment handling
+    this.initializeQueueResetService();
+  }
+
+  // Initialize the queue reset service
+  initializeQueueResetService() {
+    try {
+      queueResetService.initialize();
+      console.log("Queue reset service initialized successfully");
+    } catch (error) {
+      console.error("Error initializing queue reset service:", error);
+    }
   }
 
   // Get next queue number (for both online and walk-in)
@@ -470,6 +484,55 @@ class QueueService {
       unsubscribe();
     });
     this.listeners.clear();
+
+    // Cleanup queue reset service
+    queueResetService.cleanup();
+  }
+
+  // Manual methods for missed appointment handling
+
+  // Manually trigger missed appointment check
+  async checkForMissedAppointments() {
+    try {
+      return await queueResetService.checkAndProcessMissedAppointments();
+    } catch (error) {
+      console.error("Error checking for missed appointments:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Mark missed appointments for a specific date
+  async markMissedAppointmentsForDate(targetDate) {
+    try {
+      return await queueResetService.markMissedAppointmentsForDate(targetDate);
+    } catch (error) {
+      console.error("Error marking missed appointments for date:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get statistics about missed appointments
+  async getMissedAppointmentStats(dateRange = 7) {
+    try {
+      return await queueResetService.getMissedAppointmentStats(dateRange);
+    } catch (error) {
+      console.error("Error getting missed appointment stats:", error);
+      return {
+        totalMissed: 0,
+        recentMissed: 0,
+        autoMissed: 0,
+        manualMissed: 0,
+      };
+    }
+  }
+
+  // Start/stop automatic monitoring (useful for admin controls)
+  startAutoMissedMonitoring() {
+    queueResetService.startAutoResetMonitoring();
+  }
+
+  stopAutoMissedMonitoring() {
+    queueResetService.stopAutoResetMonitoring();
   }
 
   async addToQueue(patientData) {

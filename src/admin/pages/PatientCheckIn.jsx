@@ -15,6 +15,7 @@ import queueService from "../../shared/services/queueService";
 import dataService from "../../shared/services/dataService";
 import customDataService from "../../shared/services/customDataService";
 import authService from "../../shared/services/authService";
+import queueResetService from "../../shared/services/queueResetService";
 import {
   AlertCircle,
   CheckCircle,
@@ -77,6 +78,32 @@ const PatientCheckIn = () => {
     loadAllOnlineAppointments(calendarDate);
   }, [calendarDate]);
 
+  // Set up periodic check for missed appointments (every hour)
+  useEffect(() => {
+    // Use the new queue reset service for automatic missed appointment handling
+    // The service is already initialized when queueService is imported
+
+    // Run manual check when component mounts (as backup)
+    const runInitialCheck = async () => {
+      try {
+        const result = await queueService.checkForMissedAppointments();
+        if (result.processedCount > 0) {
+          setCheckInResult({
+            success: true,
+            message: result.message,
+          });
+        }
+      } catch (error) {
+        console.error("Error during initial missed appointments check:", error);
+      }
+    };
+
+    runInitialCheck();
+
+    // The automatic monitoring is already handled by queueResetService
+    // No need for additional intervals here
+  }, []); // Only run once when component mounts
+
   // When staff types in the search box, filter appointments after a short delay
   // If the box is empty, show all appointments
   useEffect(() => {
@@ -104,7 +131,34 @@ const PatientCheckIn = () => {
   // Get the current staff member when the page loads
   useEffect(() => {
     setCurrentStaff(authService.getCurrentStaff());
+    // The missed appointments check is now handled by the queueResetService automatically
   }, []);
+
+  // Function to manually trigger missed appointment check (simplified to use new service)
+  const checkAndMarkMissedAppointments = async () => {
+    try {
+      const result = await queueService.checkForMissedAppointments();
+
+      if (result.processedCount > 0) {
+        setCheckInResult({
+          success: true,
+          message: result.message,
+        });
+
+        // Refresh the appointments list
+        loadAllOnlineAppointments(calendarDate);
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error checking for missed appointments:", error);
+      setCheckInResult({
+        success: false,
+        message: "Error checking for missed appointments",
+      });
+      return { processedCount: 0, error: error.message };
+    }
+  };
 
   // Load all online appointments for the selected date from the database
   const loadAllOnlineAppointments = async (date) => {
@@ -406,7 +460,7 @@ const PatientCheckIn = () => {
         </div>
       </div>
 
-      {/* Search input */}
+      {/* Search input and manual check button */}
       <div className="mb-4 flex items-center gap-2">
         <Input
           type="text"
@@ -421,6 +475,16 @@ const PatientCheckIn = () => {
           className="px-4 py-2 border rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
         >
           <Search className="h-4 w-4 mr-2" /> Search
+        </Button>
+
+        {/* Manual missed appointments check button - only for admin/staff */}
+        <Button
+          variant="outline"
+          onClick={checkAndMarkMissedAppointments}
+          className="px-4 py-2 border rounded bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/40"
+          title="Manually check for missed appointments from previous days"
+        >
+          <AlertCircle className="h-4 w-4 mr-2" /> Check Missed
         </Button>
       </div>
 
@@ -554,6 +618,15 @@ const PatientCheckIn = () => {
             </li>
             <li>
               • Queue numbers are only assigned after check-in at the clinic
+            </li>
+            <li>
+              • 🔄 <strong>Automatic Processing:</strong> Appointments are
+              automatically marked as "missed" at 12:00 AM if patients haven't
+              checked in by the end of their appointment day
+            </li>
+            <li>
+              • Use "Check Missed" button to manually process missed
+              appointments from previous days
             </li>
           </ul>
         </CardContent>
