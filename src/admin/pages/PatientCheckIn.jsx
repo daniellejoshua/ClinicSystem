@@ -340,24 +340,6 @@ const PatientCheckIn = () => {
   };
 
   // Reschedule appointment (simple: set status to 'rescheduled')
-  const handleReschedule = async (appointment) => {
-    try {
-      await queueService.updateQueueStatus(appointment.id, "rescheduled");
-      setCheckInResult({ success: true, message: "Appointment rescheduled." });
-      setAllAppointments((prev) => ({
-        ...prev,
-        today: prev.today.filter((apt) => apt.id !== appointment.id),
-      }));
-      setFoundAppointments((prev) =>
-        prev.filter((apt) => apt.id !== appointment.id)
-      );
-    } catch (error) {
-      setCheckInResult({
-        success: false,
-        message: "Error rescheduling appointment.",
-      });
-    }
-  };
 
   useEffect(() => {
     // Update foundAppointments when calendarDate or filterStatus changes
@@ -478,14 +460,6 @@ const PatientCheckIn = () => {
         </Button>
 
         {/* Manual missed appointments check button - only for admin/staff */}
-        <Button
-          variant="outline"
-          onClick={checkAndMarkMissedAppointments}
-          className="px-4 py-2 border rounded bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/40"
-          title="Manually check for missed appointments from previous days"
-        >
-          <AlertCircle className="h-4 w-4 mr-2" /> Check Missed
-        </Button>
       </div>
 
       {/* Found Appointments */}
@@ -620,13 +594,9 @@ const PatientCheckIn = () => {
               • Queue numbers are only assigned after check-in at the clinic
             </li>
             <li>
-              • 🔄 <strong>Automatic Processing:</strong> Appointments are
+              <strong>Automatic Processing:</strong> Appointments are
               automatically marked as "missed" at 12:00 AM if patients haven't
               checked in by the end of their appointment day
-            </li>
-            <li>
-              • Use "Check Missed" button to manually process missed
-              appointments from previous days
             </li>
           </ul>
         </CardContent>

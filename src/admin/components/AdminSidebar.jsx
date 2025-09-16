@@ -14,6 +14,7 @@ import {
   FaChartBar,
   FaUserCheck,
   FaUser,
+  FaListUl,
 } from "react-icons/fa";
 
 const AdminSidebar = () => {
@@ -91,6 +92,12 @@ const AdminSidebar = () => {
       path: "/admin/audit-log",
       icon: FaClipboardList,
       label: "Audit Log",
+      adminOnly: true,
+    },
+    {
+      path: "/admin/queue-logs",
+      icon: FaListUl,
+      label: "Queue Logs",
       adminOnly: true,
     },
   ];

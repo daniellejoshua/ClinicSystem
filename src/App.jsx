@@ -25,6 +25,7 @@ import PatientCheckIn from "./admin/pages/PatientCheckIn.jsx"; // Check-in syste
 import AppointmentBooking from "./client/pages/AppointmentBooking.jsx"; // Patient appointment booking form
 import AppointmentPage from "./admin/pages/AppointmentPage.jsx"; // Admin view of appointments
 import AuditLog from "./admin/pages/AuditLog.jsx"; // Audit log page for admin
+import QueueLogs from "./admin/pages/QueueLogs.jsx"; // Queue logs page for admin
 
 import ProfileSettings from "./admin/pages/ProfileSettings.jsx";
 
@@ -163,6 +164,15 @@ function App() {
             }
           />
           {/* Audit log page */}
+          <Route
+            path="queue-logs"
+            element={
+              <AdminOnlyRoute>
+                <QueueLogs />
+              </AdminOnlyRoute>
+            }
+          />
+          {/* Queue logs page for admin */}
         </Route>
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFound />} />

@@ -283,19 +283,31 @@ const AuditLog = () => {
               />
             </div>
 
-            {/* Sort Order */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Sort By
-              </label>
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full border rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            {/* Sort Order - Copy design from QueueLogs */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-300">
+                Sort by time:
+              </span>
+              <button
+                className={`px-3 py-1 rounded border ${
+                  sortOrder === "oldest"
+                    ? "bg-primary text-white"
+                    : "bg-white dark:bg-gray-900 text-primary dark:text-blue-300"
+                }`}
+                onClick={() => setSortOrder("oldest")}
               >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
+                Oldest
+              </button>
+              <button
+                className={`px-3 py-1 rounded border ${
+                  sortOrder === "newest"
+                    ? "bg-primary text-white"
+                    : "bg-white dark:bg-gray-900 text-primary dark:text-blue-300"
+                }`}
+                onClick={() => setSortOrder("newest")}
+              >
+                Newest
+              </button>
             </div>
           </div>
 
