@@ -64,10 +64,76 @@ const chartColors = {
   },
 };
 
+// Auto-close timer component
+const AutoCloseTimer = ({ duration, onComplete, isDarkMode }) => {
+  const [timeLeft, setTimeLeft] = useState(duration / 1000);
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        const newTime = prev - 1;
+        const newProgress = (newTime / (duration / 1000)) * 100;
+        setProgress(newProgress);
+
+        if (newTime <= 0) {
+          clearInterval(timer);
+          onComplete();
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [duration, onComplete]);
+
+  return (
+    <div
+      className={`flex items-center space-x-2 p-2 rounded-full ${
+        isDarkMode
+          ? "bg-neutral-700/50 text-gray-300"
+          : "bg-gray-100/80 text-gray-600"
+      }`}
+    >
+      <div className="relative w-6 h-6">
+        <svg className="w-6 h-6 transform -rotate-90" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke={isDarkMode ? "#374151" : "#e5e7eb"}
+            strokeWidth="2"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke={isDarkMode ? "#10b981" : "#059669"}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 10}`}
+            strokeDashoffset={`${2 * Math.PI * 10 * (1 - progress / 100)}`}
+            className="transition-all duration-1000 ease-linear"
+          />
+        </svg>
+      </div>
+      <span className="text-xs font-medium">{timeLeft}s</span>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
   // UI state for showing/hiding forms
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("3months");
+  const [successModal, setSuccessModal] = useState({
+    show: false,
+    queueNumber: null,
+    patientName: "",
+  });
 
   // Data state for dashboard info
   const [services, setServices] = useState([]); // List of clinic services
@@ -443,9 +509,12 @@ const AdminDashboard = () => {
         // Reload data
         loadDashboardData();
 
-        alert(
-          `✅ Walk-in patient registered successfully! Queue Number: ${result.queueNumber}`
-        );
+        // Show success modal instead of alert
+        setSuccessModal({
+          show: true,
+          queueNumber: result.queueNumber,
+          patientName: patientForm.full_name,
+        });
       } else {
         throw new Error(result.error || "Failed to register walk-in patient");
       }
@@ -1337,8 +1406,7 @@ const AdminDashboard = () => {
                             key={service.id}
                             value={`services/${service.id}`}
                           >
-                            {service.service_name} ({service.duration_minutes}{" "}
-                            mins)
+                            {service.service_name}
                           </option>
                         ))}
                       </select>
@@ -1417,6 +1485,203 @@ const AdminDashboard = () => {
               </form>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {successModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() =>
+              setSuccessModal({
+                show: false,
+                queueNumber: null,
+                patientName: "",
+              })
+            }
+          />
+
+          {/* Modal Content */}
+          <div
+            className={`relative w-full max-w-md mx-auto backdrop-blur shadow-2xl border rounded-xl overflow-hidden ${
+              isDarkMode
+                ? "bg-neutral-800/95 border-gray-700"
+                : "bg-white/95 border-gray-300"
+            }`}
+          >
+            {/* Success Header */}
+            <div
+              className={`px-6 py-4 border-b ${
+                isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                      <FaCheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3
+                      className={`text-lg font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      Registration Successful!
+                    </h3>
+                    <p
+                      className={`text-sm ${
+                        isDarkMode ? "text-gray-300" : "text-gray-600"
+                      }`}
+                    >
+                      Patient added to queue
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Success Content */}
+            <div className="px-6 py-6">
+              <div className="text-center space-y-4">
+                {/* Queue Number Display */}
+                <div
+                  className={`p-4 rounded-lg border-2 border-dashed ${
+                    isDarkMode
+                      ? "bg-green-900/20 border-green-500/30"
+                      : "bg-green-50 border-green-300"
+                  }`}
+                >
+                  <div
+                    className={`text-sm font-medium ${
+                      isDarkMode ? "text-green-300" : "text-green-700"
+                    }`}
+                  >
+                    Queue Number
+                  </div>
+                  <div
+                    className={`text-3xl font-bold mt-1 ${
+                      isDarkMode ? "text-green-400" : "text-green-600"
+                    }`}
+                  >
+                    #{successModal.queueNumber}
+                  </div>
+                </div>
+
+                {/* Patient Info */}
+                <div className="space-y-2">
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Patient:</span>{" "}
+                    {successModal.patientName}
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Status:</span> Added to
+                    walk-in queue
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Time:</span>{" "}
+                    {new Date().toLocaleTimeString()}
+                  </p>
+                </div>
+
+                {/* Success Message */}
+                <div
+                  className={`p-3 rounded-lg ${
+                    isDarkMode
+                      ? "bg-blue-900/20 border border-blue-500/30"
+                      : "bg-blue-50 border border-blue-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <FaUsers
+                      className={`w-4 h-4 ${
+                        isDarkMode ? "text-blue-400" : "text-blue-600"
+                      }`}
+                    />
+                    <p
+                      className={`text-sm font-medium ${
+                        isDarkMode ? "text-blue-300" : "text-blue-700"
+                      }`}
+                    >
+                      Patient can now wait for their turn
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              className={`px-6 py-4 border-t ${
+                isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div className="flex gap-3">
+                <Button
+                  onClick={() =>
+                    setSuccessModal({
+                      show: false,
+                      queueNumber: null,
+                      patientName: "",
+                    })
+                  }
+                  className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <FaCheckCircle className="mr-2 h-4 w-4" />
+                  Got it!
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSuccessModal({
+                      show: false,
+                      queueNumber: null,
+                      patientName: "",
+                    });
+                    setShowPatientForm(true);
+                  }}
+                  className={`px-4 h-10 ${
+                    isDarkMode
+                      ? "border-gray-600 text-gray-300 hover:text-white hover:border-gray-500"
+                      : "border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                  }`}
+                >
+                  <FaPlus className="mr-2 h-4 w-4" />
+                  Add Another
+                </Button>
+              </div>
+            </div>
+
+            {/* Auto-close Timer */}
+            <div className={`absolute top-2 right-2`}>
+              <AutoCloseTimer
+                duration={8000}
+                onComplete={() =>
+                  setSuccessModal({
+                    show: false,
+                    queueNumber: null,
+                    patientName: "",
+                  })
+                }
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

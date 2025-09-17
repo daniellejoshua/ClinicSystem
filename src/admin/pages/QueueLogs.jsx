@@ -10,6 +10,7 @@ import { Download, Search, Clock, User, Filter, Calendar } from "lucide-react";
 function QueueLogs() {
   const [queueLogs, setQueueLogs] = useState([]);
   const [services, setServices] = useState([]);
+  const [availableDates, setAvailableDates] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
   const [filterStatus, setFilterStatus] = useState("");
@@ -19,6 +20,7 @@ function QueueLogs() {
   const [selectedQueueItem, setSelectedQueueItem] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataSource, setDataSource] = useState("all"); // Track what data was loaded
 
   // Check if current user is admin
   const [isAdmin, setIsAdmin] = useState(false);
@@ -37,6 +39,32 @@ function QueueLogs() {
     fetchQueueLogs();
     fetchServices();
   }, []);
+
+  // Helper function to update past entry status in Firebase
+  const updatePastEntryStatus = async (date, queueId, status) => {
+    try {
+      await dataService.updateData(`queue/${date}/${queueId}`, {
+        status: status,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error(`Error updating status for ${date}/${queueId}:`, error);
+    }
+  };
+
+  // Fetch available dates for quick filters
+  const fetchAvailableDates = async () => {
+    try {
+      const queueData = await dataService.getAllData("queue");
+      if (queueData) {
+        const dates = Object.keys(queueData).sort().reverse(); // Most recent first
+        setAvailableDates(dates.slice(0, 7)); // Show last 7 days with data
+      }
+    } catch (error) {
+      console.error("Error fetching available dates:", error);
+      setAvailableDates([]);
+    }
+  };
 
   // Effect to refetch data when date filter changes for better performance
   useEffect(() => {
@@ -57,20 +85,33 @@ function QueueLogs() {
 
       if (specificDate) {
         // Fetch only specific date for better performance
+        setDataSource(`date-${specificDate}`);
         queueData = await dataService.getData(`queue/${specificDate}`);
         queueData = { [specificDate]: queueData };
       } else {
         // Get queue data from all dates
+        setDataSource("all");
         queueData = await dataService.getAllData("queue");
       }
 
       const allQueueLogs = [];
+      const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
 
       if (queueData) {
         // Process each date's queue data
         Object.entries(queueData).forEach(([date, dayQueue]) => {
           if (dayQueue && typeof dayQueue === "object") {
             Object.entries(dayQueue).forEach(([queueId, queueItem]) => {
+              // Determine status based on date
+              let finalStatus = queueItem.status || "completed";
+
+              // If the queue entry date is past today, mark as completed
+              if (date < today && finalStatus !== "completed") {
+                finalStatus = "completed";
+                // Update the status in Firebase for past entries
+                updatePastEntryStatus(date, queueId, finalStatus);
+              }
+
               allQueueLogs.push({
                 id: queueId,
                 date: date, // This is the Firebase date key (YYYY-MM-DD)
@@ -81,7 +122,7 @@ function QueueLogs() {
                 email: queueItem.email || "N/A",
                 phone_number: queueItem.phone_number || "N/A",
                 appointment_type: queueItem.appointment_type || "walkin",
-                status: queueItem.status || "completed",
+                status: finalStatus, // Use the determined status
                 priority_flag: queueItem.priority_flag || "normal",
                 service_ref: queueItem.service_ref || "N/A",
                 arrival_time:
@@ -160,8 +201,7 @@ function QueueLogs() {
     switch (priority) {
       case "high":
         return "text-red-700 bg-red-100 dark:bg-red-900 dark:text-red-300 border border-red-300 dark:border-red-700";
-      case "emergency":
-        return "text-red-800 bg-red-200 dark:bg-red-950 dark:text-red-400 border border-red-400 dark:border-red-800";
+
       case "normal":
       default:
         return "text-gray-700 bg-gray-100 dark:bg-gray-900 dark:text-gray-300 border border-gray-300 dark:border-gray-700";
@@ -266,9 +306,13 @@ function QueueLogs() {
       "Date Range":
         filteredQueueLogs.length > 0
           ? `${new Date(
-              Math.min(...filteredQueueLogs.map((log) => new Date(log.date)))
+              Math.min(
+                ...filteredQueueLogs.map((log) => new Date(log.arrival_time))
+              )
             ).toLocaleDateString()} - ${new Date(
-              Math.max(...filteredQueueLogs.map((log) => new Date(log.date)))
+              Math.max(
+                ...filteredQueueLogs.map((log) => new Date(log.arrival_time))
+              )
             ).toLocaleDateString()}`
           : "No data",
       ...statusCounts,
@@ -278,13 +322,13 @@ function QueueLogs() {
 
     // Define columns for the report
     const columns = [
-      { key: "queue_number", header: "Queue #", width: 2 },
+      { key: "queue_number", header: "Q#", width: 2 },
       { key: "full_name", header: "Patient Name", width: 3 },
       { key: "appointment_type", header: "Type", width: 2 },
       { key: "service_name", header: "Service", width: 3 },
-      { key: "status", header: "Status", width: 2 },
-      { key: "priority_flag", header: "Priority", width: 2 },
-      { key: "date", header: "Date", width: 2 },
+      { key: "status", header: "Status", width: 3 },
+      { key: "priority_flag", header: "Flag", width: 2 },
+
       {
         key: "arrival_time",
         header: "Arrival Time",
@@ -389,7 +433,6 @@ function QueueLogs() {
             <option value="waiting">Waiting</option>
             <option value="in-progress">In Progress</option>
             <option value="completed">Completed</option>
-            <option value="missed">Missed</option>
           </select>
 
           <select
@@ -554,7 +597,6 @@ function QueueLogs() {
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4">
                             <span>{log.email}</span>
-                            <span>{log.phone_number}</span>
                           </div>
                         </div>
                       </div>

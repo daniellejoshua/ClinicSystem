@@ -71,6 +71,9 @@ class QueueResetService {
       const today = new Date().toISOString().split("T")[0];
       console.log(`Checking for missed appointments on ${today}...`);
 
+      // First, mark all past queue entries as completed
+      await this.markAllPastQueueEntriesAsCompleted(today);
+
       // Get all appointments from the database
       const appointmentsRef = ref(database, "appointments");
       const appointmentsSnapshot = await get(appointmentsRef);
@@ -118,8 +121,8 @@ class QueueResetService {
         processedCount: missedCount,
         message:
           missedCount > 0
-            ? `Successfully marked ${missedCount} appointment(s) as missed`
-            : "No appointments needed to be marked as missed",
+            ? `Successfully marked ${missedCount} appointment(s) as missed and completed all past queue entries`
+            : "No appointments needed to be marked as missed, but completed all past queue entries",
       };
 
       console.log(result.message);
@@ -131,6 +134,99 @@ class QueueResetService {
         error: error.message,
         message: "Error processing missed appointments",
       };
+    }
+  }
+
+  // Mark all past queue entries as completed
+  async markAllPastQueueEntriesAsCompleted(currentDate) {
+    try {
+      console.log(
+        `Marking all past queue entries as completed (before ${currentDate})...`
+      );
+
+      // Get all queue data
+      const queueRef = ref(database, "queue");
+      const queueSnapshot = await get(queueRef);
+
+      if (!queueSnapshot.exists()) {
+        console.log("No queue data found");
+        return { updatedCount: 0 };
+      }
+
+      const queueData = queueSnapshot.val();
+      let updatedCount = 0;
+      const staffData = authService.getCurrentStaff() || {
+        id: "system",
+        full_name: "System Auto-Process",
+      };
+
+      // Process each date's queue entries
+      for (const [date, dayQueue] of Object.entries(queueData)) {
+        // Only process dates before today
+        if (date < currentDate && dayQueue && typeof dayQueue === "object") {
+          // Process each queue entry for this date
+          for (const [queueId, queueItem] of Object.entries(dayQueue)) {
+            // Skip if already completed
+            if (queueItem.status !== "completed") {
+              try {
+                // Update queue entry status
+                const queueEntryRef = ref(database, `queue/${date}/${queueId}`);
+                await update(queueEntryRef, {
+                  status: "completed",
+                  updated_at: new Date().toISOString(),
+                  completed_by_system: true,
+                  completion_reason: "Auto-completed: Queue reset at midnight",
+                });
+
+                // Update corresponding appointment if it exists
+                if (queueItem.appointment_id) {
+                  const appointmentRef = ref(
+                    database,
+                    `appointments/${queueItem.appointment_id}`
+                  );
+                  await update(appointmentRef, {
+                    status: "completed",
+                    updated_at: new Date().toISOString(),
+                  });
+                }
+
+                updatedCount++;
+                console.log(
+                  `Completed queue entry ${queueId} from ${date} for patient: ${
+                    queueItem.full_name || "Unknown"
+                  }`
+                );
+              } catch (error) {
+                console.error(
+                  `Error updating queue entry ${queueId} from ${date}:`,
+                  error
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Log the bulk completion action
+      if (updatedCount > 0) {
+        await customDataService.addDataWithAutoId("audit_logs", {
+          user_ref: `staff/${staffData.id}`,
+          staff_full_name: staffData.full_name,
+          action: `Auto-completed ${updatedCount} past queue entries during system reset`,
+          ip_address: "System-Generated",
+          timestamp: new Date().toISOString(),
+          reason: "Automatic queue reset at midnight",
+          affected_count: updatedCount,
+        });
+      }
+
+      console.log(
+        `Successfully marked ${updatedCount} past queue entries as completed`
+      );
+      return { updatedCount };
+    } catch (error) {
+      console.error("Error marking past queue entries as completed:", error);
+      return { updatedCount: 0, error: error.message };
     }
   }
 
