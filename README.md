@@ -54,6 +54,13 @@ Visit [http://localhost:5173](http://localhost:5173) to view the app.
 - `src/shared` — Shared services, Firebase config, and utilities
 
 
-LICENSE
+License
+Danielle Joshua C. Esternon
 
-Danielle JOshua C. Esternon
+Group Members:
+John Robert Roldan
+Mark Kelly Honi
+Junmar Malapitan
+Jeric Junio
+
+
