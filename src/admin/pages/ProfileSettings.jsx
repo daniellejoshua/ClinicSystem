@@ -1,34 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  FaUser,
-  FaEnvelope,
-  FaLock,
-  FaCheck,
-  FaSpinner,
-  FaShieldAlt,
-} from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock, FaCheck, FaSpinner } from "react-icons/fa";
 import dataService from "../../shared/services/dataService";
-import authService from "../../shared/services/authService";
 import emailjs from "emailjs-com";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth, database } from "../../shared/config/firebase";
-import { ref, push } from "firebase/database";
+import authService from "../../shared/services/authService";
 
-const AddStaff = () => {
+const ProfileSettings = () => {
+  const currentStaff = authService.getCurrentStaff();
   const [form, setForm] = useState({
-    full_name: "",
-    email: "",
+    full_name: currentStaff?.full_name || "",
+    email: currentStaff?.email || "",
     password: "",
-    confirmPassword: "",
-    role: "admin",
+    oldPassword: "",
     pin: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [step, setStep] = useState(1); // 1: edit, 2: pin, 3: success
   const [error, setError] = useState("");
-  const [step, setStep] = useState(1); // 1: form, 2: pin verification, 3: success
-  const [showPinModal, setShowPinModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   const [generatedPin, setGeneratedPin] = useState("");
 
   const handleChange = (e) => {
@@ -37,101 +26,47 @@ const AddStaff = () => {
     setError("");
   };
 
-  // Auto-reset form after successful staff addition
-  useEffect(() => {
-    if (step === 3) {
-      const timer = setTimeout(() => {
-        setStep(1);
-        setMessage("");
-        setError("");
-        setForm({
-          full_name: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "admin",
-          pin: "",
-        });
-      }, 2000); // 2 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [step]);
-
-  // Send PIN to admin's email for verification
-  const sendPinToEmail = async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
-    console.log("sendPinToEmail called");
+  // Simulate sending PIN to email
+  const sendPinToEmail = async () => {
     setIsLoading(true);
-    setError("");
-
     try {
-      // Validate form before sending PIN
-      if (form.password !== form.confirmPassword) {
-        setError("Passwords do not match.");
+      const staff = await authService.staffLogin(
+        currentStaff.email,
+        form.oldPassword
+      );
+      if (!staff) {
+        setError("Incorrect old password.");
         setShowErrorModal(true);
         setIsLoading(false);
         return;
       }
-
-      if (form.password.length < 8) {
-        setError("Password must be at least 8 characters long.");
-        setShowErrorModal(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if email already exists
-      const allStaff = await dataService.getAllData("staff");
-      const emailExists = allStaff.find((staff) => staff.email === form.email);
-      if (emailExists) {
-        setError("Email already exists. Please use a different email.");
-        setShowErrorModal(true);
-        setIsLoading(false);
-        return;
-      }
-
       // Generate a random 6-digit PIN
       const pin = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedPin(pin);
-      console.log("Generated PIN:", pin);
-
-      // Get current admin info
-      const currentAdmin = authService.getCurrentStaff();
-      console.log("Current admin:", currentAdmin);
-
-      // Send PIN via EmailJS to the admin (not the new staff)
+      // Send PIN via EmailJS
       await emailjs.send(
         import.meta.env.VITE_EMAILJS_SERVICE_ID,
         "template_ivtnhod",
         {
-          to_email: currentAdmin.email,
-          to_name: currentAdmin.full_name,
+          to_email: form.email,
+          to_name: form.full_name,
           pin,
-          message: `PIN verification to add new staff: ${form.full_name} (${form.email})`,
         },
         import.meta.env.VITE_EMAILJS_USER_ID
       );
-
-      console.log("PIN sent successfully, showing modal");
-      setStep(2);
       setShowPinModal(true);
     } catch (err) {
-      console.error("Error sending PIN:", err);
-      setError("Failed to send PIN. Please try again.");
+      setError("Failed to send PIN or incorrect old password. Try again.");
       setShowErrorModal(true);
     }
     setIsLoading(false);
   };
 
-  // Verify PIN and add staff to database
+  // Simulate verifying PIN and updating profile
   const handleVerifyPin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-
     // Check PIN
     if (form.pin !== generatedPin) {
       setError("Invalid PIN. Please check your email and try again.");
@@ -139,54 +74,24 @@ const AddStaff = () => {
       setIsLoading(false);
       return;
     }
-
+    // Enforce new password length if provided
+    if (form.password && form.password.length < 8) {
+      setError("New password must be at least 8 characters long.");
+      setShowErrorModal(true);
+      setIsLoading(false);
+      return;
+    }
     try {
-      // Add staff to both Firebase Auth and database after PIN verification
-      const { confirmPassword, pin, ...staffData } = form;
-
-      // Create Firebase Auth account and database record
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        staffData.email,
-        staffData.password
-      );
-      const user = userCredential.user;
-
-      // Add staff to database with Firebase UID
-      const staffRef = ref(database, "staff");
-      const newStaffRef = await push(staffRef, {
-        email: staffData.email,
-        full_name: staffData.full_name,
-        role: staffData.role,
-        created_at: new Date().toISOString(),
-        uid: user.uid,
+      // Update profile in DB using correct staff ID path
+      await dataService.updateData(`staff/${currentStaff.id}`, {
+        full_name: form.full_name,
+        email: form.email,
+        ...(form.password ? { password: form.password } : {}),
       });
-
-      // Log the action
-      const currentAdmin = authService.getCurrentStaff();
-      await dataService.addDataWithAutoId("audit_logs", {
-        user_ref: `staff/${currentAdmin.id}`,
-        staff_full_name: currentAdmin.full_name,
-        action: `Added new ${staffData.role}: ${staffData.full_name} (${staffData.email})`,
-        ip_address: "192.168.1.100",
-        timestamp: new Date().toISOString(),
-      });
-
-      setMessage(`✅ Staff added successfully! ID: ${newStaffRef.key}`);
       setStep(3);
       setShowPinModal(false);
-
-      // Reset form
-      setForm({
-        full_name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "admin",
-        pin: "",
-      });
-    } catch (error) {
-      setError("❌ Error adding staff: " + error.message);
+    } catch (err) {
+      setError("Failed to update profile. Try again.");
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
@@ -195,31 +100,27 @@ const AddStaff = () => {
 
   return (
     <div className="max-w-lg mx-auto p-6 mt-8 mb-8 bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 rounded-3xl shadow-2xl border border-blue-200 dark:border-gray-800 relative">
-      {/* Admin Only Badge */}
-      <div className="absolute top-4 right-4">
-        <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-          <FaShieldAlt className="h-4 w-4" />
-          Admin Only
-        </div>
-      </div>
-
       <div className="flex flex-col items-center mb-6">
         <div className="bg-blue-100 dark:bg-gray-800 p-4 rounded-full mb-2 shadow">
           <FaUser className="h-10 w-10 text-blue-600 dark:text-blue-300" />
         </div>
         <h2 className="text-3xl font-bold text-blue-800 dark:text-white text-center">
-          Add New Staff
+          Profile Settings
         </h2>
         <p className="text-blue-600 dark:text-gray-300 text-center mt-2">
-          Register a new staff member for your clinic system.
+          Update your profile information securely.
         </p>
       </div>
       <div className="border-b border-blue-200 mb-6" />
       <div className="border-b border-blue-200 dark:border-gray-700 mb-6" />
-
-      {/* Step 1: Staff Details Form */}
       {step === 1 && (
-        <form onSubmit={sendPinToEmail} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendPinToEmail();
+          }}
+          className="space-y-6"
+        >
           <div className="relative">
             <label className="block font-semibold mb-2 text-blue-700 dark:text-gray-200">
               Full Name
@@ -251,16 +152,35 @@ const AddStaff = () => {
                 type="email"
                 name="email"
                 value={form.email}
-                onChange={handleChange}
+                readOnly
                 required
-                className="w-full border border-blue-300 dark:border-gray-700 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-lg bg-white dark:bg-gray-900 dark:text-white shadow-sm"
-                placeholder="Email"
+                className="w-full border border-blue-300 dark:border-gray-700 rounded-lg pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 dark:text-white shadow-sm cursor-not-allowed"
+                placeholder="Email (cannot be changed)"
               />
             </div>
           </div>
           <div className="relative">
             <label className="block font-semibold mb-2 text-blue-700 dark:text-gray-200">
-              Password
+              Old Password
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-blue-400 dark:text-blue-300">
+                <FaLock className="h-5 w-5" />
+              </span>
+              <input
+                type="password"
+                name="oldPassword"
+                value={form.oldPassword}
+                onChange={handleChange}
+                required
+                className="w-full border border-blue-300 dark:border-gray-700 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-lg bg-white dark:bg-gray-900 dark:text-white shadow-sm"
+                placeholder="Enter your current password"
+              />
+            </div>
+          </div>
+          <div className="relative">
+            <label className="block font-semibold mb-2 text-blue-700 dark:text-gray-200">
+              New Password
             </label>
             <div className="relative flex items-center">
               <span className="absolute left-4 text-blue-400 dark:text-blue-300">
@@ -271,44 +191,11 @@ const AddStaff = () => {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
-                required
+                minLength={8}
                 className="w-full border border-blue-300 dark:border-gray-700 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-lg bg-white dark:bg-gray-900 dark:text-white shadow-sm"
-                placeholder="Password"
+                placeholder="New Password (min 8 characters)"
               />
             </div>
-          </div>
-          <div className="relative">
-            <label className="block font-semibold mb-2 text-blue-700 dark:text-gray-200">
-              Confirm Password
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-4 text-blue-400 dark:text-blue-300">
-                <FaLock className="h-5 w-5" />
-              </span>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                required
-                className="w-full border border-blue-300 dark:border-gray-700 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-blue-400 focus:outline-none text-lg bg-white dark:bg-gray-900 dark:text-white shadow-sm"
-                placeholder="Confirm Password"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block font-semibold mb-2 text-blue-700 dark:text-gray-200">
-              Role
-            </label>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              className="w-full border border-blue-300 dark:border-gray-700 rounded-lg px-4 py-3 bg-white dark:bg-gray-800 text-blue-700 dark:text-gray-300 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-            </select>
           </div>
           <button
             type="submit"
@@ -323,26 +210,12 @@ const AddStaff = () => {
             ) : (
               <span className="flex items-center justify-center gap-2">
                 <FaCheck className="h-5 w-5" />
-                Send Verification PIN
+                Update Profile
               </span>
             )}
           </button>
         </form>
       )}
-
-      {/* Success Message */}
-      {step === 3 && (
-        <div className="text-center py-8">
-          <div className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300 rounded-full p-4 mb-4 mx-auto w-max">
-            <FaCheck className="h-8 w-8" />
-          </div>
-          <h2 className="text-2xl font-bold text-green-700 dark:text-green-300 mb-2">
-            Staff Added Successfully!
-          </h2>
-          <p className="text-gray-700 dark:text-gray-300 mb-6">{message}</p>
-        </div>
-      )}
-
       {/* PIN Modal */}
       {showPinModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -355,22 +228,22 @@ const AddStaff = () => {
             className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-blue-500 dark:border-gray-700 z-10 flex flex-col items-center"
           >
             <h2 className="text-xl font-bold text-blue-700 dark:text-white mb-4">
-              Enter PIN to Confirm
+              Enter PIN
             </h2>
-            <p className="text-center text-gray-600 dark:text-gray-400 mb-4 text-sm">
-              A 6-digit PIN has been sent to your email for security
-              verification.
-            </p>
             <input
               type="text"
               name="pin"
               value={form.pin}
               onChange={handleChange}
               required
-              maxLength={6}
-              className="w-full border border-blue-300 dark:border-gray-700 rounded-lg px-4 py-3 mb-4 bg-white dark:bg-gray-900 dark:text-white shadow-sm text-center text-lg font-mono"
-              placeholder="Enter 6-digit PIN"
+              className="w-full border border-blue-300 dark:border-gray-700 rounded-lg px-4 py-3 mb-4 bg-white dark:bg-gray-900 dark:text-white shadow-sm"
+              placeholder="Enter 6-digit PIN sent to your email"
             />
+            {error && (
+              <div className="text-red-600 dark:text-red-400 text-center font-semibold mb-2">
+                {error}
+              </div>
+            )}
             <button
               type="submit"
               disabled={isLoading}
@@ -379,26 +252,31 @@ const AddStaff = () => {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <FaSpinner className="animate-spin h-5 w-5 text-white" />
-                  Adding Staff...
+                  Verifying...
                 </span>
               ) : (
                 <span className="flex items-center justify-center gap-2">
                   <FaCheck className="h-5 w-5" />
-                  Confirm & Add Staff
+                  Confirm & Update
                 </span>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowPinModal(false)}
-              className="w-full mt-2 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 rounded-lg font-medium transition-all duration-200"
-            >
-              Cancel
             </button>
           </form>
         </div>
       )}
-
+      {step === 3 && (
+        <div className="text-center py-8">
+          <div className="bg-blue-100 dark:bg-gray-800 text-blue-600 dark:text-blue-300 rounded-full p-4 mb-4 mx-auto w-max">
+            <FaCheck className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-blue-700 dark:text-white mb-2">
+            Profile Updated!
+          </h2>
+          <p className="text-gray-700 dark:text-gray-300 mb-6">
+            Your profile has been successfully updated.
+          </p>
+        </div>
+      )}
       {/* Error Modal */}
       {showErrorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -426,4 +304,4 @@ const AddStaff = () => {
   );
 };
 
-export default AddStaff;
+export default ProfileSettings;

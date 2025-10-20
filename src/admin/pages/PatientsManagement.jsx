@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FaUsers,
   FaSearch,
@@ -17,7 +17,10 @@ import {
   FaGlobe,
   FaWalking,
 } from "react-icons/fa";
+import { Download } from "lucide-react";
 import customDataService from "../../shared/services/customDataService";
+import authService from "../../shared/services/authService";
+import reportService from "../../shared/services/reportService";
 
 const PatientsManagement = () => {
   const [patients, setPatients] = useState([]);
@@ -29,6 +32,14 @@ const PatientsManagement = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [patientFilter, setPatientFilter] = useState("all");
+
+  // Check if current user is admin
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status on component mount
+  useEffect(() => {
+    setIsAdmin(authService.isAdmin());
+  }, []);
 
   // Load all data with references
   useEffect(() => {
@@ -119,6 +130,93 @@ const PatientsManagement = () => {
     return matchesSearch;
   });
 
+  // Generate PDF Report for Patients
+  const generatePDFReport = async () => {
+    // Prepare filters object
+    const filters = {};
+    if (searchTerm) filters["Search Term"] = searchTerm;
+    if (patientFilter && patientFilter !== "all")
+      filters["Status"] = patientFilter;
+
+    // Prepare summary statistics
+    const statusCounts = {};
+    const ageCounts = {
+      "Under 18": 0,
+      "18-30": 0,
+      "31-50": 0,
+      "51-65": 0,
+      "Over 65": 0,
+    };
+
+    filteredPatients.forEach((patient) => {
+      // Count by status
+      const status = patient.status || "Unknown";
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+      // Count by age groups (if date_of_birth exists)
+      if (patient.date_of_birth) {
+        const age =
+          new Date().getFullYear() -
+          new Date(patient.date_of_birth).getFullYear();
+        if (age < 18) ageCounts["Under 18"]++;
+        else if (age <= 30) ageCounts["18-30"]++;
+        else if (age <= 50) ageCounts["31-50"]++;
+        else if (age <= 65) ageCounts["51-65"]++;
+        else ageCounts["Over 65"]++;
+      }
+    });
+
+    const summary = {
+      "Total Patients": filteredPatients.length,
+      "Registration Period":
+        filteredPatients.length > 0
+          ? `${new Date(
+              Math.min(
+                ...filteredPatients.map(
+                  (patient) => new Date(patient.created_at || Date.now())
+                )
+              )
+            ).toLocaleDateString()} - ${new Date(
+              Math.max(
+                ...filteredPatients.map(
+                  (patient) => new Date(patient.created_at || Date.now())
+                )
+              )
+            ).toLocaleDateString()}`
+          : "No data",
+      ...statusCounts,
+      ...ageCounts,
+    };
+
+    // Define columns for the report
+    const columns = [
+      { key: "full_name", header: "Patient Name", width: 3 },
+      { key: "email", header: "Email", width: 4 },
+      { key: "phone_number", header: "Phone", width: 3 },
+      { key: "date_of_birth", header: "Date of Birth", width: 3, type: "date" },
+      { key: "sex", header: "Sex", width: 2 },
+    ];
+
+    // Prepare data for report
+    const reportData = filteredPatients.map((patient) => ({
+      ...patient,
+      full_name: patient.full_name || "Unknown Patient",
+      email: patient.email || "N/A",
+      phone_number: patient.phone_number || "N/A",
+      date_of_birth: patient.date_of_birth || "N/A",
+      sex: patient.sex || "N/A",
+    }));
+
+    await reportService.generatePDF({
+      title: "Patients Report",
+      data: reportData,
+      columns,
+      filters,
+      summary,
+      fileName: `patients-report-${new Date().toISOString().split("T")[0]}.pdf`,
+    });
+  };
+
   const viewPatientDetails = (patient) => {
     setSelectedPatient(patient);
     setShowModal(true);
@@ -162,57 +260,69 @@ const PatientsManagement = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-white dark:bg-gray-900 min-h-screen transition-colors duration-300">
       {/* Header */}
-
-      {/* Stats Card: Only Total Patients */}
-      <div className="mb-4 text-lg font-bold text-primary">
+      <div className="mb-4 text-lg font-bold text-primary dark:text-blue-300">
         Total Patients: {filteredPatients.length}
       </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <div className="relative">
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search patients by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
-          />
+      {/* Search and Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="relative flex-1">
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search patients by name, email, or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:border-primary dark:focus:border-blue-400 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                onClick={generatePDFReport}
+                title="Generate PDF Report"
+              >
+                <Download className="h-4 w-4" />
+                PDF Report
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Patients Table - scrollable, sticky header, no queue column */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Patients Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+            <thead className="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Patient Info
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Phone Number
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Service (Referenced)
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Appointments
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredPatients.length === 0 ? (
                 <tr>
                   <td
                     colSpan="5"
-                    className="px-6 py-8 text-center text-gray-500"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
                     {searchTerm
                       ? "No patients found matching your search."
@@ -225,17 +335,20 @@ const PatientsManagement = () => {
                     patient.id
                   );
                   return (
-                    <tr key={patient.id} className="hover:bg-gray-50">
+                    <tr
+                      key={patient.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+                          <div className="w-10 h-10 bg-primary dark:bg-blue-700 rounded-full flex items-center justify-center text-white font-bold">
                             {patient.full_name?.charAt(0) || "P"}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {patient.full_name || "Unknown Name"}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-4">
+                            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4">
                               <span className="flex items-center gap-1">
                                 <FaEnvelope className="w-3 h-3" />
                                 {patient.email}
@@ -245,35 +358,35 @@ const PatientsManagement = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-gray-700 dark:text-gray-200">
                           <FaPhone className="w-3 h-3" />
                           {patient.phone_number}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-gray-100">
                           {getServiceName(patient.service_ref)}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           Ref: {patient.service_ref || "No reference"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-gray-900 dark:text-gray-100">
                           {patientAppointments.length} appointment(s)
                         </div>
                         {patientAppointments.length > 0 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
                             Latest with:{" "}
                             {getStaffName(patientAppointments[0].staff_ref)}
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => viewPatientDetails(patient)}
-                            className="text-primary hover:text-primary/80 p-1 rounded"
+                            className="text-primary dark:text-blue-400 hover:text-primary/80 dark:hover:text-blue-300 p-1 rounded"
                             title="View Details"
                           >
                             <FaEye />
@@ -292,83 +405,90 @@ const PatientsManagement = () => {
       {/* Patient Details Modal */}
       {showModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white border-2 border-primary rounded-2xl shadow-2xl max-w-2xl w-full m-4 max-h-[90%] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 border-2 border-primary dark:border-blue-700 rounded-2xl shadow-2xl max-w-2xl w-full m-4 max-h-[90%] overflow-y-auto">
             <div className="p-8">
               {/* Modal Header */}
-              <div className="flex items-center justify-between mb-8 border-b pb-4">
-                <h2 className="text-2xl font-yeseva text-primary">
+              <div className="flex items-center justify-between mb-8 border-b pb-4 border-gray-200 dark:border-gray-700">
+                <h2 className="text-2xl font-yeseva text-primary dark:text-blue-300">
                   Patient Details: {selectedPatient.full_name}
                 </h2>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 text-2xl"
                   aria-label="Close"
                 >
                   ×
                 </button>
               </div>
               {/* Patient Information */}
-
               <div className="flex flex-col items-center mb-8">
-                <div className="bg-white rounded-2xl border-2 border-primary shadow-lg p-8 w-full max-w-md">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary dark:border-blue-700 shadow-lg p-8 w-full max-w-md">
                   <div className="flex flex-col items-center mb-4">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2">
+                    <div className="w-16 h-16 bg-primary dark:bg-blue-700 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-2">
                       {selectedPatient.full_name?.charAt(0) || "P"}
                     </div>
-                    <h3 className="text-xl font-yeseva text-primary font-bold mb-1">
+                    <h3 className="text-xl font-yeseva text-primary dark:text-blue-300 font-bold mb-1">
                       {selectedPatient.full_name}
                     </h3>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       Patient ID: {selectedPatient.id}
                     </span>
                   </div>
-                  <div className="space-y-3 text-base text-gray-700">
+                  <div className="space-y-3 text-base text-gray-700 dark:text-gray-200">
                     <div className="flex items-center gap-2">
-                      <FaEnvelope className="text-primary" />
+                      <FaEnvelope className="text-primary dark:text-blue-400" />
                       <span>
                         <strong>Email:</strong>{" "}
                         {selectedPatient.email || (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-500">
+                            N/A
+                          </span>
                         )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FaPhone className="text-primary" />
+                      <FaPhone className="text-primary dark:text-blue-400" />
                       <span>
                         <strong>Phone:</strong>{" "}
                         {selectedPatient.phone_number || (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-500">
+                            N/A
+                          </span>
                         )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FaCalendar className="text-primary" />
+                      <FaCalendar className="text-primary dark:text-blue-400" />
                       <span>
                         <strong>Date of Birth:</strong>{" "}
                         {selectedPatient.date_of_birth || (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-500">
+                            N/A
+                          </span>
                         )}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <FaUser className="text-primary" />
+                      <FaUser className="text-primary dark:text-blue-400" />
                       <span>
                         <strong>Sex:</strong>{" "}
                         {selectedPatient.sex || (
-                          <span className="text-gray-400">N/A</span>
+                          <span className="text-gray-400 dark:text-gray-500">
+                            N/A
+                          </span>
                         )}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
-              {/* Appointments - Improved Design, Only Relevant Data */}
+              {/* Appointments */}
               <div className="mb-8">
-                <h3 className="text-lg font-yeseva font-bold text-primary mb-4 tracking-wide">
+                <h3 className="text-lg font-yeseva font-bold text-primary dark:text-blue-300 mb-4 tracking-wide">
                   Related Appointments
                 </h3>
                 {getPatientAppointments(selectedPatient.id).length === 0 ? (
-                  <p className="text-gray-400 text-base italic">
+                  <p className="text-gray-400 dark:text-gray-500 text-base italic">
                     No appointments found.
                   </p>
                 ) : (
@@ -376,16 +496,16 @@ const PatientsManagement = () => {
                     (appointment, index) => (
                       <div
                         key={appointment.id}
-                        className="bg-white border border-gray-200 rounded-lg p-4 mb-4 grid grid-cols-12 items-center shadow-sm hover:shadow-md transition"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 grid grid-cols-12 items-center shadow-sm hover:shadow-md transition"
                       >
                         {/* Left: Info */}
                         <div className="col-span-10 flex flex-col gap-2 justify-center">
                           <div className="flex flex-wrap items-center gap-3">
-                            <span className="inline-flex items-center gap-2 bg-primary text-white rounded px-3 py-1 text-xs font-bold font-yeseva">
+                            <span className="inline-flex items-center gap-2 bg-primary dark:bg-blue-700 text-white rounded px-3 py-1 text-xs font-bold font-yeseva">
                               <FaStethoscope className="inline mr-1" />
                               Appointment #{index + 1}
                             </span>
-                            <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700">
+                            <span className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200">
                               <FaCalendar className="inline" />
                               {appointment.appointment_date
                                 ? new Date(
@@ -395,7 +515,7 @@ const PatientsManagement = () => {
                             </span>
                             {appointment.appointment_type === "online" &&
                               appointment.preferred_date && (
-                                <span className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700">
+                                <span className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 dark:text-blue-300">
                                   <FaCalendar className="inline" />
                                   Preferred:{" "}
                                   {new Date(
@@ -405,8 +525,8 @@ const PatientsManagement = () => {
                               )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3">
-                            <span className="flex items-center gap-2 text-xs text-gray-700">
-                              <FaClock className="text-primary" />
+                            <span className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                              <FaClock className="text-primary dark:text-blue-400" />
                               <strong>Status:</strong>
                               <span
                                 className={`px-2 py-0.5 rounded font-semibold ${getStatusColor(
@@ -416,15 +536,15 @@ const PatientsManagement = () => {
                                 {appointment.status}
                               </span>
                             </span>
-                            <span className="flex items-center gap-2 text-xs text-gray-700">
-                              <FaUser className="text-primary" />
+                            <span className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                              <FaUser className="text-primary dark:text-blue-400" />
                               <strong>Type:</strong>
                               {appointment.appointment_type === "online"
                                 ? "Online"
                                 : "Walk-in"}
                             </span>
-                            <span className="flex items-center gap-2 text-xs text-gray-700">
-                              <FaStethoscope className="text-primary" />
+                            <span className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-200">
+                              <FaStethoscope className="text-primary dark:text-blue-400" />
                               <strong>Service:</strong>
                               {getServiceName(appointment.service_ref)}
                             </span>
@@ -432,7 +552,7 @@ const PatientsManagement = () => {
                         </div>
                         {/* Divider */}
                         <div className="col-span-1 flex justify-center relative right-2">
-                          <div className="w-0.5 h-12 bg-gray-200" />
+                          <div className="w-0.5 h-12 bg-gray-200 dark:bg-gray-700" />
                         </div>
                         {/* Right: Priority */}
                         <div className="col-span-1 flex flex-col items-center justify-center relative right-2">
@@ -444,7 +564,7 @@ const PatientsManagement = () => {
                             <FaFlag className="mr-1" />
                             {appointment.priority_flag || "normal"}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-400 dark:text-gray-200">
                             Priority
                           </span>
                         </div>

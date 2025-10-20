@@ -6,7 +6,7 @@ import Contact from "../components/Contact";
 
 export default function Home() {
   return (
-    <div>
+    <div className="w-full lg:overflow-x-hidden">
       <HeroSection />
       <HeroSection2 />
       <OurServices />

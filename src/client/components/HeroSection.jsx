@@ -24,7 +24,16 @@ export default function Hero() {
         <div className="absolute left-8 bottom-20 w-24 h-24 md:hidden bg-accent/20 rounded-full z-5"></div>
 
         {/* Text content - centered on mobile */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 md:left-[24rem] md:transform-none top-1/2 lg:top-1/3 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[750px] px-4 md:px-0 text-center md:text-left">
+        <style>{`
+            @media (min-width: 770px) and (max-width: 1050px) {
+              .force-center-hero-text {
+                left: 50% !important;
+                transform: translateX(-50%) translateY(-50%) !important;
+                text-align: center !important;
+              }
+            }
+          `}</style>
+        <div className="absolute left-1/2 transform -translate-x-1/2 md:left-[24rem] md:transform-none top-1/2 lg:top-1/3 -translate-y-1/2 z-20 max-w-[90%] md:max-w-[750px] px-4 md:px-0 text-center md:text-left force-center-hero-text">
           <h1 className="text-lg md:text-xl font-bold text-secondary mb-4 font-worksans tracking-[.3rem] md:tracking-[.5rem]">
             CARING FOR LIFE
           </h1>
@@ -44,7 +53,12 @@ export default function Hero() {
           </Link>
           {/* Desktop - Our Services Button */}
           <Link to="/services">
-            <button className="hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
+            <style>{`
+              @media (min-width: 750px) and (max-width: 1009px) {
+                .hide-services-btn { display: none !important; }
+              }
+            `}</style>
+            <button className="hide-services-btn hidden md:block w-auto bg-accent text-primary px-8 py-3 rounded-full font-semibold hover:bg-accent/90 transition-colors font-worksans text-base shadow-lg">
               Our Services
             </button>
           </Link>

@@ -22,16 +22,34 @@ export default function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log("Form submitted:", formData);
 
-    alert("Message sent successfully!");
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    });
+    // Create mailto link with form data
+    const subject = encodeURIComponent(
+      formData.subject || "Contact from Website"
+    );
+    const body = encodeURIComponent(
+      `Hello Tonsuya Super Health Center,\n\n` +
+        `Name: ${formData.name}\n` +
+        `Email: ${formData.email}\n` +
+        `Subject: ${formData.subject}\n\n` +
+        `Message:\n${formData.message}\n\n` +
+        `Best regards,\n${formData.name}`
+    );
+
+    const mailtoLink = `mailto:tonsuyasuperhealthcenter499@gmail.com?subject=${subject}&body=${body}`;
+
+    // Open default email client
+    window.location.href = mailtoLink;
+
+    // Optional: Reset form after opening email client
+    setTimeout(() => {
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    }, 1000);
   };
 
   return (
@@ -47,12 +65,12 @@ export default function Contact() {
         ></div>
 
         {/* White Rectangle Overlay - 50% Opacity */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        <div className="absolute inset-0 bg-primary/60"></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-primary mb-4">
+          <div className="flex items-center gap-2 text-primary mb-4  text-white">
             <button
               onClick={() => navigate("/")}
               className="font-worksans hover:text-accent transition-colors"
@@ -60,11 +78,11 @@ export default function Contact() {
               Home
             </button>
             <span>/</span>
-            <span className="font-worksans">Contact</span>
+            <span className="font-worksans ">Contact</span>
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6 text-white">
             Our Contacts
           </h1>
         </div>
@@ -250,7 +268,7 @@ export default function Contact() {
                   </h3>
 
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base">
-                    myebstudios@gmail.com
+                    tonsuyasuperhealthcenter499@gmail.com
                   </p>
                 </div>
 
@@ -263,7 +281,7 @@ export default function Contact() {
                     WORKING HOURS
                   </h3>
                   <p className="text-primary font-worksans text-xs sm:text-sm md:text-base mb-1">
-                    Mon-Sat 09:00-20:00
+                    Mon-Sat 08:00-20:00
                   </p>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 // This is the main dashboard for clinic staff and admins
 // It shows stats, charts, and lets staff manage patients, queue, and appointments
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   FaCalendarAlt,
   FaWalking,
@@ -64,11 +64,76 @@ const chartColors = {
   },
 };
 
+// Auto-close timer component
+const AutoCloseTimer = ({ duration, onComplete, isDarkMode }) => {
+  const [timeLeft, setTimeLeft] = useState(duration / 1000);
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        const newTime = prev - 1;
+        const newProgress = (newTime / (duration / 1000)) * 100;
+        setProgress(newProgress);
+
+        if (newTime <= 0) {
+          clearInterval(timer);
+          onComplete();
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [duration, onComplete]);
+
+  return (
+    <div
+      className={`flex items-center space-x-2 p-2 rounded-full ${
+        isDarkMode
+          ? "bg-neutral-700/50 text-gray-300"
+          : "bg-gray-100/80 text-gray-600"
+      }`}
+    >
+      <div className="relative w-6 h-6">
+        <svg className="w-6 h-6 transform -rotate-90" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke={isDarkMode ? "#374151" : "#e5e7eb"}
+            strokeWidth="2"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke={isDarkMode ? "#10b981" : "#059669"}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 10}`}
+            strokeDashoffset={`${2 * Math.PI * 10 * (1 - progress / 100)}`}
+            className="transition-all duration-1000 ease-linear"
+          />
+        </svg>
+      </div>
+      <span className="text-xs font-medium">{timeLeft}s</span>
+    </div>
+  );
+};
+
 const AdminDashboard = () => {
-  // UI state for showing/hiding forms and dark mode
+  // UI state for showing/hiding forms
   const [showPatientForm, setShowPatientForm] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("3months");
+  const [successModal, setSuccessModal] = useState({
+    show: false,
+    queueNumber: null,
+    patientName: "",
+  });
 
   // Data state for dashboard info
   const [services, setServices] = useState([]); // List of clinic services
@@ -98,6 +163,7 @@ const AdminDashboard = () => {
   });
 
   // Get current theme colors
+  const isDarkMode = document.documentElement.classList.contains("dark");
   const currentColors = isDarkMode ? chartColors.dark : chartColors.light;
 
   // Get current chart data from real analytics (fallback to empty array)
@@ -188,17 +254,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadDashboardData();
     setCurrentStaff(authService.getCurrentStaff());
-
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem("theme");
-    const isDark = savedTheme === "dark";
-    setIsDarkMode(isDark);
-
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
 
     // Real-time patients listener
     const unsubscribePatients = customDataService.subscribeToRealtimeData(
@@ -454,9 +509,12 @@ const AdminDashboard = () => {
         // Reload data
         loadDashboardData();
 
-        alert(
-          `✅ Walk-in patient registered successfully! Queue Number: ${result.queueNumber}`
-        );
+        // Show success modal instead of alert
+        setSuccessModal({
+          show: true,
+          queueNumber: result.queueNumber,
+          patientName: patientForm.full_name,
+        });
       } else {
         throw new Error(result.error || "Failed to register walk-in patient");
       }
@@ -490,13 +548,86 @@ const AdminDashboard = () => {
     analyticsData.totals.waitingPatients ||
     patients.filter((p) => p.status === "waiting").length;
 
+  // Calculate real percentage changes based on actual data
+  const calculatePercentageChange = (current, previous) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return (((current - previous) / previous) * 100).toFixed(1);
+  };
+
+  // Get data from last month for comparison
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const thisMonthPatients = patients.filter((p) => {
+    const createdDate = new Date(p.created_at);
+    return createdDate >= thisMonth;
+  }).length;
+
+  const lastMonthPatients = patients.filter((p) => {
+    const createdDate = new Date(p.created_at);
+    return createdDate >= lastMonth && createdDate < thisMonth;
+  }).length;
+
+  const thisMonthOnline = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return appointmentDate >= thisMonth && a.appointment_type === "online";
+  }).length;
+
+  const lastMonthOnline = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= lastMonth &&
+      appointmentDate < thisMonth &&
+      a.appointment_type === "online"
+    );
+  }).length;
+
+  const thisMonthWalkin = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= thisMonth &&
+      (a.appointment_type === "walk-in" || a.appointment_type === "walkin")
+    );
+  }).length;
+
+  const lastMonthWalkin = appointments.filter((a) => {
+    const appointmentDate = new Date(a.created_at || a.appointment_date);
+    return (
+      appointmentDate >= lastMonth &&
+      appointmentDate < thisMonth &&
+      (a.appointment_type === "walk-in" || a.appointment_type === "walkin")
+    );
+  }).length;
+
+  // Calculate percentage changes
+  const patientsChange = calculatePercentageChange(
+    thisMonthPatients,
+    lastMonthPatients
+  );
+  const onlineChange = calculatePercentageChange(
+    thisMonthOnline,
+    lastMonthOnline
+  );
+  const walkinChange = calculatePercentageChange(
+    thisMonthWalkin,
+    lastMonthWalkin
+  );
+
+  // For today's queue, compare with yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayDateString = yesterday.toISOString().split("T")[0];
+
+  // This would need queue history data - for now we'll show current count
+  const queueChange = todayQueue.length > 0 ? "Active" : "No queue";
+
   return (
     <div
-      className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 ${
-        isDarkMode ? "dark bg-gray-900" : "bg-gray-50"
-      }`}
+      className={`flex-1 space-y-4 p-4 md:p-8 pt-6 min-h-screen transition-colors duration-300 bg-gray-50 dark:bg-gray-900`}
     >
       {/* Header */}
+      {/* Use your AdminHeader here if needed, without dark mode props */}
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -506,18 +637,6 @@ const AdminDashboard = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleDarkMode}
-            className="mr-2"
-          >
-            {isDarkMode ? (
-              <FaSun className="h-4 w-4" />
-            ) : (
-              <FaMoon className="h-4 w-4" />
-            )}
-          </Button>
           <Button onClick={() => setShowPatientForm(true)}>
             <FaPlus className="mr-2 h-4 w-4" />
             Register New Patient
@@ -527,60 +646,69 @@ const AdminDashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Total Patients
             </CardTitle>
-            <FaUsers className="h-4 w-4 text-muted-foreground" />
+            <FaUsers className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPatients}</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalPatients}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {patientsChange >= 0 ? "+" : ""}
+              {patientsChange}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Online Appointments
             </CardTitle>
-            <FaGlobe className="h-4 w-4 text-muted-foreground" />
+            <FaGlobe className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{onlineAppointments}</div>
-            <p className="text-xs text-muted-foreground">
-              +180.1% from last month
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {onlineAppointments}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {onlineChange >= 0 ? "+" : ""}
+              {onlineChange}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Walk-in Patients
             </CardTitle>
-            <FaWalking className="h-4 w-4 text-muted-foreground" />
+            <FaWalking className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{walkinAppointments}</div>
-            <p className="text-xs text-muted-foreground">
-              +19% from last month
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {walkinAppointments}
+            </div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400 mt-5">
+              {walkinChange >= 0 ? "+" : ""}
+              {walkinChange}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
               Today's In Queue
             </CardTitle>
-            <FaCalendarAlt className="h-4 w-4 text-muted-foreground" />
+            <FaCalendarAlt className="h-4 w-4 text-muted-foreground dark:text-gray-300" />
           </CardHeader>
           <CardContent>
-            <div className="text-xs text-muted-foreground mb-2">
+            <div className="text-xs text-muted-foreground dark:text-gray-400 mb-2">
               {new Date().toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",
@@ -588,6 +716,9 @@ const AdminDashboard = () => {
               })}
             </div>
             <div className="text-2xl font-bold">{todayQueue.length}</div>
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
+              {queueChange}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -595,12 +726,14 @@ const AdminDashboard = () => {
       {/* Chart Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         {/* Appointment Overview AreaChart card */}
-        <Card className="w-full">
+        <Card className="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Appointment Overview</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-gray-900 dark:text-white">
+                  Appointment Overview
+                </CardTitle>
+                <CardDescription className="text-muted-foreground dark:text-gray-400">
                   Online vs Walk-in appointments -{" "}
                   {getPeriodLabel(selectedPeriod)}
                 </CardDescription>
@@ -632,7 +765,10 @@ const AdminDashboard = () => {
             </div>
           </CardHeader>
           <CardContent className="pl-2">
-            <ChartContainer config={chartConfig}>
+            <ChartContainer
+              config={chartConfig}
+              className="bg-white dark:bg-neutral-900 rounded-lg p-2"
+            >
               <AreaChart
                 accessibilityLayer
                 data={chartData}
@@ -722,10 +858,12 @@ const AdminDashboard = () => {
         </Card>
 
         {/* Recent Activity Card */}
-        <Card className="w-full">
+        <Card className="w-full bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-gray-900 dark:text-white">
+              Recent Activity
+            </CardTitle>
+            <CardDescription className="text-muted-foreground dark:text-gray-400">
               Latest staff actions and patient updates
             </CardDescription>
           </CardHeader>
@@ -733,7 +871,9 @@ const AdminDashboard = () => {
             <div className="space-y-6">
               {auditLogs.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  No recent activity yet.
+                  <span className="dark:text-gray-400">
+                    No recent activity yet.
+                  </span>
                 </div>
               ) : (
                 auditLogs
@@ -789,6 +929,15 @@ const AdminDashboard = () => {
                           </span>
                           <span className="text-xs text-gray-600 dark:text-gray-300">
                             {(() => {
+                              // Check if there's a staff_full_name field first
+                              if (
+                                log.staff_full_name &&
+                                log.staff_full_name.trim() !== ""
+                              ) {
+                                return `${log.staff_full_name} • `;
+                              }
+
+                              // Fallback to looking up staff by user_ref
                               if (
                                 log.user_ref &&
                                 log.user_ref.startsWith("staff/")
@@ -798,11 +947,14 @@ const AdminDashboard = () => {
                                   (s) => s.id === staffId
                                 );
                                 return staffMember &&
+                                  staffMember.full_name &&
                                   staffMember.full_name.trim() !== ""
                                   ? `${staffMember.full_name} • `
                                   : "Unknown Staff • ";
                               }
-                              return `${log.user_ref} • `;
+
+                              // If no user_ref or doesn't match pattern, show generic
+                              return "System • ";
                             })()}
                             {new Date(log.timestamp).toLocaleString()}
                           </span>
@@ -817,12 +969,14 @@ const AdminDashboard = () => {
       </div>
 
       {/* Service Utilization Stats Card - full width below */}
-      <Card className="w-full mt-4">
+      <Card className="w-full mt-4 bg-white dark:bg-neutral-900 border border-gray-200 dark:border-gray-800 shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Service Utilization Stats</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-gray-900 dark:text-white">
+                Service Utilization Stats
+              </CardTitle>
+              <CardDescription className="text-muted-foreground dark:text-gray-400">
                 Number of appointments per service -{" "}
                 {getServicePeriodLabel(servicePeriod)}
               </CardDescription>
@@ -853,11 +1007,11 @@ const AdminDashboard = () => {
         </CardHeader>
         <CardContent>
           {serviceUtilization.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground dark:text-gray-400">
               No service utilization data yet.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart
                 data={serviceUtilization}
                 barCategoryGap="20%"
@@ -957,21 +1111,43 @@ const AdminDashboard = () => {
           }}
         >
           {/* Enhanced Backdrop */}
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
           {/* Modal Content */}
-          <Card className="relative w-full max-w-lg mx-auto bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-2xl border-2">
+          <Card
+            className={`relative w-full max-w-lg mx-auto backdrop-blur shadow-2xl border ${
+              isDarkMode
+                ? "bg-neutral-800 text-white border-gray-700 supports-[backdrop-filter]:bg-neutral-800/80"
+                : "bg-white text-gray-900 border-gray-300 supports-[backdrop-filter]:bg-white/90"
+            }`}
+          >
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between ">
                 <div className="flex items-center space-x-2">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <FaWalking className="h-5 w-5 text-primary" />
+                  <div
+                    className={`p-2 rounded-full ${
+                      isDarkMode ? "bg-primary/20" : "bg-white/70"
+                    }`}
+                  >
+                    <FaWalking
+                      className={`h-5 w-5 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">
+                    <CardTitle
+                      className={`text-xl ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Register Walk-in Patient
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p
+                      className={`text-sm mt-1 ${
+                        isDarkMode ? "text-gray-400" : "text-gray-600"
+                      }`}
+                    >
                       Add a new walk-in patient to the queue
                     </p>
                   </div>
@@ -980,9 +1156,19 @@ const AdminDashboard = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowPatientForm(false)}
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 ${
+                    isDarkMode
+                      ? "text-gray-400 hover:text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
                 >
-                  <FaTimes className="h-4 w-4" />
+                  <FaTimes
+                    className={`h-4 w-4 ${
+                      isDarkMode
+                        ? "text-gray-300 hover:text-white"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  />
                 </Button>
               </div>
             </CardHeader>
@@ -991,9 +1177,21 @@ const AdminDashboard = () => {
               <form onSubmit={handlePatientSubmit} className="space-y-6">
                 {/* Personal Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b">
-                    <FaUsers className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">
+                  <div
+                    className={`flex items-center space-x-2 pb-2 border-b ${
+                      isDarkMode ? "border-gray-600" : "border-gray-300"
+                    }`}
+                  >
+                    <FaUsers
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
+                    <h3
+                      className={`text-sm font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Personal Information
                     </h3>
                   </div>
@@ -1002,7 +1200,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="full_name"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Full Name *
                       </Label>
@@ -1013,13 +1213,22 @@ const AdminDashboard = () => {
                         onChange={handleInputChange}
                         required
                         placeholder="Enter patient's full name"
-                        className="h-11"
+                        className={`h-11 ${
+                          isDarkMode
+                            ? "bg-neutral-700 text-white border-gray-600"
+                            : "bg-white text-gray-900 border-gray-300"
+                        }`}
                       />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium">
+                        <Label
+                          htmlFor="email"
+                          className={`text-sm font-medium ${
+                            isDarkMode ? "text-gray-300" : "text-gray-700"
+                          }`}
+                        >
                           Email Address *
                         </Label>
                         <Input
@@ -1030,14 +1239,20 @@ const AdminDashboard = () => {
                           onChange={handleInputChange}
                           required
                           placeholder="patient@example.com"
-                          className="h-11"
+                          className={`h-11 ${
+                            isDarkMode
+                              ? "bg-neutral-700 text-white border-gray-600"
+                              : "bg-white text-gray-900 border-gray-300"
+                          }`}
                         />
                       </div>
 
                       <div className="space-y-2">
                         <Label
                           htmlFor="phone_number"
-                          className="text-sm font-medium"
+                          className={`text-sm font-medium ${
+                            isDarkMode ? "text-gray-300" : "text-gray-700"
+                          }`}
                         >
                           Phone Number *
                         </Label>
@@ -1049,7 +1264,11 @@ const AdminDashboard = () => {
                           onChange={handleInputChange}
                           required
                           placeholder="+63 9XX XXX XXXX"
-                          className="h-11"
+                          className={`h-11 ${
+                            isDarkMode
+                              ? "bg-neutral-700 text-white border-gray-600"
+                              : "bg-white text-gray-900 border-gray-300"
+                          }`}
                         />
                       </div>
                     </div>
@@ -1057,7 +1276,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="date_of_birth"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Date of Birth *
                       </Label>
@@ -1068,12 +1289,21 @@ const AdminDashboard = () => {
                         value={patientForm.date_of_birth}
                         onChange={handleInputChange}
                         required
-                        className="h-11"
+                        className={`h-11 ${
+                          isDarkMode
+                            ? "bg-neutral-700 text-white border-gray-600"
+                            : "bg-white text-gray-900 border-gray-300"
+                        }`}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="gender" className="text-sm font-medium">
+                      <Label
+                        htmlFor="gender"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
+                      >
                         Gender *
                       </Label>
                       <select
@@ -1082,7 +1312,11 @@ const AdminDashboard = () => {
                         value={patientForm.gender}
                         onChange={handleInputChange}
                         required
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="">Select gender...</option>
                         <option value="Male">Male</option>
@@ -1094,21 +1328,51 @@ const AdminDashboard = () => {
 
                 {/* Appointment Information Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b">
-                    <FaClipboardList className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">
+                  <div
+                    className={`flex items-center space-x-2 pb-2 border-b ${
+                      isDarkMode ? "border-gray-600" : "border-gray-300"
+                    }`}
+                  >
+                    <FaClipboardList
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-gray-300" : "text-blue-500"
+                      }`}
+                    />
+                    <h3
+                      className={`text-sm font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
                       Appointment Information
                     </h3>
                   </div>
 
                   {/* Walk-in Only Badge */}
-                  <div className="flex items-center space-x-2 p-3 bg-secondary/10 border border-secondary/20 rounded-lg">
-                    <FaWalking className="h-4 w-4 text-secondary" />
+                  <div
+                    className={`flex items-center space-x-2 p-3 border rounded-lg ${
+                      isDarkMode
+                        ? "bg-blue-500/20 border-blue-400/30"
+                        : "bg-blue-50 border-blue-200"
+                    }`}
+                  >
+                    <FaWalking
+                      className={`h-4 w-4 ${
+                        isDarkMode ? "text-blue-300" : "text-blue-500"
+                      }`}
+                    />
                     <div>
-                      <p className="text-sm font-medium text-secondary">
+                      <p
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-blue-200" : "text-blue-600"
+                        }`}
+                      >
                         Walk-in Appointment
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p
+                        className={`text-xs ${
+                          isDarkMode ? "text-blue-300/70" : "text-gray-600"
+                        }`}
+                      >
                         Patient will be added to the walk-in queue
                       </p>
                     </div>
@@ -1118,7 +1382,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="service_ref"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Select Service *
                       </Label>
@@ -1128,7 +1394,11 @@ const AdminDashboard = () => {
                         value={patientForm.service_ref}
                         onChange={handleInputChange}
                         required
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="">Choose a service...</option>
                         {services.map((service) => (
@@ -1136,8 +1406,7 @@ const AdminDashboard = () => {
                             key={service.id}
                             value={`services/${service.id}`}
                           >
-                            {service.service_name} ({service.duration_minutes}{" "}
-                            mins)
+                            {service.service_name}
                           </option>
                         ))}
                       </select>
@@ -1146,7 +1415,9 @@ const AdminDashboard = () => {
                     <div className="space-y-2">
                       <Label
                         htmlFor="priority_flag"
-                        className="text-sm font-medium"
+                        className={`text-sm font-medium ${
+                          isDarkMode ? "text-gray-300" : "text-gray-700"
+                        }`}
                       >
                         Priority Level
                       </Label>
@@ -1155,7 +1426,11 @@ const AdminDashboard = () => {
                         name="priority_flag"
                         value={patientForm.priority_flag}
                         onChange={handleInputChange}
-                        className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`flex h-11 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                          isDarkMode
+                            ? "border-gray-600 bg-neutral-700 text-white"
+                            : "border-gray-300 bg-white text-gray-900"
+                        }`}
                       >
                         <option value="normal">Normal Priority</option>
                         <option value="high">High Priority</option>
@@ -1165,11 +1440,15 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-6 border-t">
+                <div
+                  className={`flex gap-3 pt-6 border-t ${
+                    isDarkMode ? "border-gray-600" : "border-gray-300"
+                  }`}
+                >
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 h-11"
+                    className="flex-1 h-11 bg-primary text-white hover:bg-primary/90"
                     size="lg"
                   >
                     {isLoading ? (
@@ -1179,7 +1458,11 @@ const AdminDashboard = () => {
                       </>
                     ) : (
                       <>
-                        <FaSave className="mr-2 h-4 w-4" />
+                        <FaSave
+                          className={`mr-2 h-4 w-4 ${
+                            isDarkMode ? "text-white" : "text-white"
+                          }`}
+                        />
                         Register Patient
                       </>
                     )}
@@ -1189,7 +1472,11 @@ const AdminDashboard = () => {
                     type="button"
                     variant="outline"
                     onClick={() => setShowPatientForm(false)}
-                    className="px-6 h-11"
+                    className={`px-6 h-11 ${
+                      isDarkMode
+                        ? "border-gray-600 text-gray-300 hover:text-gray-600 hover:border-white"
+                        : "border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                    }`}
                     size="lg"
                   >
                     Cancel
@@ -1198,6 +1485,203 @@ const AdminDashboard = () => {
               </form>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {successModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() =>
+              setSuccessModal({
+                show: false,
+                queueNumber: null,
+                patientName: "",
+              })
+            }
+          />
+
+          {/* Modal Content */}
+          <div
+            className={`relative w-full max-w-md mx-auto backdrop-blur shadow-2xl border rounded-xl overflow-hidden ${
+              isDarkMode
+                ? "bg-neutral-800/95 border-gray-700"
+                : "bg-white/95 border-gray-300"
+            }`}
+          >
+            {/* Success Header */}
+            <div
+              className={`px-6 py-4 border-b ${
+                isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div className="flex items-center justify-center">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                      <FaCheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3
+                      className={`text-lg font-semibold ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      Registration Successful!
+                    </h3>
+                    <p
+                      className={`text-sm ${
+                        isDarkMode ? "text-gray-300" : "text-gray-600"
+                      }`}
+                    >
+                      Patient added to queue
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Success Content */}
+            <div className="px-6 py-6">
+              <div className="text-center space-y-4">
+                {/* Queue Number Display */}
+                <div
+                  className={`p-4 rounded-lg border-2 border-dashed ${
+                    isDarkMode
+                      ? "bg-green-900/20 border-green-500/30"
+                      : "bg-green-50 border-green-300"
+                  }`}
+                >
+                  <div
+                    className={`text-sm font-medium ${
+                      isDarkMode ? "text-green-300" : "text-green-700"
+                    }`}
+                  >
+                    Queue Number
+                  </div>
+                  <div
+                    className={`text-3xl font-bold mt-1 ${
+                      isDarkMode ? "text-green-400" : "text-green-600"
+                    }`}
+                  >
+                    #{successModal.queueNumber}
+                  </div>
+                </div>
+
+                {/* Patient Info */}
+                <div className="space-y-2">
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Patient:</span>{" "}
+                    {successModal.patientName}
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Status:</span> Added to
+                    walk-in queue
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      isDarkMode ? "text-gray-300" : "text-gray-600"
+                    }`}
+                  >
+                    <span className="font-medium">Time:</span>{" "}
+                    {new Date().toLocaleTimeString()}
+                  </p>
+                </div>
+
+                {/* Success Message */}
+                <div
+                  className={`p-3 rounded-lg ${
+                    isDarkMode
+                      ? "bg-blue-900/20 border border-blue-500/30"
+                      : "bg-blue-50 border border-blue-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <FaUsers
+                      className={`w-4 h-4 ${
+                        isDarkMode ? "text-blue-400" : "text-blue-600"
+                      }`}
+                    />
+                    <p
+                      className={`text-sm font-medium ${
+                        isDarkMode ? "text-blue-300" : "text-blue-700"
+                      }`}
+                    >
+                      Patient can now wait for their turn
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div
+              className={`px-6 py-4 border-t ${
+                isDarkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div className="flex gap-3">
+                <Button
+                  onClick={() =>
+                    setSuccessModal({
+                      show: false,
+                      queueNumber: null,
+                      patientName: "",
+                    })
+                  }
+                  className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <FaCheckCircle className="mr-2 h-4 w-4" />
+                  Got it!
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSuccessModal({
+                      show: false,
+                      queueNumber: null,
+                      patientName: "",
+                    });
+                    setShowPatientForm(true);
+                  }}
+                  className={`px-4 h-10 ${
+                    isDarkMode
+                      ? "border-gray-600 text-gray-300 hover:text-white hover:border-gray-500"
+                      : "border-gray-300 text-gray-700 hover:text-gray-900 hover:border-gray-400"
+                  }`}
+                >
+                  <FaPlus className="mr-2 h-4 w-4" />
+                  Add Another
+                </Button>
+              </div>
+            </div>
+
+            {/* Auto-close Timer */}
+            <div className={`absolute top-2 right-2`}>
+              <AutoCloseTimer
+                duration={8000}
+                onComplete={() =>
+                  setSuccessModal({
+                    show: false,
+                    queueNumber: null,
+                    patientName: "",
+                  })
+                }
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

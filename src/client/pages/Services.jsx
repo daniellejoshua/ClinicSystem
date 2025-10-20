@@ -130,17 +130,6 @@ const servicesData = [
     serviceId: "medical-certificate",
     buttonText: "Learn More",
   },
-  {
-    id: 11,
-    icon: FaEllipsisH,
-    title: "Other Services",
-    description:
-      "Various other healthcare services and medical procedures customized to meet specific patient needs.",
-    image: DoctorWithPatient,
-    featured: false,
-    serviceId: "other",
-    buttonText: "Learn More",
-  },
 ];
 
 // Then use it in your component
@@ -167,13 +156,13 @@ export default function Services() {
           }}
         ></div>
 
-        {/* White Rectangle Overlay - 50% Opacity */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        {/* Primary Overlay */}
+        <div className="absolute inset-0 bg-primary/60"></div>
 
         {/* Content */}
         <div className="relative h-full flex flex-col justify-center max-w-7xl mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-primary mb-4">
+          <div className="flex items-center gap-2 text-white mb-4">
             <button
               onClick={() => navigate("/")}
               className="font-worksans hover:text-accent transition-colors"
@@ -185,7 +174,7 @@ export default function Services() {
           </div>
 
           {/* Main Title */}
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-primary mb-6">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-yeseva text-white mb-6">
             Our Services
           </h1>
         </div>
@@ -205,7 +194,7 @@ export default function Services() {
             {servicesData.map((service) => (
               <div
                 key={service.id}
-                className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white max-w-sm mx-auto"
+                className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 bg-white max-w-sm mx-auto flex flex-col h-full"
               >
                 {/* Card Image */}
                 <div className="relative h-64 overflow-hidden">
@@ -233,14 +222,14 @@ export default function Services() {
                 </div>
 
                 {/* Card Content */}
-                <div className="p-6">
+                <div className="p-6 flex flex-col flex-grow">
                   <h3 className="text-xl font-worksans font-bold mb-3 text-primary">
                     {service.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+                  <p className="text-gray-600 text-sm mb-4 leading-relaxed flex-grow">
                     {service.description}
                   </p>
-                  <div className="flex items-center">
+                  <div className="flex items-center mt-auto">
                     <button
                       onClick={() => handleServiceClick(service.serviceId)}
                       className="text-secondary font-worksans font-medium transition-colors flex items-center gap-1"

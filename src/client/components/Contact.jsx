@@ -60,8 +60,8 @@ export default function Contact() {
               Email
             </h3>
             <div className="space-y-1 lg:space-y-2">
-              <p className="font-worksans text-xs lg:text-base">
-                justinnabunturan@gmail.com
+              <p className="font-worksans text-xs lg:text-md">
+                tonsuyasuperhealthcenter499@gmail.com
               </p>
             </div>
           </div>
@@ -76,7 +76,7 @@ export default function Contact() {
             </h3>
             <div className="space-y-1 lg:space-y-2">
               <p className="font-worksans text-xs lg:text-base">
-                Mon-Sat 09:00-20:00
+                Mon-Sat 08:00-20:00
               </p>
             </div>
           </div>
