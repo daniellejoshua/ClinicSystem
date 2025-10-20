@@ -52,15 +52,12 @@ Visit [http://localhost:5173](http://localhost:5173) to view the app.
 - `src/client` — Patient-facing pages and components
 - `src/admin` — Admin dashboard and management tools
 - `src/shared` — Shared services, Firebase config, and utilities
-
+- `Doc` — Docuementation of the Project 
 
 ## FirebaseDeployed Web App Link
 
 - https://clinicsystem-a7c34.web.app/?fbclid=IwZXh0bgNhZW0CMTEAAR7MmXiybhFj4Te2yD_Cr0Ey27oDvWxpbAghbZuFWHyPtyD5PM8tTn7N_gbQ6A_aem_-o0axXDK77_pds657dvYLw
 
-
-License
-Danielle Joshua C. Esternon
 
 Group Members:
 Danielle Joshua Esternon
