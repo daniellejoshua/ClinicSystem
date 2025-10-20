@@ -58,6 +58,7 @@ License
 Danielle Joshua C. Esternon
 
 Group Members:
+Danielle Joshua Esternon
 John Robert Roldan
 Mark Kelly Honi
 Junmar Malapitan
