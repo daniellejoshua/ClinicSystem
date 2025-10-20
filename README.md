@@ -59,11 +59,13 @@ Visit [http://localhost:5173](http://localhost:5173) to view the app.
 - https://clinicsystem-a7c34.web.app/?fbclid=IwZXh0bgNhZW0CMTEAAR7MmXiybhFj4Te2yD_Cr0Ey27oDvWxpbAghbZuFWHyPtyD5PM8tTn7N_gbQ6A_aem_-o0axXDK77_pds657dvYLw
 
 
-Group Members:
-Danielle Joshua Esternon
-John Robert Roldan
-Mark Kelly Honi
-Junmar Malapitan
-Jeric Junio
+## Group Members
+
+- Danielle Joshua Esternon
+- John Robert Roldan
+- Mark Kelly Honi
+- Junmar Malapitan
+- Jeric Junio
+
 
 
